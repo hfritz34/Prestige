@@ -1,0 +1,85 @@
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+trigger:
+- main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+jobs:
+- job:
+  displayName: "Build and Deploy Api"
+  steps:
+  - task: NuGetToolInstaller@1
+
+  - task: NuGetCommand@2
+    inputs:
+      restoreSolution: '$(solution)'
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: 'build'
+      projects: 'Prestige.Api/*.csproj'
+      arguments: '--configuration Release'
+
+  - task: DotNetCoreCLI@2
+    displayName: Publish
+    inputs:
+      command: 'publish'
+      publishWebProjects: false
+      projects: 'Prestige.Api/*.csproj'
+      arguments: '--configuration Release --output $(build.artifactstagingdirectory)/PrestigeApi'
+
+  - task: AzureRmWebAppDeployment@4
+    inputs:
+      ConnectionType: 'AzureRM'
+      azureSubscription: 'PrestigeInterns2024'
+      appType: 'apiApp'
+      WebAppName: 'PrestigeApi'
+      packageForLinux: '$(build.artifactStagingDirectory)/PrestigeApi/Prestige.Api.zip'
+      enableCustomDeployment: true
+      DeploymentType: 'zipDeploy'
+- job: 
+  displayName: "Build and Deploy Web"
+  steps:
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.14.0'
+    displayName: 'Install Node.js'
+  
+  - task: CmdLine@2
+    inputs:
+      script: |
+        call corepack enable
+        call yarn install
+        call yarn build
+      workingDirectory: $(Build.SourcesDirectory)/Prestige.Web
+    displayName: 'yarn install and build'
+
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(Build.SourcesDirectory)/Prestige.Web/dist'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/Prestige.Web/build.zip'
+      replaceExistingArchive: true
+
+  
+  - task: AzureRmWebAppDeployment@4
+    inputs:
+      ConnectionType: 'AzureRM'
+      azureSubscription: 'PrestigeInterns2024'
+      appType: 'webApp'
+      WebAppName: 'PrestigeWeb'
+      package: '$(Build.ArtifactStagingDirectory)/Prestige.Web/build.zip'
+      enableCustomDeployment: true
+      DeploymentType: 'zipDeploy'

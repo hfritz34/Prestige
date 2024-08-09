@@ -1,0 +1,9 @@
+{
+    "azureFunctions.deploySubpath": "Prestige.Functions/bin/Release/net8.0/publish",
+    "azureFunctions.projectLanguage": "C#",
+    "azureFunctions.projectRuntime": "~4",
+    "debug.internalConsoleOptions": "neverOpen",
+    "azureFunctions.preDeployTask": "publish (functions)",
+    "appService.defaultWebAppToDeploy": "/subscriptions/6fee8f0a-bc70-4ee2-9e0d-2fd90288291b/resourceGroups/interns-2024Sandbox-rg/providers/Microsoft.Web/sites/PrestigeApi",
+    "appService.deploySubpath": ""
+}
