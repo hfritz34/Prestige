@@ -1,20 +1,25 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+Prestige - A Music Social Media Revolution 🎵✨
+Prestige is a PWA that redefines how we experience, share, and connect over music. At its core, Prestige assigns a level of prestige based on the time you spend with your favorite albums, songs, and artists. Compete with friends, share your unique music journey, and use your listening habits as a conversation starter.
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+🌟 Key Features:
+Compare Prestiges: See how your dedication to music stacks up against your friends.
+Spotify Integration: Seamlessly connect to Spotify's API for efficient, real-time data updates.
+Social Connections: Discover your friends’ music tastes and gain deeper insights into their personalities through shared listening.
+Earn Rewards: Unlock cosmetic badges and achievements for your listening milestones.
+Live Feed: Stay in the loop with what your friends are currently vibing to on Spotify or Apple Music.
+🧠 Inspired by Maslow's Peak Experiences:
+Abraham Maslow identified music as a universal pathway to peak human experiences – moments of joy, connection, and self-realization. Prestige builds on this idea, creating a space where music is not just listened to but celebrated and shared.
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+🎶 Why Prestige?
+In 2023, music has become a lifestyle for millions globally. Despite the explosion of streaming platforms and fandoms, there’s no single community where music lovers can come together, share their passion, and dive deep into the magic of music. Prestige fills this gap by fostering connection through:
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+Sharing your music taste.
+Competing with fellow fans to prove your dedication.
+Learning about others through their unique playlists and preferences.
+🛠️ Built For Music Lovers By Music Lovers:
+Your music is more than background noise—it’s your story, told in melodies and rhythms. Prestige is a platform where you’re not defined by photos or followers, but by the beats that resonate with your soul.
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+Let’s make music more social, more meaningful, and more connected. 🎧
+
+Citations:
+Abraham Maslow, "Music, Education, and Peak Experiences," in Documentary Report of the Tanglewood Symposium, ed. Robert Choate (Washington, DC: Music Educators National Conference, 1968).
