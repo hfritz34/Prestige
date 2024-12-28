@@ -115,14 +115,10 @@ namespace Prestige.Api
             {
                 options.AddPolicy("AllowAll", policy =>
                     policy
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
-                options.AddPolicy("AllowSpecific", policy =>
-                    policy
-                    .WithOrigins("https://prestigeweb.azurewebsites.net")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+                        .AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
             });
         }
 

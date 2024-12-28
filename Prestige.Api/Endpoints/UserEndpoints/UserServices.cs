@@ -92,7 +92,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             {
                 { "client_id", Config.GetSection("Auth0:Client_Id").Value ??  throw Logger.ConfigurationMissing("Auth0:Client_Id") },
                 { "client_secret", Config.GetSection("Auth0:Client_Secret").Value ?? throw Logger.ConfigurationMissing("Auth0:Client_Secret") },
-                { "audience", "https://dev-u10jtlqih3lq02fh.us.auth0.com/api/v2/" },
+                { "audience", "https://dev-tfgyd3i2jqk0igxv.us.auth0.com/api/v2/" },
                 { "grant_type", "client_credentials" }
             };
 
