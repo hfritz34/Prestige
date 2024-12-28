@@ -12,8 +12,8 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    [Migration("20240925000139_NewSqlDB")]
-    partial class NewSqlDB
+    [Migration("20241228193250_SyncDatabaseWithModel")]
+    partial class SyncDatabaseWithModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

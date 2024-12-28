@@ -5,7 +5,7 @@
 namespace Prestige.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewSqlDB : Migration
+    public partial class SyncDatabaseWithModel : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

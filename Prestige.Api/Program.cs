@@ -101,7 +101,6 @@ namespace Prestige.Api
             builder.Services.AddScoped<ProfileServices>();
             builder.Services.AddScoped<FriendshipService>();
             builder.Services.AddScoped<PrestigeServices>();
-
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
@@ -113,32 +112,42 @@ namespace Prestige.Api
         {
             builder.Services.AddCors(options =>
             {
-               options.AddPolicy("AllowAll", policy =>
+                options.AddPolicy("AllowAll", policy =>
                     policy
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+                        .AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
                 options.AddPolicy("AllowSpecific", policy =>
                     policy
-                    .WithOrigins("https://prestigeweb.azurewebsites.net")
-                    .AllowAnyMethod()
-                    .AllowAnyHeader());
+                        .WithOrigins("https://prestigeweb.azurewebsites.net") 
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
             });
         }
 
         private static void AddAuthentication(WebApplicationBuilder builder)
         {
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.Authority = builder.Configuration["Auth0:Domain"];
-                options.Audience = builder.Configuration["Auth0:Audience"];
-                options.TokenValidationParameters = new TokenValidationParameters
+                .AddJwtBearer(options =>
                 {
-                    NameClaimType = ClaimTypes.NameIdentifier
-                };
-                options.SaveToken = true;
-            });
+                    options.Authority = builder.Configuration["Auth0:Domain"];
+                    options.Audience = builder.Configuration["Auth0:Audience"];
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        NameClaimType = ClaimTypes.NameIdentifier
+                    };
+                    options.SaveToken = true;
+
+                    // Conditionally set RequireHttpsMetadata based on environment
+                    if (builder.Environment.IsDevelopment())
+                    {
+                        options.RequireHttpsMetadata = false;
+                    }
+                    else
+                    {
+                        options.RequireHttpsMetadata = true;
+                    }
+                });
         }
 
         private static void AddAuthorization(WebApplicationBuilder builder)
