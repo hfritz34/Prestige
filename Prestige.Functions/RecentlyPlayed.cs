@@ -242,7 +242,7 @@ namespace RecentlyPlayedTrigger
 
             var auth0Client = new HttpClient
             {
-                BaseAddress = new Uri("https://dev-u10jtlqih3lq02fh.us.auth0.com")
+                BaseAddress = new Uri("https://dev-tfgyd3i2jqk0igxv.us.auth0.com")
             };
 
             auth0Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", managementToken);
@@ -298,7 +298,7 @@ namespace RecentlyPlayedTrigger
         {
             var auth0Client = new HttpClient
             {
-                BaseAddress = new Uri("https://dev-u10jtlqih3lq02fh.us.auth0.com")
+                BaseAddress = new Uri("https://dev-tfgyd3i2jqk0igxv.us.auth0.com")
             };
 
             var tokenData = new Dictionary<string, string>
