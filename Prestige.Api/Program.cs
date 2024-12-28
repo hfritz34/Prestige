@@ -113,12 +113,16 @@ namespace Prestige.Api
         {
             builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAll", policy =>
+               options.AddPolicy("AllowAll", policy =>
                     policy
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials());
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
+                options.AddPolicy("AllowSpecific", policy =>
+                    policy
+                    .WithOrigins("https://prestigeweb.azurewebsites.net")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader());
             });
         }
 
