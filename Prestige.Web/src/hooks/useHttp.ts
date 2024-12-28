@@ -9,7 +9,7 @@ const useHttp = () => {
 	const getOne = async <T>(relativeUri: string): Promise<T> => {
 		const token = await getAccessTokenSilently({
             authorizationParams: {
-                audience: 'https://prestigeapi.azurewebsites.net',
+                audience: 'https://prestige-auth0-resource',
               },
             cacheMode: "on"
         })
@@ -24,7 +24,7 @@ const useHttp = () => {
 	const getMany = async <T>(relativeUri: string): Promise<T[]> => {
 		const token = await getAccessTokenSilently({
             authorizationParams: {
-                audience: 'https://prestigeapi.azurewebsites.net',
+                audience: 'https://prestige-auth0-resource',
               },
             cacheMode: "on"
         })
@@ -41,7 +41,7 @@ const useHttp = () => {
 		try {
 			const token = await getAccessTokenSilently({
                 authorizationParams: {
-                    audience: 'https://prestigeapi.azurewebsites.net',
+                    audience: 'https://prestige-auth0-resource',
                   },
                 cacheMode: "on"
             })
@@ -61,7 +61,7 @@ const useHttp = () => {
 		try {
 			const token = await getAccessTokenSilently({
                 authorizationParams: {
-                    audience: 'https://prestigeapi.azurewebsites.net',
+                    audience: 'https://prestige-auth0-resource',
                   },
                 cacheMode: "on"
             })
@@ -82,7 +82,7 @@ const useHttp = () => {
 		try {
 			const token = await getAccessTokenSilently({
                 authorizationParams: {
-                    audience: 'https://prestigeapi.azurewebsites.net',
+                    audience: 'https://prestige-auth0-resource',
                   },
                 cacheMode: "on"
             })
@@ -103,7 +103,7 @@ const useHttp = () => {
 		try {
 			const token = await getAccessTokenSilently({
                 authorizationParams: {
-                    audience: 'https://prestigeapi.azurewebsites.net',
+                    audience: 'https://prestige-auth0-resource',
                   },
                 cacheMode: "on"
             })
