@@ -109,46 +109,54 @@ namespace Prestige.Api
         }
 
         private static void AddCorsPolicy(WebApplicationBuilder builder)
-        {
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAll", policy =>
-                    policy
-                        .AllowAnyOrigin()
-                        .AllowAnyMethod()
-                        .AllowAnyHeader());
-                options.AddPolicy("AllowSpecific", policy =>
-                    policy
-                        .WithOrigins("https://prestigeweb.azurewebsites.net") 
-                        .AllowAnyMethod()
-                        .AllowAnyHeader());
-            });
-        }
+{
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", policy =>
+            policy
+                .WithOrigins("http://localhost:5173")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials());
+    });
+}
 
         private static void AddAuthentication(WebApplicationBuilder builder)
+{
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
         {
-            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer(options =>
-                {
-                    options.Authority = builder.Configuration["Auth0:Domain"];
-                    options.Audience = builder.Configuration["Auth0:Audience"];
-                    options.TokenValidationParameters = new TokenValidationParameters
-                    {
-                        NameClaimType = ClaimTypes.NameIdentifier
-                    };
-                    options.SaveToken = true;
+            options.Authority = $"https://{builder.Configuration["Auth0:Domain"]}";
+            options.Audience = builder.Configuration["Auth0:Audience"];
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                NameClaimType = ClaimTypes.NameIdentifier,
+                ValidateIssuerSigningKey = true,
+                ValidateIssuer = true,
+                ValidateAudience = true
+            };
+            options.SaveToken = true;
 
-                    // Conditionally set RequireHttpsMetadata based on environment
-                    if (builder.Environment.IsDevelopment())
-                    {
-                        options.RequireHttpsMetadata = false;
-                    }
-                    else
-                    {
-                        options.RequireHttpsMetadata = true;
-                    }
-                });
-        }
+            if (builder.Environment.IsDevelopment())
+            {
+                options.RequireHttpsMetadata = false;
+            }
+
+            options.Events = new JwtBearerEvents
+            {
+                OnAuthenticationFailed = context =>
+                {
+                    Console.WriteLine($"OnAuthenticationFailed: {context.Exception.Message}");
+                    return Task.CompletedTask;
+                },
+                OnTokenValidated = context =>
+                {
+                    Console.WriteLine($"Token validated for user: {context.Principal?.Identity?.Name}");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+}
 
         private static void AddAuthorization(WebApplicationBuilder builder)
         {

@@ -82,46 +82,62 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         }
 
         private async Task<Auth0UserResponse> GetAuth0UserAsync()
+{
+    try 
+    {
+        var client = new HttpClient(new HttpClientHandler())
         {
-            var client = new HttpClient(new HttpClientHandler())
-            {
-                BaseAddress = new Uri(Config.GetSection("Auth0:Domain").Value ?? throw Logger.ConfigurationMissing("Auth0:Domain")),
-            };
+            BaseAddress = new Uri($"https://{Config["Auth0:Domain"]}"),
+        };
 
-            var tokenData = new Dictionary<string, string>
-            {
-                { "client_id", Config.GetSection("Auth0:Client_Id").Value ??  throw Logger.ConfigurationMissing("Auth0:Client_Id") },
-                { "client_secret", Config.GetSection("Auth0:Client_Secret").Value ?? throw Logger.ConfigurationMissing("Auth0:Client_Secret") },
-                { "audience", "https://dev-tfgyd3i2jqk0igxv.us.auth0.com/api/v2/" },
-                { "grant_type", "client_credentials" }
-            };
+        var tokenData = new Dictionary<string, string>
+        {
+            { "client_id", Config["Auth0:Client_Id"] },
+            { "client_secret", Config["Auth0:Client_Secret"] },
+            { "audience", Config["Auth0:ManagementApiAudience"] },
+            { "grant_type", "client_credentials" }
+        };
 
-            var tokenRequest = new FormUrlEncodedContent(tokenData);
+        _logger.LogInformation($"Getting management token for domain: {Config["Auth0:Domain"]}");
+        var tokenRequest = new FormUrlEncodedContent(tokenData);
+        var tokenResponse = await client.PostAsync("/oauth/token", tokenRequest);
 
-
-            var tokenResponse = await client.PostAsync("/oauth/token", tokenRequest);
-            tokenResponse.EnsureSuccessStatusCode();
-
-            var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-
-            if (tokenContent == null || !tokenContent.TryGetValue("access_token", out object? value))
-            {
-                throw Logger.TokenNotFound("Access Token");
-            }
-
-            var accessToken = value.ToString();
-
-            var userRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v2/users/" + UserAuthId);
-            userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var userResponse = await client.SendAsync(userRequest);
-            userResponse.EnsureSuccessStatusCode();
-
-            var auth0User = await userResponse.Content.ReadFromJsonAsync<Auth0UserResponse>() ?? throw Logger.UserNotFound(UserAuthId);
-
-            return auth0User;
+        if (!tokenResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await tokenResponse.Content.ReadAsStringAsync();
+            _logger.LogError($"Token request failed: {errorContent}");
+            throw new Exception($"Failed to get management token: {errorContent}");
         }
 
+        var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        if (tokenContent == null || !tokenContent.TryGetValue("access_token", out object? value))
+        {
+            throw Logger.TokenNotFound("Access Token");
+        }
+
+        var accessToken = value.ToString();
+        _logger.LogInformation("Successfully got management token");
+
+        var userRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/users/{UserAuthId}");
+        userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var userResponse = await client.SendAsync(userRequest);
+        if (!userResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await userResponse.Content.ReadAsStringAsync();
+            _logger.LogError($"User info request failed: {errorContent}");
+            throw new Exception($"Failed to get user info: {errorContent}");
+        }
+
+        var auth0User = await userResponse.Content.ReadFromJsonAsync<Auth0UserResponse>();
+        return auth0User ?? throw Logger.UserNotFound(UserAuthId);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in GetAuth0UserAsync");
+        throw;
+    }
+}
         public UserResponse UpdateNickName(string id, string nickName)
         {
             if (id != UserAuthId.Split("|").Last())

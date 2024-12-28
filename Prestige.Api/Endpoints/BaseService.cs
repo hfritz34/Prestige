@@ -11,7 +11,7 @@ namespace Prestige.Api.Endpoints
     {
         private readonly PrestigeContext _prestigeDb;
         private readonly ClaimsPrincipal _principal;
-        private readonly ILogger<BaseService> _logger;
+        protected readonly ILogger<BaseService> _logger;
         private readonly IConfiguration _config;
 
         public PrestigeContext PrestigeDb => _prestigeDb;
