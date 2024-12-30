@@ -90,13 +90,13 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             BaseAddress = new Uri($"https://{Config["Auth0:Domain"]}"),
         };
 
-        var tokenData = new Dictionary<string, string>
-        {
-            { "client_id", Config["Auth0:ClientId"] },
-            { "client_secret", Config["Auth0:ClientSecret"] },
-            { "audience", Config["Auth0:ManagementApiAudience"] },
-            { "grant_type", "client_credentials" }
-        };
+       var tokenData = new Dictionary<string, string>
+            {
+                { "client_id", Config.GetSection("Auth0:ClientId").Value ??  throw Logger.ConfigurationMissing("Auth0:ClientId") },
+                { "client_secret", Config.GetSection("Auth0:ClientSecret").Value ?? throw Logger.ConfigurationMissing("Auth0:ClientSecret") },
+                { "audience", "https://dev-tfgyd3i2jqk0igxv.us.auth0.com/api/v2/" },
+                { "grant_type", "client_credentials" }
+            };
 
         _logger.LogInformation($"Getting management token for domain: {Config["Auth0:Domain"]}");
         var tokenRequest = new FormUrlEncodedContent(tokenData);
