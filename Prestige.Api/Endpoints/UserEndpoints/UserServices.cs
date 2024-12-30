@@ -92,8 +92,8 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         var tokenData = new Dictionary<string, string>
         {
-            { "client_id", Config["Auth0:Client_Id"] },
-            { "client_secret", Config["Auth0:Client_Secret"] },
+            { "client_id", Config["Auth0:ClientId"] },
+            { "client_secret", Config["Auth0:ClientSecret"] },
             { "audience", Config["Auth0:ManagementApiAudience"] },
             { "grant_type", "client_credentials" }
         };
