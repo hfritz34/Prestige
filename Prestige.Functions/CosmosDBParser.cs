@@ -21,76 +21,121 @@ namespace CosmosDBParser
         }
 
         [Function("CosmosDBParser")]
-        public async Task Run([CosmosDBTrigger(
-            databaseName: "MusicDB",
-            containerName: "RecentlyPlayed",
-            Connection = "CosmosDBConnectionString",
-            LeaseContainerName = "leases",
-            CreateLeaseContainerIfNotExists = false)] IReadOnlyList<Document> data)
+ public async Task Run([CosmosDBTrigger(
+    databaseName: "MusicDB",
+    containerName: "RecentlyPlayed",
+    Connection = "CosmosDBConnectionString",
+    LeaseContainerName = "leases",
+    CreateLeaseContainerIfNotExists = false)] IReadOnlyList<Document> data)
+{
+    try 
+    {
+        var client = await GetApiClientAsync();
+        
+        // Debug logging
+        _logger.LogInformation($"Received {data.Count} documents from Cosmos DB");
+        foreach (var doc in data)
         {
-            var client = await GetApiClientAsync();
-            var idsList = data.Select(d => d.id).ToList();
-            var ids = string.Join(",", idsList);
-            var idsResponse = await client.GetAsync($"spotify/tracks?ids={ids}");
+            _logger.LogInformation($"Document ID: {doc.id}, Track ID: {doc.trackId}");
+        }
+        
+        // Use trackId instead of id
+        var idsList = data.Select(d => d.trackId).ToList();
+        var ids = string.Join(",", idsList);
+        
+        _logger.LogInformation($"Requesting tracks with IDs: {ids}");
+        
+        var idsResponse = await client.GetAsync($"spotify/tracks?ids={ids}");
+        var responseContent = await idsResponse.Content.ReadAsStringAsync();
+        
+        if (!idsResponse.IsSuccessStatusCode)
+        {
+            _logger.LogError($"Failed to get tracks. Status: {idsResponse.StatusCode}, Content: {responseContent}");
             idsResponse.EnsureSuccessStatusCode();
-            if (data != null && data.Count > 0)
+        }
+
+        if (data != null && data.Count > 0)
+        {
+            foreach (var json in data)
             {
-                foreach (var json in data)
+                try
                 {
-                    try
+                    _logger.LogInformation($"Processing track data for ID: {json.trackId}");
+                    var userTrackResponse = await client.PostAsJsonAsync($"prestige/{json.userId}/tracks", new
                     {
-                        var id = json.id;
-                        var batchId = json.batchId;
-                        var userId = json.userId;
-                        var trackId = json.trackId;
-                        int duration_ms = json.duration_ms;
-                        var played_at = json.played_at;
-                        var duration_s = duration_ms / 1000;
+                        TrackId = json.trackId,
+                        TotalTime = json.duration_ms / 1000
+                    });
 
-                        _logger.LogInformation($"INFORMATION | Batch ID: {batchId} User ID: {userId} Track ID: {trackId} Duration(ms): {duration_ms} Played At: {played_at}");
-
-                        var userTrackResponse = await client.PostAsJsonAsync($"prestige/{userId}/tracks", new
-                        {
-                            TrackId = trackId,
-                            TotalTime = duration_s
-                        });
-
-                        userTrackResponse.EnsureSuccessStatusCode();
-
-                    }
-                    catch (Exception ex)
+                    var userTrackContent = await userTrackResponse.Content.ReadAsStringAsync();
+                    if (!userTrackResponse.IsSuccessStatusCode)
                     {
-                        _logger.LogError($"Exception encountered: {ex.Message}");
+                        _logger.LogError($"Failed to post track. Status: {userTrackResponse.StatusCode}, Content: {userTrackContent}");
                     }
+                    userTrackResponse.EnsureSuccessStatusCode();
+
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Error processing track {json.trackId} for user {json.userId}");
                 }
             }
         }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in CosmosDBParser");
+        throw;
+    }
+}
 
-        private async Task<HttpClient> GetApiClientAsync()
+private async Task<HttpClient> GetApiClientAsync()
+{
+    _logger.LogInformation("Starting Auth0 token request");
+    var auth0Client = new HttpClient();
+    var auth0Domain = Environment.GetEnvironmentVariable("Auth0Domain");
+    
+    _logger.LogInformation($"Requesting token from Auth0 domain: {auth0Domain}");
+    
+    var request = new HttpRequestMessage(HttpMethod.Post, $"https://{auth0Domain}/oauth/token");
+    request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
+    {
+        ["grant_type"] = "client_credentials",
+        ["client_id"] = Environment.GetEnvironmentVariable("Auth0ClientId"),
+        ["client_secret"] = Environment.GetEnvironmentVariable("Auth0ClientSecret"),
+        // Use the API audience instead of Management API audience
+        ["audience"] = Environment.GetEnvironmentVariable("Auth0ApiAudience")
+    });
+
+    try 
+    {
+        var tokenResponse = await auth0Client.SendAsync(request);
+        var responseContent = await tokenResponse.Content.ReadAsStringAsync();
+        _logger.LogInformation($"Auth0 response status: {tokenResponse.StatusCode}");
+        
+        if (!tokenResponse.IsSuccessStatusCode)
         {
-            var auth0Client = new HttpClient();
-            var request = new HttpRequestMessage(HttpMethod.Post, $"https://{Environment.GetEnvironmentVariable("Auth0Domain")}/oauth/token");
-            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                ["grant_type"] = "client_credentials",
-                ["client_id"] = Environment.GetEnvironmentVariable("Auth0ClientId"),
-                ["client_secret"] = Environment.GetEnvironmentVariable("Auth0ClientSecret"),
-                ["audience"] = Environment.GetEnvironmentVariable("ApiBaseUrl")
-            });
-
-            var tokenResponse = await auth0Client.SendAsync(request);
-            tokenResponse.EnsureSuccessStatusCode();
-            var tokenObject = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-
-            var accessToken = tokenObject["access_token"].ToString();
-
-            var apiClient = new HttpClient();
-
-            apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            apiClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl"));
-
-            return apiClient;
+            _logger.LogError($"Auth0 error response: {responseContent}");
         }
+        
+        tokenResponse.EnsureSuccessStatusCode();
+        
+        var tokenObject = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+        var accessToken = tokenObject["access_token"].ToString();
+
+        var apiClient = new HttpClient();
+        apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        apiClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl"));
+
+        _logger.LogInformation("Successfully created API client");
+        return apiClient;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError($"Error getting API client: {ex.Message}");
+        throw;
+    }
+}
     }
     public class Document
     {

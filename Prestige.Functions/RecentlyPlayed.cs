@@ -14,6 +14,7 @@ namespace RecentlyPlayedTrigger
         private static readonly HttpClient httpClient = new HttpClient();
         private static readonly string? cosmosConnectionString = Environment.GetEnvironmentVariable("CosmosDBConnectionString");
         private static readonly string? sqlConnectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
+        private static readonly string? auth0Domain = Environment.GetEnvironmentVariable("Auth0Domain") ?? throw new Exception("Auth0Domain not found");
         private readonly CosmosClient cosmosClient;
         private readonly Database database;
         private readonly Container container;
@@ -37,7 +38,7 @@ namespace RecentlyPlayedTrigger
         }
 
         [Function("RecentlyPlayedTrigger")]
-        public async Task Run([TimerTrigger("* * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("0 * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -49,7 +50,6 @@ namespace RecentlyPlayedTrigger
             try
             {
                 var batchId = Guid.NewGuid().ToString();
-
                 var users = await GetAllUsersAsync();
 
                 foreach (var user in users)
@@ -100,14 +100,12 @@ namespace RecentlyPlayedTrigger
                 response.EnsureSuccessStatusCode();
             }
 
-            //_logger.LogInformation($"Spotify API response: {responseContent}");
             return JsonDocument.Parse(responseContent).RootElement;
         }
 
         private async Task StoreTracksInCosmosDB(string userId, string batchId, JsonElement recentlyPlayedTracks)
         {
             var mostRecentPlayedAt = await GetMostRecentPlayedAt(userId);
-
             var items = recentlyPlayedTracks.GetProperty("items").EnumerateArray();
 
             foreach (var item in items)
@@ -156,7 +154,8 @@ namespace RecentlyPlayedTrigger
         {
             var queryDefinition = new QueryDefinition("SELECT TOP 1 c.played_at FROM c WHERE c.userId = @userId ORDER BY c.played_at DESC")
                 .WithParameter("@userId", userId);
-            var queryIterator = container.GetItemQueryIterator<JsonElement>(queryDefinition, requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey(userId), MaxItemCount = 1 });
+            var queryIterator = container.GetItemQueryIterator<JsonElement>(queryDefinition, 
+                requestOptions: new QueryRequestOptions { PartitionKey = new PartitionKey(userId), MaxItemCount = 1 });
 
             while (queryIterator.HasMoreResults)
             {
@@ -206,35 +205,59 @@ namespace RecentlyPlayedTrigger
         }
 
         private async Task<List<User>> GetAllUsersAsync()
+{
+    _logger.LogInformation("Starting GetAllUsersAsync");
+    var users = new List<User>();
+    try 
+    {
+        using (var connection = new SqlConnection(sqlConnectionString))
         {
-            var users = new List<User>();
-            using (var connection = new SqlConnection(sqlConnectionString))
+            _logger.LogInformation("Attempting to open SQL connection");
+            await connection.OpenAsync();
+            _logger.LogInformation("SQL connection opened successfully");
+            
+            var query = "SELECT Id FROM [User]";
+            using (var command = new SqlCommand(query, connection))
             {
-                await connection.OpenAsync();
-                var query = "SELECT Id FROM [User]";
-
-                using (var command = new SqlCommand(query, connection))
+                _logger.LogInformation("Executing SQL query");
+                using (var reader = await command.ExecuteReaderAsync())
                 {
-                    using (var reader = await command.ExecuteReaderAsync())
+                    while (await reader.ReadAsync())
                     {
-                        while (await reader.ReadAsync())
-                        {
-                            users.Add(new User
-                            {
-                                Id = reader.GetString(0)
-                            });
-                        }
+                        var userId = reader.GetString(0);
+                        users.Add(new User { Id = userId });
+                        _logger.LogInformation($"Found user with ID: {userId}");
                     }
                 }
             }
-            return users;
         }
+        _logger.LogInformation($"GetAllUsersAsync completed. Found {users.Count} users");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error in GetAllUsersAsync");
+        throw; // Re-throw to maintain the original behavior
+    }
+    return users;
+}
 
-        private async Task<(string accessToken, string refreshToken)> GetSpotifyTokensAsync(string userId)
-        {
-            var managementToken = await GetAuth0ManagementTokenAsync();
-            return await GetUserTokensAsync(userId, managementToken);
-        }
+private async Task<(string accessToken, string refreshToken)> GetSpotifyTokensAsync(string userId)
+{
+    _logger.LogInformation($"Getting Spotify tokens for user: {userId}");
+    try 
+    {
+        var managementToken = await GetAuth0ManagementTokenAsync();
+        _logger.LogInformation("Successfully obtained Auth0 management token");
+        var tokens = await GetUserTokensAsync(userId, managementToken);
+        _logger.LogInformation("Successfully obtained Spotify tokens");
+        return tokens;
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, $"Error getting Spotify tokens for user {userId}");
+        throw;
+    }
+}
 
         private async Task<(string accessToken, string refreshToken)> GetUserTokensAsync(string userId, string managementToken)
         {
@@ -242,7 +265,7 @@ namespace RecentlyPlayedTrigger
 
             var auth0Client = new HttpClient
             {
-                BaseAddress = new Uri("https://dev-tfgyd3i2jqk0igxv.us.auth0.com")
+                BaseAddress = new Uri($"https://{auth0Domain}")
             };
 
             auth0Client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", managementToken);
@@ -298,7 +321,7 @@ namespace RecentlyPlayedTrigger
         {
             var auth0Client = new HttpClient
             {
-                BaseAddress = new Uri("https://dev-tfgyd3i2jqk0igxv.us.auth0.com")
+                BaseAddress = new Uri($"https://{auth0Domain}")
             };
 
             var tokenData = new Dictionary<string, string>
