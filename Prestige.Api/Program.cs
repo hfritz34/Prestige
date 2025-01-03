@@ -173,32 +173,32 @@ namespace Prestige.Api
                 return user ?? throw new InvalidOperationException("User not found");
             });
         }
+private static void RunApp(WebApplicationBuilder builder)
+{
+    var app = builder.Build();
 
-        private static void RunApp(WebApplicationBuilder builder)
-        {
-            var app = builder.Build();
+    // Add health check before other middleware
+    app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+       .AllowAnonymous()
+       .WithName("HealthCheck");
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseCors("AllowAll");
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
-            else
-            {
-                app.UseCors("AllowSpecific");
-            }
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+        app.UseCors("AllowAll");
+    }
+    else 
+    {
+        app.UseCors("AllowFunctions");
+    }
 
-            app.UseHttpsRedirection();
+    app.UseHttpsRedirection();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapControllers().RequireAuthorization();
 
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.MapControllers().RequireAuthorization();
-
-            app.Run();
-        }
-
+    app.Run();
+}
     }
 }
