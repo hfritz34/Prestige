@@ -20,7 +20,7 @@ namespace CosmosDBParser
            containerName: "RecentlyPlayed",
            Connection = "CosmosDBConnectionString", 
            LeaseContainerName = "leases",
-           CreateLeaseContainerIfNotExists = true)] IReadOnlyList<Document> data)
+           CreateLeaseContainerIfNotExists =  true )] IReadOnlyList<Document> data)
        {
            _logger.LogInformation($"CosmosDBParser triggered with {data.Count} documents");
            

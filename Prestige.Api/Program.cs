@@ -190,7 +190,7 @@ private static void RunApp(WebApplicationBuilder builder)
     }
     else 
     {
-        app.UseCors("AllowFunctions");
+        app.UseCors("AllowAll");
     }
 
     app.UseHttpsRedirection();
