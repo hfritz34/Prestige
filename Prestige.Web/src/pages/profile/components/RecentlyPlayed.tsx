@@ -18,8 +18,8 @@ const RecentlyPlayed : React.FC = () => {
     return (
         <>
         <h2 className="text-lg font-bold mt-6 mb-5">Recently Played</h2><ul>
-            {recentlyPlayed?.map((track) => (
-                <li key={track.id} className="flex items-center ml-2.5 mb-2.5">
+            {recentlyPlayed?.map((track, index) => (
+                <li key={`${track.id}-${index}`} className="flex items-center ml-2.5 mb-2.5">
                     <img src={track.imageUrl} alt={track.trackName} className="w-16 h-16 mr-2.5" />
                     <div>
                         <h3 className="m-0 text-lg">{track.trackName}</h3>

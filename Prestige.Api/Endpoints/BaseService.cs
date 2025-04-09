@@ -81,45 +81,72 @@ namespace Prestige.Api.Endpoints
 
         public async Task<(string accessToken, string refreshToken)> RefreshSpotifyTokensAsync(string refreshToken)
         {
-            var spotifyHttpClient = new HttpClient
+            try
             {
-                BaseAddress = new Uri("https://accounts.spotify.com")
-            };
+                _logger.LogInformation("[Debug] Starting Spotify token refresh");
+                
+                // Try both configuration formats
+                var clientId = Config["Spotify:ClientId"] ?? Config["SPOTIFY_CLIENT_ID"];
+                var clientSecret = Config["Spotify:ClientSecret"] ?? Config["SPOTIFY_CLIENT_SECRET"];
 
-            var tokenData = new Dictionary<string, string>
-            {
-                { "grant_type", "refresh_token" },
-                { "refresh_token", refreshToken },
-                { "client_id", Config["SPOTIFY_CLIENT_ID"] ?? throw new Exception("Spotify ClientId not found") },
-                { "client_secret", Config["SPOTIFY_CLIENT_SECRET"] ?? throw new Exception("Spotify ClientSecret not found") }
-            };
+                _logger.LogInformation($"[Debug] Configuration status:" +
+                    $"\n  - Client ID found: {!string.IsNullOrEmpty(clientId)}" +
+                    $"\n  - Client Secret found: {!string.IsNullOrEmpty(clientSecret)}");
 
-            var tokenRequest = new HttpRequestMessage(HttpMethod.Post, "/api/token")
-            {
-                Content = new FormUrlEncodedContent(tokenData)
-            };
-            tokenRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+                if (string.IsNullOrEmpty(clientId)) throw Logger.ConfigurationMissing("Spotify:ClientId or SPOTIFY_CLIENT_ID");
+                if (string.IsNullOrEmpty(clientSecret)) throw Logger.ConfigurationMissing("Spotify:ClientSecret or SPOTIFY_CLIENT_SECRET");
 
-            _logger.LogInformation("Sending token refresh request to Spotify");
-            var tokenResponse = await spotifyHttpClient.SendAsync(tokenRequest);
-            var responseContent = await tokenResponse.Content.ReadAsStringAsync();
-            
-            if (!tokenResponse.IsSuccessStatusCode)
-            {
-                _logger.LogError($"Failed to refresh Spotify token. Status: {tokenResponse.StatusCode}, Content: {responseContent}");
-                throw new Exception($"Failed to refresh Spotify token: {tokenResponse.StatusCode} - {responseContent}");
+                var client = new HttpClient();
+                var authHeader = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authHeader);
+
+                var tokenData = new Dictionary<string, string>
+                {
+                    { "grant_type", "refresh_token" },
+                    { "refresh_token", refreshToken }
+                };
+
+                _logger.LogInformation("[Debug] Sending token refresh request to Spotify");
+                _logger.LogInformation($"[Debug] Using refresh token: {refreshToken.Substring(0, Math.Min(10, refreshToken.Length))}...");
+                
+                var response = await client.PostAsync(
+                    "https://accounts.spotify.com/api/token",
+                    new FormUrlEncodedContent(tokenData)
+                );
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                _logger.LogInformation($"[Debug] Token refresh response status: {response.StatusCode}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"[Debug] Token refresh failed:" +
+                        $"\n  - Status: {response.StatusCode}" +
+                        $"\n  - Content: {responseContent}" +
+                        $"\n  - Headers: {string.Join(", ", response.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
+                    throw new Exception($"Failed to refresh Spotify token: {response.StatusCode} - {responseContent}");
+                }
+
+                var tokenResponse = await response.Content.ReadFromJsonAsync<TokenResponse>();
+                if (tokenResponse == null)
+                {
+                    _logger.LogError("[Debug] Token response was null after JSON parsing");
+                    throw Logger.TokenNotFound("Spotify Token Response");
+                }
+
+                if (string.IsNullOrEmpty(tokenResponse.AccessToken))
+                {
+                    _logger.LogError("[Debug] Access token is missing from response");
+                    throw Logger.TokenNotFound("Access Token in Response");
+                }
+
+                _logger.LogInformation("[Debug] Successfully refreshed Spotify tokens");
+                return (tokenResponse.AccessToken, tokenResponse.RefreshToken ?? refreshToken);
             }
-
-            var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<TokenResponse>();
-
-            if (tokenContent == null || string.IsNullOrEmpty(tokenContent.AccessToken))
+            catch (Exception ex)
             {
-                _logger.LogError($"Invalid token response from Spotify: {responseContent}");
-                throw new Exception("Failed to refresh Spotify access token: Invalid response format");
+                _logger.LogError(ex, "[Debug] Exception in RefreshSpotifyTokensAsync");
+                throw;
             }
-
-            _logger.LogInformation("Successfully refreshed Spotify tokens");
-            return (tokenContent.AccessToken, tokenContent.RefreshToken ?? refreshToken);
         }
 
         private async Task<Auth0UserResponse> GetAuth0UserAsync()
