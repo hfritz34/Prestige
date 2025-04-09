@@ -48,16 +48,34 @@ namespace Prestige.Api.Endpoints
 
             if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
             {
-                (string newAccessToken, string newRefreshToken) = await RefreshSpotifyTokensAsync(user.RefreshToken);
+                try
+                {
+                    // All Spotify users are managed through Auth0, so we'll use the Auth0 management API
+                    var auth0User = await GetAuth0UserAsync();
+                    var spotifyIdentity = auth0User.Identities.FirstOrDefault();
+                    
+                    if (spotifyIdentity == null)
+                    {
+                        throw new Exception("No Spotify identity found in Auth0 user profile");
+                    }
 
-                user.UpdateTokens(newAccessToken, newRefreshToken, DateTime.Now.AddMinutes(60));
-                PrestigeDb.SaveChanges();
-                Logger.LogInformation($"Refreshed Access Token for user {id}: {newAccessToken}");
+                    user.UpdateTokens(
+                        spotifyIdentity.AccessToken,
+                        spotifyIdentity.RefreshToken,
+                        DateTime.Now.AddHours(1)
+                    );
 
-                return newAccessToken;
+                    PrestigeDb.SaveChanges();
+                    Logger.LogInformation($"Refreshed Access Token for user {id} through Auth0");
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, $"Failed to refresh token for user {id}");
+                    throw;
+                }
             }
 
-            Logger.LogInformation($"Access Token for user {id}: {user.AccessToken}");
+            Logger.LogInformation($"Returning Access Token for user {id}");
             return user.AccessToken;
         }
 
@@ -80,60 +98,160 @@ namespace Prestige.Api.Endpoints
             {
                 Content = new FormUrlEncodedContent(tokenData)
             };
+            tokenRequest.Content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
+            _logger.LogInformation("Sending token refresh request to Spotify");
             var tokenResponse = await spotifyHttpClient.SendAsync(tokenRequest);
-            tokenResponse.EnsureSuccessStatusCode();
+            var responseContent = await tokenResponse.Content.ReadAsStringAsync();
+            
+            if (!tokenResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError($"Failed to refresh Spotify token. Status: {tokenResponse.StatusCode}, Content: {responseContent}");
+                throw new Exception($"Failed to refresh Spotify token: {tokenResponse.StatusCode} - {responseContent}");
+            }
 
             var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<TokenResponse>();
 
             if (tokenContent == null || string.IsNullOrEmpty(tokenContent.AccessToken))
             {
-                throw new Exception("Failed to refresh Spotify access token.");
+                _logger.LogError($"Invalid token response from Spotify: {responseContent}");
+                throw new Exception("Failed to refresh Spotify access token: Invalid response format");
             }
 
+            _logger.LogInformation("Successfully refreshed Spotify tokens");
             return (tokenContent.AccessToken, tokenContent.RefreshToken ?? refreshToken);
         }
 
         private async Task<Auth0UserResponse> GetAuth0UserAsync()
         {
-            var UserAuthId = Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                ?? throw Logger.UserNotFound("AUTH");
-            var client = new HttpClient(new HttpClientHandler())
+            try 
             {
-                BaseAddress = new Uri(Config.GetSection("Auth0:Domain").Value ?? throw Logger.ConfigurationMissing("Auth0:Domain")),
-            };
+                var UserAuthId = Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                _logger.LogInformation($"[Debug] Starting Auth0 token refresh for user ID: {UserAuthId}");
+                if (UserAuthId == null)
+                {
+                    _logger.LogError("[Debug] NameIdentifier claim not found in Principal");
+                    throw Logger.UserNotFound("AUTH");
+                }
 
-            var tokenData = new Dictionary<string, string>
-            {
-                { "client_id", Config.GetSection("Auth0:Client_Id").Value ??  throw Logger.ConfigurationMissing("Auth0:Client_Id") },
-                { "client_secret", Config.GetSection("Auth0:Client_Secret").Value ?? throw Logger.ConfigurationMissing("Auth0:Client_Secret") },
-                { "audience", "https://dev-u10jtlqih3lq02fh.us.auth0.com/api/v2/" },
-                { "grant_type", "client_credentials" }
-            };
+                var auth0Domain = Config.GetSection("Auth0:Domain").Value;
+                var clientId = Config["Auth0:ClientId"];
+                var audience = Config["Auth0:ManagementApiAudience"];
 
-            var tokenRequest = new FormUrlEncodedContent(tokenData);
+                _logger.LogInformation($"[Debug] Auth0 Configuration:" + 
+                    $"\n  - Domain: {auth0Domain}" +
+                    $"\n  - Client ID: {(clientId?.Length > 4 ? clientId.Substring(0, 4) + "..." : "null")}" +
+                    $"\n  - Audience: {audience}");
 
-            var tokenResponse = await client.PostAsync("/oauth/token", tokenRequest);
-            tokenResponse.EnsureSuccessStatusCode();
+                if (auth0Domain == null) throw Logger.ConfigurationMissing("Auth0:Domain");
+                if (clientId == null) throw Logger.ConfigurationMissing("Auth0:ClientId");
+                if (audience == null) throw Logger.ConfigurationMissing("Auth0:ManagementApiAudience");
 
-            var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+                // Format domain
+                if (!auth0Domain.StartsWith("https://"))
+                {
+                    auth0Domain = $"https://{auth0Domain}";
+                    _logger.LogInformation($"[Debug] Added https:// to domain: {auth0Domain}");
+                }
+                if (!auth0Domain.EndsWith("/"))
+                {
+                    auth0Domain = $"{auth0Domain}/";
+                    _logger.LogInformation($"[Debug] Added trailing slash to domain: {auth0Domain}");
+                }
 
-            if (tokenContent == null || !tokenContent.TryGetValue("access_token", out object? value))
-            {
-                throw Logger.TokenNotFound("Access Token");
+                _logger.LogInformation($"[Debug] Creating HttpClient with base address: {auth0Domain}");
+                var client = new HttpClient(new HttpClientHandler())
+                {
+                    BaseAddress = new Uri(auth0Domain),
+                };
+
+                var tokenData = new Dictionary<string, string>
+                {
+                    { "client_id", clientId },
+                    { "client_secret", Config["Auth0:ClientSecret"] ?? throw Logger.ConfigurationMissing("Auth0:ClientSecret") },
+                    { "audience", audience },
+                    { "grant_type", "client_credentials" }
+                };
+
+                _logger.LogInformation("[Debug] Preparing token request:" +
+                    "\n  - Endpoint: oauth/token" +
+                    "\n  - Grant Type: client_credentials" +
+                    $"\n  - Audience: {audience}");
+
+                var tokenRequest = new FormUrlEncodedContent(tokenData);
+                _logger.LogInformation("[Debug] Sending token request to Auth0");
+                var tokenResponse = await client.PostAsync("oauth/token", tokenRequest);
+                
+                var responseContent = await tokenResponse.Content.ReadAsStringAsync();
+                _logger.LogInformation($"[Debug] Token response status: {tokenResponse.StatusCode}");
+                
+                if (!tokenResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"[Debug] Token request failed:" +
+                        $"\n  - Status: {tokenResponse.StatusCode}" +
+                        $"\n  - Content: {responseContent}" +
+                        $"\n  - Headers: {string.Join(", ", tokenResponse.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
+                    throw new Exception($"Failed to get Auth0 token: {tokenResponse.StatusCode} - {responseContent}");
+                }
+
+                var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
+                _logger.LogInformation("[Debug] Successfully parsed token response");
+
+                if (tokenContent == null)
+                {
+                    _logger.LogError("[Debug] Token response was null after JSON parsing");
+                    throw Logger.TokenNotFound("Access Token");
+                }
+
+                if (!tokenContent.TryGetValue("access_token", out object? value))
+                {
+                    _logger.LogError($"[Debug] No access_token in response. Available keys: {string.Join(", ", tokenContent.Keys)}");
+                    throw Logger.TokenNotFound("Access Token");
+                }
+
+                var accessToken = value.ToString();
+                _logger.LogInformation($"[Debug] Got management API token. First 10 chars: {accessToken?.Substring(0, Math.Min(10, accessToken?.Length ?? 0))}...");
+
+                var userEndpoint = $"api/v2/users/{UserAuthId}";
+                _logger.LogInformation($"[Debug] Preparing user request to endpoint: {userEndpoint}");
+                
+                var userRequest = new HttpRequestMessage(HttpMethod.Get, userEndpoint);
+                userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+                _logger.LogInformation("[Debug] Sending user profile request");
+                var userResponse = await client.SendAsync(userRequest);
+                var userResponseContent = await userResponse.Content.ReadAsStringAsync();
+                
+                _logger.LogInformation($"[Debug] User profile response status: {userResponse.StatusCode}");
+                
+                if (!userResponse.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"[Debug] User profile request failed:" +
+                        $"\n  - Status: {userResponse.StatusCode}" +
+                        $"\n  - Content: {userResponseContent}" +
+                        $"\n  - Headers: {string.Join(", ", userResponse.Headers.Select(h => $"{h.Key}={string.Join(",", h.Value)}"))}");
+                    throw new Exception($"Failed to get Auth0 user: {userResponse.StatusCode} - {userResponseContent}");
+                }
+
+                var auth0User = await userResponse.Content.ReadFromJsonAsync<Auth0UserResponse>();
+                if (auth0User == null)
+                {
+                    _logger.LogError("[Debug] Auth0 user response was null after JSON parsing");
+                    throw Logger.UserNotFound(UserAuthId);
+                }
+
+                _logger.LogInformation($"[Debug] Successfully retrieved Auth0 user profile:" +
+                    $"\n  - User ID: {auth0User.UserId}" +
+                    $"\n  - Email: {auth0User.Email}" +
+                    $"\n  - Number of identities: {auth0User.Identities?.Count ?? 0}");
+
+                return auth0User;
             }
-
-            var accessToken = value.ToString();
-
-            var userRequest = new HttpRequestMessage(HttpMethod.Get, "/api/v2/users/" + UserAuthId);
-            userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-
-            var userResponse = await client.SendAsync(userRequest);
-            userResponse.EnsureSuccessStatusCode();
-
-            var auth0User = await userResponse.Content.ReadFromJsonAsync<Auth0UserResponse>() ?? throw Logger.UserNotFound(UserAuthId);
-
-            return auth0User;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Debug] Exception in GetAuth0UserAsync");
+                throw;
+            }
         }
 
         public BaseService(PrestigeContext prestigeDb, ILogger<BaseService> logger, ClaimsPrincipal principal, IConfiguration config)

@@ -16,6 +16,9 @@ namespace Prestige.Api.Endpoints.Profile
 
     public class SpotifyTrack
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; }
 

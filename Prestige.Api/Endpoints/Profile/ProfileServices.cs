@@ -27,9 +27,11 @@ namespace Prestige.Api.Endpoints.Profile
 
         public async Task<IEnumerable<UserTrackResponse>> GetTopTracksAsync(string userId)
         {
-            if (userId != UserAuthId.Split("|").Last())
+            var currentUserId = UserAuthId.Split("|").Last();
+            if (userId != currentUserId)
             {
-                throw new Exception("Unauthorized");
+                _logger.LogWarning($"Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
+                throw Logger.UserUnauthorized(userId);
             }
 
             var userTracks = await PrestigeDb.UserTracks
@@ -115,37 +117,91 @@ namespace Prestige.Api.Endpoints.Profile
 
         public async Task<List<RecentlyPlayedResponse>> GetRecentlyPlayedAsync(string userId)
         {
-            if (userId != UserAuthId.Split("|").Last())
+            var currentUserId = UserAuthId.Split("|").Last();
+            _logger.LogInformation($"Current user ID: {currentUserId}, Requested user ID: {userId}");
+            
+            if (userId != currentUserId)
             {
-                throw new Exception("Unauthorized");
+                _logger.LogWarning($"Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
+                throw Logger.UserUnauthorized(userId);
             }
 
-            var accessToken = await GetAccessTokenAsync(userId);
-            var client = new HttpClient();
-            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var spotifyRecentlyPlayed = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
-
-            var response = await client.GetAsync(spotifyRecentlyPlayed);
-            response.EnsureSuccessStatusCode();
-
-            var content = await response.Content.ReadAsStringAsync();
-
-            var spotifyResponse = JsonSerializer.Deserialize<SpotifyRecentlyPlayedResponse>(content);
-
-            if (spotifyResponse?.Items == null)
+            try
             {
-                throw new Exception("Invalid response from Spotify API.");
+                _logger.LogInformation($"Getting access token for user {userId}");
+                var accessToken = await GetAccessTokenAsync(userId);
+                _logger.LogInformation($"Successfully got access token for user {userId}");
+
+                using var client = new HttpClient();
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                var spotifyRecentlyPlayed = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
+
+                _logger.LogInformation($"Fetching recently played tracks for user {userId}");
+                var response = await client.GetAsync(spotifyRecentlyPlayed);
+                _logger.LogInformation($"Spotify API response status: {response.StatusCode}");
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    _logger.LogInformation("Access token expired, refreshing...");
+                    var user = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw Logger.UserNotFound(userId);
+                    _logger.LogInformation($"Found user {userId} in database, refreshing token");
+                    
+                    try 
+                    {
+                        (string newAccessToken, string newRefreshToken) = await RefreshSpotifyTokensAsync(user.RefreshToken);
+                        _logger.LogInformation("Successfully refreshed Spotify tokens");
+                        
+                        user.UpdateTokens(newAccessToken, newRefreshToken, DateTime.Now.AddMinutes(60));
+                        await PrestigeDb.SaveChangesAsync();
+                        _logger.LogInformation("Updated user tokens in database");
+
+                        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", newAccessToken);
+                        response = await client.GetAsync(spotifyRecentlyPlayed);
+                        _logger.LogInformation($"Retried Spotify API call with new token, status: {response.StatusCode}");
+                    }
+                    catch (Exception tokenEx)
+                    {
+                        _logger.LogError(tokenEx, "Error refreshing Spotify tokens");
+                        throw;
+                    }
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogError($"Spotify API error: Status {response.StatusCode}, Content: {content}");
+                    throw new Exception($"Failed to fetch recently played tracks: {response.StatusCode} - {content}");
+                }
+
+                _logger.LogInformation($"Successfully retrieved recently played tracks for user {userId}");
+                _logger.LogDebug($"Spotify API response content: {content}");
+
+                var spotifyResponse = JsonSerializer.Deserialize<SpotifyRecentlyPlayedResponse>(content);
+
+                if (spotifyResponse?.Items == null)
+                {
+                    _logger.LogError($"Invalid response from Spotify API: Items is null. Content: {content}");
+                    throw new Exception("Invalid response from Spotify API: Items is null");
+                }
+
+                var tracks = spotifyResponse.Items
+                    .Where(item => item.Track != null)
+                    .Select(item => new RecentlyPlayedResponse(
+                        item.Track.Name ?? "Unknown Track",
+                        item.Track.Artists?.FirstOrDefault()?.Name ?? "Unknown Artist",
+                        item.Track.Album?.Images?.FirstOrDefault()?.Url ?? "No Image Available",
+                        item.Track.Id ?? Guid.NewGuid().ToString()
+                    )).ToList();
+
+                _logger.LogInformation($"Successfully processed {tracks.Count} recently played tracks for user {userId}");
+                return tracks;
             }
-
-            var recentlyPlayed = spotifyResponse.Items.Select(item => new RecentlyPlayedResponse(
-                item.Track?.Name ?? "Unknown Track",
-                item.Track?.Artists.FirstOrDefault()?.Name ?? "Unknown Artist",
-                item.Track?.Album.Images.FirstOrDefault()?.Url ?? "No Image Available",
-                Guid.NewGuid().ToString()
-
-            )).ToList();
-
-            return recentlyPlayed;
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error fetching recently played tracks for user {userId}");
+                throw;
+            }
         }
         public IEnumerable<UserTrackResponse> GetFavoriteTracks(string id)
         {

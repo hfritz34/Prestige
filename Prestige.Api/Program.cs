@@ -1,4 +1,4 @@
-using System.Security.Claims;
+anusing System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -109,54 +109,49 @@ namespace Prestige.Api
         }
 
         private static void AddCorsPolicy(WebApplicationBuilder builder)
-{
-    builder.Services.AddCors(options =>
-    {
-        options.AddPolicy("AllowAll", policy =>
-            policy
-                .WithOrigins("http://localhost:5173")
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .AllowCredentials());
-    });
-}
+        {
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                    policy
+                        .WithOrigins("http://localhost:5173")
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials());
+            });
+        }
 
         private static void AddAuthentication(WebApplicationBuilder builder)
-{
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
         {
-            options.Authority = $"https://{builder.Configuration["Auth0:Domain"]}";
-            options.Audience = builder.Configuration["Auth0:Audience"];
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                NameClaimType = ClaimTypes.NameIdentifier,
-                ValidateIssuerSigningKey = true,
-                ValidateIssuer = true,
-                ValidateAudience = true
-            };
-            options.SaveToken = true;
-
-            if (builder.Environment.IsDevelopment())
-            {
-                options.RequireHttpsMetadata = false;
-            }
-
-            options.Events = new JwtBearerEvents
-            {
-                OnAuthenticationFailed = context =>
+            builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
                 {
-                    Console.WriteLine($"OnAuthenticationFailed: {context.Exception.Message}");
-                    return Task.CompletedTask;
-                },
-                OnTokenValidated = context =>
-                {
-                    Console.WriteLine($"Token validated for user: {context.Principal?.Identity?.Name}");
-                    return Task.CompletedTask;
-                }
-            };
-        });
-}
+                    options.Authority = $"https://{builder.Configuration["Auth0:Domain"]}";
+                    options.Audience = builder.Configuration["Auth0:Audience"];
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        NameClaimType = ClaimTypes.NameIdentifier,
+                        ValidateIssuerSigningKey = true,
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidIssuer = $"https://{builder.Configuration["Auth0:Domain"]}/",
+                        ValidAudience = builder.Configuration["Auth0:Audience"]
+                    };
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            Console.WriteLine($"OnAuthenticationFailed: {context.Exception.Message}");
+                            return Task.CompletedTask;
+                        },
+                        OnTokenValidated = context =>
+                        {
+                            Console.WriteLine($"Token validated for user: {context.Principal?.Identity?.Name}");
+                            return Task.CompletedTask;
+                        }
+                    };
+                });
+        }
 
         private static void AddAuthorization(WebApplicationBuilder builder)
         {
@@ -173,32 +168,33 @@ namespace Prestige.Api
                 return user ?? throw new InvalidOperationException("User not found");
             });
         }
-private static void RunApp(WebApplicationBuilder builder)
-{
-    var app = builder.Build();
 
-    // Add health check before other middleware
-    app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
-       .AllowAnonymous()
-       .WithName("HealthCheck");
+        private static void RunApp(WebApplicationBuilder builder)
+        {
+            var app = builder.Build();
 
-    if (app.Environment.IsDevelopment())
-    {
-        app.UseSwagger();
-        app.UseSwaggerUI();
-        app.UseCors("AllowAll");
-    }
-    else 
-    {
-        app.UseCors("AllowAll");
-    }
+            // Add health check before other middleware
+            app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
+               .AllowAnonymous()
+               .WithName("HealthCheck");
 
-    app.UseHttpsRedirection();
-    app.UseAuthentication();
-    app.UseAuthorization();
-    app.MapControllers().RequireAuthorization();
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+                app.UseCors("AllowAll");
+            }
+            else 
+            {
+                app.UseCors("AllowAll");
+            }
 
-    app.Run();
-}
+            app.UseHttpsRedirection();
+            app.UseAuthentication();
+            app.UseAuthorization();
+            app.MapControllers().RequireAuthorization();
+
+            app.Run();
+        }
     }
 }
