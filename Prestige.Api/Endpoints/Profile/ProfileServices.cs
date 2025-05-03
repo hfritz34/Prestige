@@ -118,71 +118,94 @@ namespace Prestige.Api.Endpoints.Profile
         public async Task<List<RecentlyPlayedResponse>> GetRecentlyPlayedAsync(string userId)
         {
             var currentUserId = UserAuthId.Split("|").Last();
-            _logger.LogInformation($"Current user ID: {currentUserId}, Requested user ID: {userId}");
-            
+            _logger.LogInformation($"BEGIN GetRecentlyPlayedAsync: Current user ID: {currentUserId}, Requested user ID: {userId}");
+
             if (userId != currentUserId)
             {
-                _logger.LogWarning($"Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
+                _logger.LogWarning($"GetRecentlyPlayedAsync: Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
                 throw Logger.UserUnauthorized(userId);
             }
 
             try
             {
-                _logger.LogInformation($"Getting access token for user {userId}");
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Getting access token for user {userId}");
                 var accessToken = await GetAccessTokenAsync(userId);
-                _logger.LogInformation($"Successfully got access token for user {userId}");
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully got access token for user {userId}. Token Length: {accessToken?.Length ?? 0}");
 
                 using var client = new HttpClient();
                 client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                var spotifyRecentlyPlayed = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
+                var spotifyRecentlyPlayedUrl = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
 
-                _logger.LogInformation($"Fetching recently played tracks for user {userId}");
-                var response = await client.GetAsync(spotifyRecentlyPlayed);
-                _logger.LogInformation($"Spotify API response status: {response.StatusCode}");
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Fetching recently played tracks for user {userId} from URL: {spotifyRecentlyPlayedUrl}");
+                var response = await client.GetAsync(spotifyRecentlyPlayedUrl);
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Initial Spotify API response status: {response.StatusCode}");
 
                 if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 {
-                    _logger.LogInformation("Access token expired, refreshing...");
-                    var user = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw Logger.UserNotFound(userId);
-                    _logger.LogInformation($"Found user {userId} in database, refreshing token");
-                    
-                    try 
+                    _logger.LogWarning("GetRecentlyPlayedAsync: Spotify Access token expired, attempting refresh...");
+                    var user = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                    if (user == null)
+                    {
+                         _logger.LogError($"GetRecentlyPlayedAsync: User {userId} not found in database during token refresh attempt.");
+                         throw Logger.UserNotFound(userId);
+                    }
+
+                    if (string.IsNullOrEmpty(user.RefreshToken))
+                    {
+                         _logger.LogError($"GetRecentlyPlayedAsync: User {userId} found but has no RefreshToken in database.");
+                         throw new Exception(0, $"User {userId} has no refresh token available for Spotify refresh."); // Consider specific EventId/Exception
+                    }
+
+                    _logger.LogInformation($"GetRecentlyPlayedAsync: Found user {userId} in database, attempting RefreshSpotifyTokensAsync with RefreshToken Length: {user.RefreshToken?.Length ?? 0}");
+
+                    try
                     {
                         (string newAccessToken, string newRefreshToken) = await RefreshSpotifyTokensAsync(user.RefreshToken);
-                        _logger.LogInformation("Successfully refreshed Spotify tokens");
-                        
-                        user.UpdateTokens(newAccessToken, newRefreshToken, DateTime.Now.AddMinutes(60));
+                        _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully refreshed Spotify tokens. New AccessToken Length: {newAccessToken?.Length ?? 0}, New RefreshToken Length: {newRefreshToken?.Length ?? 0}");
+
+                        user.UpdateTokens(newAccessToken, newRefreshToken, DateTime.UtcNow.AddMinutes(55)); // Use UtcNow
                         await PrestigeDb.SaveChangesAsync();
-                        _logger.LogInformation("Updated user tokens in database");
+                        _logger.LogInformation($"GetRecentlyPlayedAsync: Updated user tokens in database for {userId}");
 
                         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", newAccessToken);
-                        response = await client.GetAsync(spotifyRecentlyPlayed);
-                        _logger.LogInformation($"Retried Spotify API call with new token, status: {response.StatusCode}");
+                        _logger.LogInformation($"GetRecentlyPlayedAsync: Retrying Spotify API call with new token to {spotifyRecentlyPlayedUrl}");
+                        response = await client.GetAsync(spotifyRecentlyPlayedUrl);
+                        _logger.LogInformation($"GetRecentlyPlayedAsync: Retried Spotify API call status: {response.StatusCode}");
                     }
                     catch (Exception tokenEx)
                     {
-                        _logger.LogError(tokenEx, "Error refreshing Spotify tokens");
-                        throw;
+                        _logger.LogError(tokenEx, $"GetRecentlyPlayedAsync: Error during RefreshSpotifyTokensAsync for user {userId}");
+                        throw; // Re-throw the specific token refresh exception
                     }
                 }
-                
+
                 var content = await response.Content.ReadAsStringAsync();
-                
+
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError($"Spotify API error: Status {response.StatusCode}, Content: {content}");
-                    throw new Exception($"Failed to fetch recently played tracks: {response.StatusCode} - {content}");
+                    _logger.LogError($"GetRecentlyPlayedAsync: Spotify API error after potential refresh: Status {response.StatusCode}, Content: {content}");
+                    throw new Exception(0, $"Failed to fetch recently played tracks: {response.StatusCode} - {content}");
                 }
 
-                _logger.LogInformation($"Successfully retrieved recently played tracks for user {userId}");
-                _logger.LogDebug($"Spotify API response content: {content}");
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully retrieved content for user {userId}. Content Length: {content?.Length ?? 0}");
 
-                var spotifyResponse = JsonSerializer.Deserialize<SpotifyRecentlyPlayedResponse>(content);
+                SpotifyRecentlyPlayedResponse? spotifyResponse = null;
+                try
+                {
+                     spotifyResponse = JsonSerializer.Deserialize<SpotifyRecentlyPlayedResponse>(content);
+                     _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully deserialized Spotify response for user {userId}. Items found: {spotifyResponse?.Items?.Count ?? 0}");
+                }
+                catch (JsonException jsonEx)
+                {
+                    _logger.LogError(jsonEx, $"GetRecentlyPlayedAsync: JSON deserialization failed for user {userId}. Content: {content}");
+                    throw new Exception(0, "Failed to deserialize Spotify response.", jsonEx); // Wrap original exception
+                }
+
 
                 if (spotifyResponse?.Items == null)
                 {
-                    _logger.LogError($"Invalid response from Spotify API: Items is null. Content: {content}");
-                    throw new Exception("Invalid response from Spotify API: Items is null");
+                    _logger.LogWarning($"GetRecentlyPlayedAsync: Deserialized response from Spotify API has null Items for user {userId}. Content: {content}");
+                    throw new Exception(0, "Invalid response from Spotify API: Items is null after deserialization");
                 }
 
                 var tracks = spotifyResponse.Items
@@ -194,12 +217,13 @@ namespace Prestige.Api.Endpoints.Profile
                         item.Track.Id ?? Guid.NewGuid().ToString()
                     )).ToList();
 
-                _logger.LogInformation($"Successfully processed {tracks.Count} recently played tracks for user {userId}");
+                _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully processed {tracks.Count} recently played tracks for user {userId}");
+                _logger.LogInformation($"END GetRecentlyPlayedAsync: For user {userId}");
                 return tracks;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error fetching recently played tracks for user {userId}");
+                _logger.LogError(ex, $"GetRecentlyPlayedAsync: Unhandled exception for user {userId} before returning to controller.");
                 throw;
             }
         }

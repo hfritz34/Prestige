@@ -38,7 +38,7 @@ namespace RecentlyPlayedTrigger
         }
 
         [Function("RecentlyPlayedTrigger")]
-        public async Task Run([TimerTrigger("* * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("0 * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -205,59 +205,59 @@ namespace RecentlyPlayedTrigger
         }
 
         private async Task<List<User>> GetAllUsersAsync()
-{
-    _logger.LogInformation("Starting GetAllUsersAsync");
-    var users = new List<User>();
-    try 
-    {
-        using (var connection = new SqlConnection(sqlConnectionString))
         {
-            _logger.LogInformation("Attempting to open SQL connection");
-            await connection.OpenAsync();
-            _logger.LogInformation("SQL connection opened successfully");
-            
-            var query = "SELECT Id FROM [User]";
-            using (var command = new SqlCommand(query, connection))
+            _logger.LogInformation("Starting GetAllUsersAsync");
+            var users = new List<User>();
+            try 
             {
-                _logger.LogInformation("Executing SQL query");
-                using (var reader = await command.ExecuteReaderAsync())
+                using (var connection = new SqlConnection(sqlConnectionString))
                 {
-                    while (await reader.ReadAsync())
+                    _logger.LogInformation("Attempting to open SQL connection");
+                    await connection.OpenAsync();
+                    _logger.LogInformation("SQL connection opened successfully");
+                    
+                    var query = "SELECT Id FROM [User]";
+                    using (var command = new SqlCommand(query, connection))
                     {
-                        var userId = reader.GetString(0);
-                        users.Add(new User { Id = userId });
-                        _logger.LogInformation($"Found user with ID: {userId}");
+                        _logger.LogInformation("Executing SQL query");
+                        using (var reader = await command.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                var userId = reader.GetString(0);
+                                users.Add(new User { Id = userId });
+                                _logger.LogInformation($"Found user with ID: {userId}");
+                            }
+                        }
                     }
                 }
+                _logger.LogInformation($"GetAllUsersAsync completed. Found {users.Count} users");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in GetAllUsersAsync");
+                throw; // Re-throw to maintain the original behavior
+            }
+            return users;
+        }
+
+        private async Task<(string accessToken, string refreshToken)> GetSpotifyTokensAsync(string userId)
+        {
+            _logger.LogInformation($"Getting Spotify tokens for user: {userId}");
+            try 
+            {
+                var managementToken = await GetAuth0ManagementTokenAsync();
+                _logger.LogInformation("Successfully obtained Auth0 management token");
+                var tokens = await GetUserTokensAsync(userId, managementToken);
+                _logger.LogInformation("Successfully obtained Spotify tokens");
+                return tokens;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting Spotify tokens for user {userId}");
+                throw;
             }
         }
-        _logger.LogInformation($"GetAllUsersAsync completed. Found {users.Count} users");
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error in GetAllUsersAsync");
-        throw; // Re-throw to maintain the original behavior
-    }
-    return users;
-}
-
-private async Task<(string accessToken, string refreshToken)> GetSpotifyTokensAsync(string userId)
-{
-    _logger.LogInformation($"Getting Spotify tokens for user: {userId}");
-    try 
-    {
-        var managementToken = await GetAuth0ManagementTokenAsync();
-        _logger.LogInformation("Successfully obtained Auth0 management token");
-        var tokens = await GetUserTokensAsync(userId, managementToken);
-        _logger.LogInformation("Successfully obtained Spotify tokens");
-        return tokens;
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, $"Error getting Spotify tokens for user {userId}");
-        throw;
-    }
-}
 
         private async Task<(string accessToken, string refreshToken)> GetUserTokensAsync(string userId, string managementToken)
         {
