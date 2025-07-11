@@ -10,12 +10,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Prestige.Api.Logging;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
+using Exception = Prestige.Api.Exceptions.Exception;
 
 namespace Prestige.Api.Endpoints.Profile
 {
     public class ProfileServices : BaseService
     {
-        private string UserAuthId => Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("User not found");
+        private string UserAuthId => Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception(10001, "User not found");
 
         public ProfileServices(PrestigeContext prestigeDb, ILogger<ProfileServices> logger, ClaimsPrincipal principal, IConfiguration config)
             : base(prestigeDb, logger, principal, config)
@@ -63,7 +64,7 @@ namespace Prestige.Api.Endpoints.Profile
         {
             if (userId != UserAuthId.Split("|").Last())
             {
-                throw new Exception("Unauthorized");
+                throw Logger.UserUnauthorized(userId);
             }
 
             var userAlbums = await PrestigeDb.UserAlbums
@@ -93,7 +94,7 @@ namespace Prestige.Api.Endpoints.Profile
         {
             if (userId != UserAuthId.Split("|").Last())
             {
-                throw new Exception("Unauthorized");
+                throw Logger.UserUnauthorized(userId);
             }
 
             var userArtists = await PrestigeDb.UserArtists
@@ -153,7 +154,7 @@ namespace Prestige.Api.Endpoints.Profile
                     if (string.IsNullOrEmpty(user.RefreshToken))
                     {
                          _logger.LogError($"GetRecentlyPlayedAsync: User {userId} found but has no RefreshToken in database.");
-                         throw new Exception(0, $"User {userId} has no refresh token available for Spotify refresh."); // Consider specific EventId/Exception
+                         throw new Exception(10010, $"User {userId} has no refresh token available for Spotify refresh.");
                     }
 
                     _logger.LogInformation($"GetRecentlyPlayedAsync: Found user {userId} in database, attempting RefreshSpotifyTokensAsync with RefreshToken Length: {user.RefreshToken?.Length ?? 0}");
@@ -184,7 +185,7 @@ namespace Prestige.Api.Endpoints.Profile
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError($"GetRecentlyPlayedAsync: Spotify API error after potential refresh: Status {response.StatusCode}, Content: {content}");
-                    throw new Exception(0, $"Failed to fetch recently played tracks: {response.StatusCode} - {content}");
+                    throw new Exception(10011, $"Failed to fetch recently played tracks: {response.StatusCode} - {content}");
                 }
 
                 _logger.LogInformation($"GetRecentlyPlayedAsync: Successfully retrieved content for user {userId}. Content Length: {content?.Length ?? 0}");
@@ -198,14 +199,14 @@ namespace Prestige.Api.Endpoints.Profile
                 catch (JsonException jsonEx)
                 {
                     _logger.LogError(jsonEx, $"GetRecentlyPlayedAsync: JSON deserialization failed for user {userId}. Content: {content}");
-                    throw new Exception(0, "Failed to deserialize Spotify response.", jsonEx); // Wrap original exception
+                    throw new Exception(10012, "Failed to deserialize Spotify response.", jsonEx);
                 }
 
 
                 if (spotifyResponse?.Items == null)
                 {
                     _logger.LogWarning($"GetRecentlyPlayedAsync: Deserialized response from Spotify API has null Items for user {userId}. Content: {content}");
-                    throw new Exception(0, "Invalid response from Spotify API: Items is null after deserialization");
+                    throw new Exception(10013, "Invalid response from Spotify API: Items is null after deserialization");
                 }
 
                 var tracks = spotifyResponse.Items

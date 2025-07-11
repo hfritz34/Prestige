@@ -82,43 +82,61 @@ namespace CosmosDBParser
 
        private async Task<HttpClient> GetApiClientAsync()
        {
-           _logger.LogInformation("Getting Auth0 token");
+           _logger.LogInformation("Getting Auth0 M2M token for Prestige API");
            var auth0Client = new HttpClient();
+           // Ensure domain has trailing slash for consistency
            var auth0Domain = Environment.GetEnvironmentVariable("Auth0Domain");
+           if (!string.IsNullOrEmpty(auth0Domain) && !auth0Domain.EndsWith("/"))
+           {
+               auth0Domain += "/";
+           }
            
-           var request = new HttpRequestMessage(HttpMethod.Post, $"https://{auth0Domain}/oauth/token");
+           // Use dedicated settings for the M2M app calling the API
+           var m2mClientId = Environment.GetEnvironmentVariable("FunctionM2MClientId") ?? throw new Exception("FunctionM2MClientId setting not found");
+           var m2mClientSecret = Environment.GetEnvironmentVariable("FunctionM2MClientSecret") ?? throw new Exception("FunctionM2MClientSecret setting not found");
+           // Use the API's audience, NOT the management API audience
+           var apiAudience = Environment.GetEnvironmentVariable("Auth0ApiAudience") ?? throw new Exception("Auth0ApiAudience setting not found"); 
+
+           var request = new HttpRequestMessage(HttpMethod.Post, $"https://{auth0Domain}oauth/token"); 
            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
            {
-               ["grant_type"] = "client_credentials",
-               ["client_id"] = Environment.GetEnvironmentVariable("Auth0ClientId"),
-               ["client_secret"] = Environment.GetEnvironmentVariable("Auth0ClientSecret"),
-               ["audience"] = Environment.GetEnvironmentVariable("Auth0ApiAudience")
+               {"grant_type", "client_credentials"},
+               {"client_id", m2mClientId},
+               {"client_secret", m2mClientSecret},
+               {"audience", apiAudience} // Use the API audience here
            });
 
            try 
            {
                var tokenResponse = await auth0Client.SendAsync(request);
                var responseContent = await tokenResponse.Content.ReadAsStringAsync();
-               _logger.LogInformation($"Auth0 response: {tokenResponse.StatusCode}");
+               _logger.LogInformation($"Auth0 M2M token response: {tokenResponse.StatusCode}");
                
                if (!tokenResponse.IsSuccessStatusCode)
                {
-                   _logger.LogError($"Auth0 error: {responseContent}");
-                   tokenResponse.EnsureSuccessStatusCode();
+                   _logger.LogError($"Auth0 M2M token error: {responseContent}");
+                   tokenResponse.EnsureSuccessStatusCode(); // Throw exception if failed
                }
                
                var tokenObject = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-               var accessToken = tokenObject["access_token"].ToString();
+               if (tokenObject == null || !tokenObject.TryGetValue("access_token", out object? value))
+               {
+                    _logger.LogError("Could not find access_token in Auth0 M2M response.");
+                    throw new Exception("Failed to retrieve access token from Auth0 M2M response.");
+               }
+               var accessToken = value.ToString();
+               _logger.LogInformation("Successfully obtained M2M access token for Prestige API.");
 
                var apiClient = new HttpClient();
                apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-               apiClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl"));
+               // Use the API base URL configured
+               apiClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl") ?? throw new Exception("ApiBaseUrl setting not found"));
 
                return apiClient;
            }
            catch (Exception ex)
            {
-               _logger.LogError(ex, "Failed to get API client");
+               _logger.LogError(ex, "Failed to get API client using M2M credentials");
                throw;
            }
        }

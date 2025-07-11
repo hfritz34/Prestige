@@ -7,6 +7,7 @@
 ImportDataExample.txt
 CosmosDbExample.txt
 local.settings.json
+PRESTIGE_APPLICATION_OVERVIEW.txt
 
 # User-specific files
 *.rsuser
