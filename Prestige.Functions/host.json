@@ -8,5 +8,29 @@
             },
             "enableLiveMetricsFilters": true
         }
-    }
+    },
+    "extensions": {
+        "http": {
+            "routePrefix": "api"
+        },
+        "cosmosDB": {
+            "connectionMode": "Gateway",
+            "protocol": "Https",
+            "leaseOptions": {
+                "leasePrefix": "prestige"
+            }
+        }
+    },
+    "host": {
+        "cors": {
+            "allowedOrigins": [
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "https://localhost:5173",
+                "https://portal.azure.com"
+            ],
+            "supportCredentials": false
+        }
+    },
+    "functionTimeout": "00:10:00"
 }

@@ -20,6 +20,14 @@ namespace Prestige.Api.Data.Configurations
                    .HasForeignKey("AlbumId");
 
             builder.HasKey("UserId", "AlbumId");
+
+            // Index for ordering by TotalTime (descending for top albums)
+            builder.HasIndex(nameof(UserAlbum.TotalTime))
+                   .HasDatabaseName("IX_UserAlbum_TotalTime");
+            
+            // Composite index for user-specific queries ordered by TotalTime
+            builder.HasIndex("UserId", nameof(UserAlbum.TotalTime))
+                   .HasDatabaseName("IX_UserAlbum_UserId_TotalTime");
         }
     }
 }

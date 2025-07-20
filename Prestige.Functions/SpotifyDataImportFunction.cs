@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos;
@@ -11,7 +12,9 @@ using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
 
-public class SpotifyDataImportFunction
+namespace Prestige.Functions
+{
+    public class SpotifyDataImportFunction
 {
     private readonly ILogger _logger;
     private readonly Container _container;
@@ -36,6 +39,18 @@ public class SpotifyDataImportFunction
 
         try
         {
+            // Get userId from query parameter
+            var userId = req.Query["userId"];
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
+                await responseError.WriteStringAsync("Missing required query parameter: userId");
+                return responseError;
+            }
+            
+            _logger.LogInformation($"Processing Spotify data import for user: {userId}");
+
             // Check Content-Type header
             if (!req.Headers.TryGetValues("Content-Type", out var contentTypeValues))
             {
@@ -63,9 +78,15 @@ public class SpotifyDataImportFunction
                 return responseError;
             }
 
+            // Create a single batchId for this import session
+            var batchId = Guid.NewGuid().ToString();
+            var importStats = new ImportStatistics();
+
             // Read the multipart form data
             var reader = new MultipartReader(boundary, req.Body);
             MultipartSection section;
+            var documentsToInsert = new List<Document>();
+            
             while ((section = await reader.ReadNextSectionAsync()) != null)
             {
                 var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition);
@@ -75,67 +96,198 @@ public class SpotifyDataImportFunction
                 if (contentDisposition.DispositionType.Equals("form-data") && contentDisposition.FileName.HasValue)
                 {
                     var fileName = contentDisposition.FileName.Value;
+                    _logger.LogInformation($"Processing file: {fileName}");
 
                     using (var stream = section.Body)
                     using (var readerStream = new StreamReader(stream))
                     {
                         var data = await readerStream.ReadToEndAsync();
+                        _logger.LogInformation($"File {fileName} content length: {data.Length} characters");
+                        _logger.LogInformation($"File {fileName} first 500 chars: {data.Substring(0, Math.Min(500, data.Length))}");
+                        
                         var items = JsonConvert.DeserializeObject<List<SpotifyHistory>>(data);
+                        
+                        if (items == null || items.Count == 0)
+                        {
+                            _logger.LogWarning($"No items found in file: {fileName}. Deserialization returned null or empty list.");
+                            continue;
+                        }
+                        
+                        importStats.TotalItems += items.Count;
 
                         foreach (var item in items)
                         {
+                            // Skip if it's not a music track (episode or audiobook)
+                            if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || 
+                                !string.IsNullOrEmpty(item.AudiobookUri))
+                            {
+                                importStats.SkippedItems++;
+                                _logger.LogInformation($"Skipped non-music content: {item.EpisodeName ?? item.AudiobookTitle}");
+                                continue;
+                            }
+                            
+                            // Skip if no track URI
+                            if (string.IsNullOrEmpty(item.SpotifyTrackUri))
+                            {
+                                importStats.SkippedItems++;
+                                _logger.LogWarning($"Skipped item with no track URI");
+                                continue;
+                            }
+                            
+                            // Extract track ID from Spotify URI (format: spotify:track:TRACK_ID)
+                            var trackId = ExtractTrackIdFromUri(item.SpotifyTrackUri);
+                            if (string.IsNullOrEmpty(trackId))
+                            {
+                                importStats.SkippedItems++;
+                                _logger.LogWarning($"Failed to extract track ID from URI: {item.SpotifyTrackUri}");
+                                continue;
+                            }
+                            
+                            // Create unique ID based on trackId, played_at timestamp, and batchId
+                            var uniqueId = $"{trackId}_{item.Ts}_{batchId}";
+                            
                             var document = new Document
                             {
-                                id = Guid.NewGuid().ToString(),
-                                batchId = Guid.NewGuid().ToString(),
-                                userId = item.Username,
-                                trackId = item.SpotifyTrackUri,
+                                id = uniqueId,
+                                batchId = batchId,
+                                userId = userId,
+                                trackId = trackId,
                                 duration_ms = item.MsPlayed,
-                                played_at = item.Ts
+                                played_at = item.Ts  // ISO 8601 format timestamp
                             };
 
-                            await _container.UpsertItemAsync(document);
+                            documentsToInsert.Add(document);
                         }
                     }
                 }
             }
+            
+            // Batch insert documents
+            if (documentsToInsert.Count > 0)
+            {
+                _logger.LogInformation($"Inserting {documentsToInsert.Count} tracks for user {userId}");
+                
+                // Process in batches for better performance
+                const int batchSize = 100;
+                for (int i = 0; i < documentsToInsert.Count; i += batchSize)
+                {
+                    var batch = documentsToInsert.Skip(i).Take(batchSize);
+                    var tasks = batch.Select(doc => _container.UpsertItemAsync(doc, new PartitionKey(doc.userId)));
+                    await Task.WhenAll(tasks);
+                    
+                    importStats.ImportedItems += batch.Count();
+                    _logger.LogInformation($"Progress: {importStats.ImportedItems}/{documentsToInsert.Count} tracks imported");
+                }
+            }
 
             var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteStringAsync("Data imported successfully.");
+            var resultMessage = $"Import completed successfully. Total items: {importStats.TotalItems}, Imported: {importStats.ImportedItems}, Skipped: {importStats.SkippedItems}";
+            _logger.LogInformation(resultMessage);
+            await response.WriteStringAsync(resultMessage);
             return response;
         }
         catch (Exception ex)
         {
             _logger.LogError($"Exception encountered: {ex.Message}");
+            _logger.LogError($"Stack trace: {ex.StackTrace}");
 
             var responseError = req.CreateResponse(HttpStatusCode.InternalServerError);
-            await responseError.WriteStringAsync("An error occurred while processing your request.");
+            await responseError.WriteStringAsync($"An error occurred while processing your request: {ex.Message}");
             return responseError;
         }
+    }
+    
+    private string ExtractTrackIdFromUri(string spotifyUri)
+    {
+        if (string.IsNullOrEmpty(spotifyUri))
+            return null;
+            
+        // Format: spotify:track:TRACK_ID
+        var parts = spotifyUri.Split(':');
+        if (parts.Length == 3 && parts[0] == "spotify" && parts[1] == "track")
+        {
+            return parts[2];
+        }
+        
+        return null;
+    }
+    
+    public class ImportStatistics
+    {
+        public int TotalItems { get; set; }
+        public int ImportedItems { get; set; }
+        public int SkippedItems { get; set; }
     }
 
     public class SpotifyHistory
     {
+        [JsonProperty("ts")]
         public string Ts { get; set; }
-        public string Username { get; set; }
+        
+        [JsonProperty("platform")]
         public string Platform { get; set; }
+        
+        [JsonProperty("ms_played")]
         public int MsPlayed { get; set; }
+        
+        [JsonProperty("conn_country")]
         public string ConnCountry { get; set; }
-        public string IpAddrDecrypted { get; set; }
-        public string UserAgentDecrypted { get; set; }
+        
+        [JsonProperty("ip_addr")]
+        public string IpAddr { get; set; }
+        
+        [JsonProperty("master_metadata_track_name")]
         public string MasterMetadataTrackName { get; set; }
+        
+        [JsonProperty("master_metadata_album_artist_name")]
         public string MasterMetadataAlbumArtistName { get; set; }
+        
+        [JsonProperty("master_metadata_album_album_name")]
         public string MasterMetadataAlbumAlbumName { get; set; }
+        
+        [JsonProperty("spotify_track_uri")]
         public string SpotifyTrackUri { get; set; }
+        
+        [JsonProperty("episode_name")]
         public string EpisodeName { get; set; }
+        
+        [JsonProperty("episode_show_name")]
         public string EpisodeShowName { get; set; }
+        
+        [JsonProperty("spotify_episode_uri")]
         public string SpotifyEpisodeUri { get; set; }
+        
+        [JsonProperty("audiobook_title")]
+        public string AudiobookTitle { get; set; }
+        
+        [JsonProperty("audiobook_uri")]
+        public string AudiobookUri { get; set; }
+        
+        [JsonProperty("audiobook_chapter_uri")]
+        public string AudiobookChapterUri { get; set; }
+        
+        [JsonProperty("audiobook_chapter_title")]
+        public string AudiobookChapterTitle { get; set; }
+        
+        [JsonProperty("reason_start")]
         public string ReasonStart { get; set; }
+        
+        [JsonProperty("reason_end")]
         public string ReasonEnd { get; set; }
+        
+        [JsonProperty("shuffle")]
         public bool Shuffle { get; set; }
+        
+        [JsonProperty("skipped")]
         public bool? Skipped { get; set; }
+        
+        [JsonProperty("offline")]
         public bool Offline { get; set; }
+        
+        [JsonProperty("offline_timestamp")]
         public long OfflineTimestamp { get; set; }
+        
+        [JsonProperty("incognito_mode")]
         public bool IncognitoMode { get; set; }
     }
 
@@ -148,4 +300,5 @@ public class SpotifyDataImportFunction
         public int duration_ms { get; set; }
         public string played_at { get; set; }
     }
+}
 }

@@ -28,48 +28,84 @@ namespace CosmosDBParser
            {
                var client = await GetApiClientAsync();
                
-               foreach (var doc in data)
+               _logger.LogInformation($"Processing {data.Count} documents in batches");
+               
+               // Get unique track IDs for Spotify API call
+               var uniqueTrackIds = data.Select(d => d.trackId).Distinct().ToList();
+               var trackIdsString = string.Join(",", uniqueTrackIds);
+               
+               _logger.LogInformation($"Requesting {uniqueTrackIds.Count} unique tracks from Spotify API");
+               var trackMetadataResponse = await client.GetAsync($"spotify/tracks?ids={trackIdsString}");
+               var responseContent = await trackMetadataResponse.Content.ReadAsStringAsync();
+               
+               if (!trackMetadataResponse.IsSuccessStatusCode)
                {
-                   _logger.LogInformation($"Processing document - ID: {doc.id}, Track: {doc.trackId}, User: {doc.userId}");
-               }
-               
-               var idsList = data.Select(d => d.trackId).ToList();
-               var ids = string.Join(",", idsList);
-               
-               _logger.LogInformation($"Requesting tracks from API: {ids}");
-               var idsResponse = await client.GetAsync($"spotify/tracks?ids={ids}");
-               var responseContent = await idsResponse.Content.ReadAsStringAsync();
-               
-               if (!idsResponse.IsSuccessStatusCode)
-               {
-                   _logger.LogError($"Track request failed: {idsResponse.StatusCode} - {responseContent}");
-                   idsResponse.EnsureSuccessStatusCode();
+                   _logger.LogError($"Track metadata request failed: {trackMetadataResponse.StatusCode} - {responseContent}");
+                   trackMetadataResponse.EnsureSuccessStatusCode();
                }
 
-               foreach (var doc in data)
+               // Group documents by user for batch processing
+               var userGroups = data.GroupBy(d => d.userId);
+               
+               foreach (var userGroup in userGroups)
                {
-                   try
+                   var userId = userGroup.Key;
+                   var userTracks = userGroup.ToList();
+                   
+                   _logger.LogInformation($"Processing {userTracks.Count} tracks for user {userId} in batches");
+                   
+                   // Process tracks in smaller batches to avoid overwhelming the API
+                   const int batchSize = 50;
+                   var batches = userTracks
+                       .Select((track, index) => new { track, index })
+                       .GroupBy(x => x.index / batchSize)
+                       .Select(g => g.Select(x => x.track).ToList());
+                   
+                   var batchNumber = 1;
+                   foreach (var batch in batches)
                    {
-                       _logger.LogInformation($"Posting track {doc.trackId} for user {doc.userId}");
-                       var userTrackResponse = await client.PostAsJsonAsync($"prestige/{doc.userId}/tracks", new
-                       {
-                           TrackId = doc.trackId,
-                           TotalTime = doc.duration_ms / 1000
-                       });
-
-                       if (!userTrackResponse.IsSuccessStatusCode)
-                       {
-                           var errorContent = await userTrackResponse.Content.ReadAsStringAsync();
-                           _logger.LogError($"Failed posting track: {userTrackResponse.StatusCode} - {errorContent}");
-                           userTrackResponse.EnsureSuccessStatusCode();
-                       }
+                       _logger.LogInformation($"Processing batch {batchNumber} of {batch.Count} tracks for user {userId}");
                        
-                       _logger.LogInformation($"Successfully processed track {doc.trackId}");
-                   }
-                   catch (Exception ex)
-                   {
-                       _logger.LogError(ex, $"Error processing track {doc.trackId} for user {doc.userId}");
-                       throw;
+                       // Create concurrent requests for this batch
+                       var batchTasks = batch.Select(async doc =>
+                       {
+                           try
+                           {
+                               var userTrackResponse = await client.PostAsJsonAsync($"prestige/{doc.userId}/tracks", new
+                               {
+                                   TrackId = doc.trackId,
+                                   TotalTime = doc.duration_ms / 1000
+                               });
+
+                               if (!userTrackResponse.IsSuccessStatusCode)
+                               {
+                                   var errorContent = await userTrackResponse.Content.ReadAsStringAsync();
+                                   _logger.LogError($"Failed posting track {doc.trackId}: {userTrackResponse.StatusCode} - {errorContent}");
+                                   return false;
+                               }
+                               
+                               return true;
+                           }
+                           catch (Exception ex)
+                           {
+                               _logger.LogError(ex, $"Error processing track {doc.trackId} for user {doc.userId}");
+                               return false;
+                           }
+                       });
+                       
+                       // Wait for all requests in this batch to complete
+                       var results = await Task.WhenAll(batchTasks);
+                       var successCount = results.Count(r => r);
+                       var failureCount = results.Count(r => !r);
+                       
+                       _logger.LogInformation($"Batch {batchNumber} completed: {successCount} successful, {failureCount} failed");
+                       batchNumber++;
+                       
+                       // Small delay between batches to avoid overwhelming the API
+                       if (batchNumber <= batches.Count())
+                       {
+                           await Task.Delay(100);
+                       }
                    }
                }
            }
@@ -150,5 +186,7 @@ namespace CosmosDBParser
        public string trackId { get; set; }
        public int duration_ms { get; set; }
        public string played_at { get; set; }
+       public bool processed { get; set; } = false;
+       public string lastTriggered { get; set; }
    }
 }
