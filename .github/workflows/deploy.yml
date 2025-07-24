@@ -6,9 +6,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME_API: 'prestigeapi'
-  AZURE_WEBAPP_NAME_WEB: 'PrestigeWeb'
   DOTNET_VERSION: '9.0.x'
-  NODE_VERSION: '20.14.0'
 
 jobs:
   build-and-deploy-api:
@@ -36,33 +34,4 @@ jobs:
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_API }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
-        package: ./api-publish
-
-  build-and-deploy-web:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        
-    - name: Enable Corepack
-      run: corepack enable
-        
-    - name: Install dependencies
-      run: yarn install
-      working-directory: ./Prestige.Web
-      
-    - name: Build application
-      run: yarn build
-      working-directory: ./Prestige.Web
-      
-    - name: Deploy to Azure App Service
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: ${{ env.AZURE_WEBAPP_NAME_WEB }}
-        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB }}
-        package: ./Prestige.Web/dist 
+        package: ./api-publish 
