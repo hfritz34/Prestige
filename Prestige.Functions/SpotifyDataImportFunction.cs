@@ -11,6 +11,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
+using System.Security.Cryptography;
+using System.Text;
+using System.Data.SqlClient;
 
 namespace Prestige.Functions
 {
@@ -18,6 +21,7 @@ namespace Prestige.Functions
 {
     private readonly ILogger _logger;
     private readonly Container _container;
+    private readonly string _sqlConnectionString;
 
     public SpotifyDataImportFunction(ILoggerFactory loggerFactory)
     {
@@ -29,6 +33,8 @@ namespace Prestige.Functions
 
         var cosmosClient = new CosmosClient(connectionString);
         _container = cosmosClient.GetContainer(databaseId, containerId);
+        
+        _sqlConnectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
     }
 
     [Function("SpotifyDataImportFunction")]
@@ -86,6 +92,7 @@ namespace Prestige.Functions
             var reader = new MultipartReader(boundary, req.Body);
             MultipartSection section;
             var documentsToInsert = new List<Document>();
+            var fileResults = new List<FileImportResult>();
             
             while ((section = await reader.ReadNextSectionAsync()) != null)
             {
@@ -98,24 +105,61 @@ namespace Prestige.Functions
                     var fileName = contentDisposition.FileName.Value;
                     _logger.LogInformation($"Processing file: {fileName}");
 
-                    using (var stream = section.Body)
-                    using (var readerStream = new StreamReader(stream))
+                    using (var memoryStream = new MemoryStream())
                     {
-                        var data = await readerStream.ReadToEndAsync();
-                        _logger.LogInformation($"File {fileName} content length: {data.Length} characters");
-                        _logger.LogInformation($"File {fileName} first 500 chars: {data.Substring(0, Math.Min(500, data.Length))}");
+                        await section.Body.CopyToAsync(memoryStream);
+                        memoryStream.Position = 0;
                         
-                        var items = JsonConvert.DeserializeObject<List<SpotifyHistory>>(data);
+                        // Calculate file hash
+                        var fileHash = await CalculateFileHashAsync(memoryStream);
+                        _logger.LogInformation($"File {fileName} hash: {fileHash}");
                         
-                        if (items == null || items.Count == 0)
+                        // Check if file has been imported before
+                        if (await IsFileDuplicateAsync(userId, fileHash))
                         {
-                            _logger.LogWarning($"No items found in file: {fileName}. Deserialization returned null or empty list.");
+                            _logger.LogWarning($"File {fileName} has already been imported for user {userId}");
+                            fileResults.Add(new FileImportResult 
+                            { 
+                                FileName = fileName, 
+                                Status = "Skipped - Already Imported",
+                                RecordCount = 0
+                            });
                             continue;
                         }
                         
-                        importStats.TotalItems += items.Count;
+                        // Create import history record
+                        var importHistoryId = await CreateImportHistoryAsync(userId, fileHash, fileName, batchId);
+                        
+                        // Read the file content
+                        memoryStream.Position = 0;
+                        using (var readerStream = new StreamReader(memoryStream))
+                        {
+                            var data = await readerStream.ReadToEndAsync();
+                            _logger.LogInformation($"File {fileName} content length: {data.Length} characters");
+                            
+                            var items = JsonConvert.DeserializeObject<List<SpotifyHistory>>(data);
+                        
+                            if (items == null || items.Count == 0)
+                            {
+                                _logger.LogWarning($"No items found in file: {fileName}. Deserialization returned null or empty list.");
+                                await UpdateImportHistoryAsync(importHistoryId, 0, null, null, "Failed: No items found");
+                                fileResults.Add(new FileImportResult 
+                                { 
+                                    FileName = fileName, 
+                                    Status = "Failed - No items found",
+                                    RecordCount = 0
+                                });
+                                continue;
+                            }
+                            
+                            var fileDocuments = new List<Document>();
+                            var fileStats = new FileImportStatistics { FileName = fileName };
+                            DateTime? minTimestamp = null;
+                            DateTime? maxTimestamp = null;
+                            
+                            importStats.TotalItems += items.Count;
 
-                        foreach (var item in items)
+                            foreach (var item in items)
                         {
                             // Skip if it's not a music track (episode or audiobook)
                             if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || 
@@ -143,20 +187,41 @@ namespace Prestige.Functions
                                 continue;
                             }
                             
-                            // Create unique ID based on trackId, played_at timestamp, and batchId
-                            var uniqueId = $"{trackId}_{item.Ts}_{batchId}";
-                            
-                            var document = new Document
-                            {
-                                id = uniqueId,
-                                batchId = batchId,
-                                userId = userId,
-                                trackId = trackId,
-                                duration_ms = item.MsPlayed,
-                                played_at = item.Ts  // ISO 8601 format timestamp
-                            };
+                                // Create unique ID based on trackId, played_at timestamp, and batchId
+                                var uniqueId = $"{trackId}_{item.Ts}_{batchId}";
+                                
+                                // Track timestamps
+                                if (DateTime.TryParse(item.Ts, out var timestamp))
+                                {
+                                    if (minTimestamp == null || timestamp < minTimestamp)
+                                        minTimestamp = timestamp;
+                                    if (maxTimestamp == null || timestamp > maxTimestamp)
+                                        maxTimestamp = timestamp;
+                                }
+                                
+                                var document = new Document
+                                {
+                                    id = uniqueId,
+                                    batchId = batchId,
+                                    userId = userId,
+                                    trackId = trackId,
+                                    duration_ms = item.MsPlayed,
+                                    played_at = item.Ts  // ISO 8601 format timestamp
+                                };
 
-                            documentsToInsert.Add(document);
+                                fileDocuments.Add(document);
+                                documentsToInsert.Add(document);
+                                fileStats.ImportedItems++;
+                            }
+                            
+                            // Update import history for this file
+                            await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, "Completed");
+                            fileResults.Add(new FileImportResult 
+                            { 
+                                FileName = fileName, 
+                                Status = "Completed",
+                                RecordCount = fileStats.ImportedItems
+                            });
                         }
                     }
                 }
@@ -181,9 +246,13 @@ namespace Prestige.Functions
             }
 
             var response = req.CreateResponse(HttpStatusCode.OK);
-            var resultMessage = $"Import completed successfully. Total items: {importStats.TotalItems}, Imported: {importStats.ImportedItems}, Skipped: {importStats.SkippedItems}";
-            _logger.LogInformation(resultMessage);
-            await response.WriteStringAsync(resultMessage);
+            var resultMessage = new
+            {
+                Summary = $"Import completed. Total items: {importStats.TotalItems}, Imported: {importStats.ImportedItems}, Skipped: {importStats.SkippedItems}",
+                Files = fileResults
+            };
+            _logger.LogInformation($"Import completed: {JsonConvert.SerializeObject(resultMessage)}");
+            await response.WriteAsJsonAsync(resultMessage);
             return response;
         }
         catch (Exception ex)
@@ -212,11 +281,91 @@ namespace Prestige.Functions
         return null;
     }
     
+    private async Task<string> CalculateFileHashAsync(Stream stream)
+    {
+        using (var sha256 = SHA256.Create())
+        {
+            var hash = await sha256.ComputeHashAsync(stream);
+            stream.Position = 0; // Reset stream position for reading
+            return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+        }
+    }
+    
+    private async Task<bool> IsFileDuplicateAsync(string userId, string fileHash)
+    {
+        using (var connection = new SqlConnection(_sqlConnectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand(
+                "SELECT COUNT(*) FROM ImportHistories WHERE UserId = @userId AND FileHash = @fileHash AND Status = 'Completed'",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@fileHash", fileHash);
+            
+            var count = (int)await command.ExecuteScalarAsync();
+            return count > 0;
+        }
+    }
+    
+    private async Task<int> CreateImportHistoryAsync(string userId, string fileHash, string fileName, string batchId)
+    {
+        using (var connection = new SqlConnection(_sqlConnectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand(
+                @"INSERT INTO ImportHistories (UserId, FileHash, FileName, BatchId, ImportDate, Status, RecordCount) 
+                  VALUES (@userId, @fileHash, @fileName, @batchId, @importDate, @status, 0);
+                  SELECT CAST(SCOPE_IDENTITY() as int);",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@fileHash", fileHash);
+            command.Parameters.AddWithValue("@fileName", fileName);
+            command.Parameters.AddWithValue("@batchId", batchId);
+            command.Parameters.AddWithValue("@importDate", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@status", "Processing");
+            
+            return (int)await command.ExecuteScalarAsync();
+        }
+    }
+    
+    private async Task UpdateImportHistoryAsync(int importHistoryId, int recordCount, DateTime? minTimestamp, DateTime? maxTimestamp, string status)
+    {
+        using (var connection = new SqlConnection(_sqlConnectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand(
+                @"UPDATE ImportHistories 
+                  SET RecordCount = @recordCount, MinTimestamp = @minTimestamp, MaxTimestamp = @maxTimestamp, Status = @status
+                  WHERE Id = @id",
+                connection);
+            command.Parameters.AddWithValue("@id", importHistoryId);
+            command.Parameters.AddWithValue("@recordCount", recordCount);
+            command.Parameters.AddWithValue("@minTimestamp", (object)minTimestamp ?? DBNull.Value);
+            command.Parameters.AddWithValue("@maxTimestamp", (object)maxTimestamp ?? DBNull.Value);
+            command.Parameters.AddWithValue("@status", status);
+            
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+    
     public class ImportStatistics
     {
         public int TotalItems { get; set; }
         public int ImportedItems { get; set; }
         public int SkippedItems { get; set; }
+    }
+    
+    public class FileImportResult
+    {
+        public string FileName { get; set; }
+        public string Status { get; set; }
+        public int RecordCount { get; set; }
+    }
+    
+    public class FileImportStatistics
+    {
+        public string FileName { get; set; }
+        public int ImportedItems { get; set; }
     }
 
     public class SpotifyHistory
