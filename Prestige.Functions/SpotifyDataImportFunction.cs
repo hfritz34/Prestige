@@ -214,14 +214,32 @@ namespace Prestige.Functions
                                 fileStats.ImportedItems++;
                             }
                             
-                            // Update import history for this file
-                            await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, "Completed");
-                            fileResults.Add(new FileImportResult 
-                            { 
-                                FileName = fileName, 
-                                Status = "Completed",
-                                RecordCount = fileStats.ImportedItems
-                            });
+                            // Check for overlapping imports
+                            var overlaps = await CheckForOverlappingImportsAsync(userId, minTimestamp, maxTimestamp);
+                            if (overlaps.Count > 0)
+                            {
+                                var overlapWarning = $"Warning: Date range overlaps with {overlaps.Count} previous import(s)";
+                                _logger.LogWarning($"{overlapWarning} for file {fileName}");
+                                await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, $"Completed with overlaps: {overlaps.Count}");
+                                fileResults.Add(new FileImportResult 
+                                { 
+                                    FileName = fileName, 
+                                    Status = $"Completed with {overlaps.Count} overlap(s)",
+                                    RecordCount = fileStats.ImportedItems,
+                                    Overlaps = overlaps
+                                });
+                            }
+                            else
+                            {
+                                // Update import history for this file
+                                await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, "Completed");
+                                fileResults.Add(new FileImportResult 
+                                { 
+                                    FileName = fileName, 
+                                    Status = "Completed",
+                                    RecordCount = fileStats.ImportedItems
+                                });
+                            }
                         }
                     }
                 }
@@ -307,6 +325,51 @@ namespace Prestige.Functions
         }
     }
     
+    private async Task<List<ImportOverlap>> CheckForOverlappingImportsAsync(string userId, DateTime? minTimestamp, DateTime? maxTimestamp)
+    {
+        var overlaps = new List<ImportOverlap>();
+        
+        if (minTimestamp == null || maxTimestamp == null)
+            return overlaps;
+            
+        using (var connection = new SqlConnection(_sqlConnectionString))
+        {
+            await connection.OpenAsync();
+            var command = new SqlCommand(
+                @"SELECT FileName, MinTimestamp, MaxTimestamp, ImportDate 
+                  FROM ImportHistories 
+                  WHERE UserId = @userId 
+                  AND Status = 'Completed'
+                  AND MinTimestamp IS NOT NULL 
+                  AND MaxTimestamp IS NOT NULL
+                  AND (
+                    (MinTimestamp <= @maxTs AND MaxTimestamp >= @minTs) OR
+                    (MinTimestamp >= @minTs AND MinTimestamp <= @maxTs) OR
+                    (MaxTimestamp >= @minTs AND MaxTimestamp <= @maxTs)
+                  )",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@minTs", minTimestamp);
+            command.Parameters.AddWithValue("@maxTs", maxTimestamp);
+            
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    overlaps.Add(new ImportOverlap
+                    {
+                        FileName = reader.GetString(0),
+                        MinTimestamp = reader.GetDateTime(1),
+                        MaxTimestamp = reader.GetDateTime(2),
+                        ImportDate = reader.GetDateTime(3)
+                    });
+                }
+            }
+        }
+        
+        return overlaps;
+    }
+    
     private async Task<int> CreateImportHistoryAsync(string userId, string fileHash, string fileName, string batchId)
     {
         using (var connection = new SqlConnection(_sqlConnectionString))
@@ -360,12 +423,21 @@ namespace Prestige.Functions
         public string FileName { get; set; }
         public string Status { get; set; }
         public int RecordCount { get; set; }
+        public List<ImportOverlap> Overlaps { get; set; }
     }
     
     public class FileImportStatistics
     {
         public string FileName { get; set; }
         public int ImportedItems { get; set; }
+    }
+    
+    public class ImportOverlap
+    {
+        public string FileName { get; set; }
+        public DateTime MinTimestamp { get; set; }
+        public DateTime MaxTimestamp { get; set; }
+        public DateTime ImportDate { get; set; }
     }
 
     public class SpotifyHistory
