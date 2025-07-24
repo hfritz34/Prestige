@@ -66,7 +66,8 @@ namespace Prestige.Functions
             try
             {
                 var limit = 50; // Default limit
-                if (req.Query.TryGetValue("limit", out var limitStr) && int.TryParse(limitStr, out var parsedLimit))
+                var limitStr = req.Query["limit"];
+                if (!string.IsNullOrEmpty(limitStr) && int.TryParse(limitStr, out var parsedLimit))
                 {
                     limit = Math.Min(parsedLimit, 100); // Cap at 100
                 }
