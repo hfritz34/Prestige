@@ -3,6 +3,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using System.Net;
+using Prestige.Functions.Models;
 
 namespace CosmosDBParser
 {
@@ -16,7 +17,7 @@ namespace CosmosDBParser
         }
 
         [Function("TriggerCosmosChangeFeeds")]
-        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req)
+        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
         {
             _logger.LogInformation("TriggerCosmosChangeFeeds HTTP trigger function processed a request");
             

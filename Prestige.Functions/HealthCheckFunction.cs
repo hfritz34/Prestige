@@ -15,12 +15,9 @@ namespace Prestige.Functions
         }
 
         [Function("HealthCheck")]
-        public HttpResponseData Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
+        public async Task<HttpResponseData> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get")] HttpRequestData req)
         {
             _logger.LogInformation("Health check endpoint called");
-
-            var response = req.CreateResponse(HttpStatusCode.OK);
-            response.Headers.Add("Content-Type", "application/json");
 
             var healthStatus = new
             {
@@ -42,7 +39,12 @@ namespace Prestige.Functions
                 }
             };
 
-            response.WriteString(System.Text.Json.JsonSerializer.Serialize(healthStatus));
+            var response = req.CreateResponse(HttpStatusCode.OK);
+            response.Headers.Add("Access-Control-Allow-Origin", "*");
+            response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
+            
+            await response.WriteAsJsonAsync(healthStatus);
             return response;
         }
     }

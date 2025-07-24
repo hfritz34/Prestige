@@ -55,6 +55,7 @@ namespace Prestige.Functions
                 if (string.IsNullOrEmpty(userId))
                 {
                     var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
+                    responseError.Headers.Add("Access-Control-Allow-Origin", "*");
                     await responseError.WriteStringAsync("Missing required query parameter: userId");
                     return responseError;
                 }
@@ -190,6 +191,9 @@ namespace Prestige.Functions
                 }
 
                 var response = req.CreateResponse(HttpStatusCode.Accepted);
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 var resultMessage = new
                 {
                     BatchId = batchId,
@@ -206,6 +210,7 @@ namespace Prestige.Functions
                 _logger.LogError($"Stack trace: {ex.StackTrace}");
 
                 var responseError = req.CreateResponse(HttpStatusCode.InternalServerError);
+                responseError.Headers.Add("Access-Control-Allow-Origin", "*");
                 await responseError.WriteStringAsync($"An error occurred while processing your request: {ex.Message}");
                 return responseError;
             }

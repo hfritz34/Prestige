@@ -432,7 +432,7 @@ namespace Prestige.Functions
             public bool Offline { get; set; }
             
             [JsonProperty("offline_timestamp")]
-            public long OfflineTimestamp { get; set; }
+            public long? OfflineTimestamp { get; set; }
             
             [JsonProperty("incognito_mode")]
             public bool IncognitoMode { get; set; }

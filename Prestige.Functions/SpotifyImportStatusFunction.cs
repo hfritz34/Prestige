@@ -34,11 +34,15 @@ namespace Prestige.Functions
                 if (imports.Count == 0)
                 {
                     var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
+                    notFoundResponse.Headers.Add("Access-Control-Allow-Origin", "*");
                     await notFoundResponse.WriteStringAsync($"No imports found for batch ID: {batchId}");
                     return notFoundResponse;
                 }
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 await response.WriteAsJsonAsync(new
                 {
                     BatchId = batchId,
@@ -51,6 +55,7 @@ namespace Prestige.Functions
             {
                 _logger.LogError($"Error getting import status: {ex.Message}");
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                errorResponse.Headers.Add("Access-Control-Allow-Origin", "*");
                 await errorResponse.WriteStringAsync($"Error retrieving import status: {ex.Message}");
                 return errorResponse;
             }
@@ -75,6 +80,9 @@ namespace Prestige.Functions
                 var imports = await GetImportsByUserIdAsync(userId, limit);
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
+                response.Headers.Add("Access-Control-Allow-Origin", "*");
+                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
                 await response.WriteAsJsonAsync(new
                 {
                     UserId = userId,
@@ -87,6 +95,7 @@ namespace Prestige.Functions
             {
                 _logger.LogError($"Error getting user import history: {ex.Message}");
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
+                errorResponse.Headers.Add("Access-Control-Allow-Origin", "*");
                 await errorResponse.WriteStringAsync($"Error retrieving import history: {ex.Message}");
                 return errorResponse;
             }
