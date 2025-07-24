@@ -156,47 +156,62 @@ namespace Prestige.Functions
                             var fileStats = new FileImportStatistics { FileName = fileName };
                             DateTime? minTimestamp = null;
                             DateTime? maxTimestamp = null;
+                            var dailyListeningTime = new Dictionary<string, int>(); // Track daily listening time in milliseconds
                             
                             importStats.TotalItems += items.Count;
 
                             foreach (var item in items)
-                        {
-                            // Skip if it's not a music track (episode or audiobook)
-                            if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || 
-                                !string.IsNullOrEmpty(item.AudiobookUri))
                             {
-                                importStats.SkippedItems++;
-                                _logger.LogInformation($"Skipped non-music content: {item.EpisodeName ?? item.AudiobookTitle}");
-                                continue;
-                            }
-                            
-                            // Skip if no track URI
-                            if (string.IsNullOrEmpty(item.SpotifyTrackUri))
-                            {
-                                importStats.SkippedItems++;
-                                _logger.LogWarning($"Skipped item with no track URI");
-                                continue;
-                            }
-                            
-                            // Extract track ID from Spotify URI (format: spotify:track:TRACK_ID)
-                            var trackId = ExtractTrackIdFromUri(item.SpotifyTrackUri);
-                            if (string.IsNullOrEmpty(trackId))
-                            {
-                                importStats.SkippedItems++;
-                                _logger.LogWarning($"Failed to extract track ID from URI: {item.SpotifyTrackUri}");
-                                continue;
-                            }
+                                // Skip if it's not a music track (episode or audiobook)
+                                if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || 
+                                    !string.IsNullOrEmpty(item.AudiobookUri))
+                                {
+                                    importStats.SkippedItems++;
+                                    _logger.LogInformation($"Skipped non-music content: {item.EpisodeName ?? item.AudiobookTitle}");
+                                    continue;
+                                }
+                                
+                                // Skip if no track URI
+                                if (string.IsNullOrEmpty(item.SpotifyTrackUri))
+                                {
+                                    importStats.SkippedItems++;
+                                    _logger.LogWarning($"Skipped item with no track URI");
+                                    continue;
+                                }
+                                
+                                // Validate track duration (between 1ms and 1 hour)
+                                if (item.MsPlayed <= 0 || item.MsPlayed > 3600000) // 1 hour in milliseconds
+                                {
+                                    importStats.SkippedItems++;
+                                    _logger.LogWarning($"Skipped track with invalid duration: {item.MsPlayed}ms");
+                                    continue;
+                                }
+                                
+                                // Extract track ID from Spotify URI (format: spotify:track:TRACK_ID)
+                                var trackId = ExtractTrackIdFromUri(item.SpotifyTrackUri);
+                                if (string.IsNullOrEmpty(trackId))
+                                {
+                                    importStats.SkippedItems++;
+                                    _logger.LogWarning($"Failed to extract track ID from URI: {item.SpotifyTrackUri}");
+                                    continue;
+                                }
                             
                                 // Create unique ID based on trackId, played_at timestamp, and batchId
                                 var uniqueId = $"{trackId}_{item.Ts}_{batchId}";
                                 
-                                // Track timestamps
+                                // Track timestamps and daily listening time
                                 if (DateTime.TryParse(item.Ts, out var timestamp))
                                 {
                                     if (minTimestamp == null || timestamp < minTimestamp)
                                         minTimestamp = timestamp;
                                     if (maxTimestamp == null || timestamp > maxTimestamp)
                                         maxTimestamp = timestamp;
+                                        
+                                    // Track daily listening time
+                                    var dateKey = timestamp.Date.ToString("yyyy-MM-dd");
+                                    if (!dailyListeningTime.ContainsKey(dateKey))
+                                        dailyListeningTime[dateKey] = 0;
+                                    dailyListeningTime[dateKey] += item.MsPlayed;
                                 }
                                 
                                 var document = new Document
@@ -214,19 +229,38 @@ namespace Prestige.Functions
                                 fileStats.ImportedItems++;
                             }
                             
+                            // Validate daily listening time (max 18 hours per day)
+                            var suspiciousDays = new List<string>();
+                            foreach (var day in dailyListeningTime)
+                            {
+                                var hoursListened = day.Value / (1000.0 * 60 * 60); // Convert ms to hours
+                                if (hoursListened > 18) // More than 18 hours in a day is suspicious
+                                {
+                                    suspiciousDays.Add($"{day.Key}: {hoursListened:F1} hours");
+                                    _logger.LogWarning($"Suspicious listening time on {day.Key}: {hoursListened:F1} hours");
+                                }
+                            }
+                            
                             // Check for overlapping imports
                             var overlaps = await CheckForOverlappingImportsAsync(userId, minTimestamp, maxTimestamp);
-                            if (overlaps.Count > 0)
+                            if (overlaps.Count > 0 || suspiciousDays.Count > 0)
                             {
-                                var overlapWarning = $"Warning: Date range overlaps with {overlaps.Count} previous import(s)";
-                                _logger.LogWarning($"{overlapWarning} for file {fileName}");
-                                await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, $"Completed with overlaps: {overlaps.Count}");
+                                var warnings = new List<string>();
+                                if (overlaps.Count > 0)
+                                    warnings.Add($"{overlaps.Count} overlap(s)");
+                                if (suspiciousDays.Count > 0)
+                                    warnings.Add($"{suspiciousDays.Count} suspicious day(s)");
+                                    
+                                var warningMessage = string.Join(" and ", warnings);
+                                _logger.LogWarning($"File {fileName} completed with warnings: {warningMessage}");
+                                await UpdateImportHistoryAsync(importHistoryId, fileStats.ImportedItems, minTimestamp, maxTimestamp, $"Completed with warnings: {warningMessage}");
                                 fileResults.Add(new FileImportResult 
                                 { 
                                     FileName = fileName, 
-                                    Status = $"Completed with {overlaps.Count} overlap(s)",
+                                    Status = $"Completed with {warningMessage}",
                                     RecordCount = fileStats.ImportedItems,
-                                    Overlaps = overlaps
+                                    Overlaps = overlaps,
+                                    SuspiciousDays = suspiciousDays
                                 });
                             }
                             else
@@ -424,6 +458,7 @@ namespace Prestige.Functions
         public string Status { get; set; }
         public int RecordCount { get; set; }
         public List<ImportOverlap> Overlaps { get; set; }
+        public List<string> SuspiciousDays { get; set; }
     }
     
     public class FileImportStatistics
