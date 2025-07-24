@@ -22,7 +22,7 @@ namespace Prestige.Functions
 
         [Function("GetImportStatus")]
         public async Task<HttpResponseData> GetImportStatus(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "import-status/{batchId}")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "import-status/{batchId}")] HttpRequestData req,
             string batchId)
         {
             _logger.LogInformation($"Getting import status for batch: {batchId}");
@@ -58,7 +58,7 @@ namespace Prestige.Functions
 
         [Function("GetUserImportHistory")]
         public async Task<HttpResponseData> GetUserImportHistory(
-            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "import-history/{userId}")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "import-history/{userId}")] HttpRequestData req,
             string userId)
         {
             _logger.LogInformation($"Getting import history for user: {userId}");
