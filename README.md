@@ -41,7 +41,7 @@ Abraham Maslow identified music as a universal pathway to peak human experiences
 
 ## 🎶 Why Prestige Matters
 
-In 2024, music has become a lifestyle for millions globally. Despite the explosion of streaming platforms and fandoms, there's no single community where music lovers can come together and dive deep into the magic of music. Prestige fills this gap by fostering connection through:
+In 2025, music has become a lifestyle for millions globally. Despite the explosion of streaming platforms and fandoms, there's no single community where music lovers can come together and dive deep into the magic of music. Prestige fills this gap by fostering connection through:
 
 - **Authentic Expression**: Share your music taste, not just photos
 - **Friendly Competition**: Prove your dedication to fellow music fans  
