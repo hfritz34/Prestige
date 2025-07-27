@@ -88,7 +88,7 @@ const SongPage: React.FC = () => {
                       className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
                     />
                   )}
-                  <div className="flex-shrink-0 w-20 h-20 relative z-10">
+                  <div className="shrink-0 w-20 h-20 relative z-10">
                     <img src={friend.profilePicUrl} alt={`${friend.nickname}'s profile`} className="w-full h-full object-cover rounded-full" />
                   </div>
                   <div className="ml-4 relative z-10 w-3/4">

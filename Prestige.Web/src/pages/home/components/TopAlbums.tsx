@@ -31,7 +31,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
     <div className="p-4 overflow-visible">
       <h2 className="text-lg font-bold mt-6 mb-5 text-center">Top 3 Prestiges</h2>
       <div className="flex justify-center mb-8">
-        <div className="flex w-full max-w-screen-lg justify-between px-2 md:px-0">
+        <div className="flex w-full max-w-(--breakpoint-lg) justify-between px-2 md:px-0">
           {topThreeAlbums.map((album) => {
             const prestige = getAlbumPrestigeTier(album.totalTime);
             return (
@@ -85,7 +85,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
                   className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
                 />
               )}
-              <div className="flex-shrink-0 w-24 h-24 relative z-10">
+              <div className="shrink-0 w-24 h-24 relative z-10">
                 <img src={album.album.images[0]?.url} alt={album.album.name} className="w-full h-full object-cover rounded-lg" />
               </div>
               <div className="ml-4 relative z-10">
