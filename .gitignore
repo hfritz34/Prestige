@@ -9,6 +9,10 @@ CosmosDbExample.txt
 local.settings.json
 PRESTIGE_APPLICATION_OVERVIEW.txt
 
+# Build artifacts
+*.zip
+prestige-api.zip
+
 # User-specific files
 *.rsuser
 *.suo
@@ -17,6 +21,7 @@ PRESTIGE_APPLICATION_OVERVIEW.txt
 *.sln.docstates
 *.Development.json
 .env
+*.idea
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs

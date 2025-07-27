@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using Prestige.Functions.Models;
 
 namespace CosmosDBParser
 {
@@ -178,15 +179,4 @@ namespace CosmosDBParser
        }
    }
 
-   public class Document
-   {
-       public string id { get; set; }
-       public string batchId { get; set; }
-       public string userId { get; set; }
-       public string trackId { get; set; }
-       public int duration_ms { get; set; }
-       public string played_at { get; set; }
-       public bool processed { get; set; } = false;
-       public string lastTriggered { get; set; }
-   }
 }

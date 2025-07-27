@@ -5,6 +5,7 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using System.Net;
+using Prestige.Functions.Models;
 
 namespace CosmosDBParser
 {

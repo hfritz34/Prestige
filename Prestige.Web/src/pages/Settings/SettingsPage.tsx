@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Account from '@/pages/Settings/Account';
 import ImportData from '@/pages/Settings/ImportData';
+import ImportDataDev from '@/pages/Settings/ImportDataDev';
 import HowWeTrackPrestige from '@/pages/Settings/HowWeTrackPrestige';
 import PrivacyPolicy from '@/pages/Settings/PrivacyPolicy';
 import TermsOfService from '@/pages/Settings/TermsOfService';
@@ -21,6 +22,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 const componentsMap: { [key: string]: React.FC } = {
   Account,
   ImportData,
+  ImportDataDev,
   HowWeTrackPrestige,
   PrivacyPolicy,
   TermsOfService,

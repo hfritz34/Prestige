@@ -1,0 +1,34 @@
+name: API CI
+
+on:
+  push:
+    branches: [ "*" ]
+    paths:
+      - 'Prestige.Api/**'
+      - '.github/workflows/api-ci.yml'
+  pull_request:
+    branches: [ "*" ]
+    paths:
+      - 'Prestige.Api/**'
+      - '.github/workflows/api-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build API
+      run: dotnet build Prestige.Api/*.csproj --configuration Release --no-restore
+      
+    - name: Test API
+      run: dotnet test Prestige.Api/*.csproj --configuration Release --no-build --verbosity normal 

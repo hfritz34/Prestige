@@ -20,6 +20,7 @@ namespace Prestige.Api.Data
         public DbSet<UserArtist> UserArtists { get; set; }
         public DbSet<Image> Images { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
+        public DbSet<ImportHistory> ImportHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,6 +33,7 @@ namespace Prestige.Api.Data
             modelBuilder.ApplyConfiguration(new ArtistConfiguration());
             modelBuilder.ApplyConfiguration(new ImageConfiguration());
             modelBuilder.ApplyConfiguration(new FriendshipConfiguration());
+            modelBuilder.ApplyConfiguration(new ImportHistoryConfiguration());
         }
     }
 }
