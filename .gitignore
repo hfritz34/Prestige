@@ -21,6 +21,7 @@ prestige-api.zip
 *.sln.docstates
 *.Development.json
 .env
+*.idea
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
