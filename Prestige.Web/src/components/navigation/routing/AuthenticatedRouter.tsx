@@ -11,12 +11,17 @@ import AddFavoritesPage from '@/pages/profile-setup/AddFavoritesPage';
 import AlbumPage from '@/pages/IndividualPrestiges/AlbumPage';
 import ArtistPage from '@/pages/IndividualPrestiges/ArtistPage';
 import FriendProfilePage from '@/pages/friends/FriendProfilePage';
+import LandingPage from "@/pages/landing/LandingPage";
 
 
 const AuthenticatedRouter = createBrowserRouter([
     {
         path: "/",
         element: <SplashPage />,
+    },
+    {
+        path: "/landing",
+        element: <LandingPage />,
     },
     {
         path: "/profile-setup",
