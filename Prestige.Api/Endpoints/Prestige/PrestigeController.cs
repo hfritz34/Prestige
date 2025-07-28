@@ -17,11 +17,11 @@ namespace Prestige.Api.Endpoints.Prestige
         }
 
         [HttpPost("{userId}/tracks")]
-        public IActionResult PostUserTrack(string userId, [FromBody] UserTrackRequest request)
+        public async Task<IActionResult> PostUserTrack(string userId, [FromBody] UserTrackRequest request)
         {
             try
             {
-                var track = _service.PostUserTrack(userId, request);
+                var track = await _service.PostUserTrack(userId, request);
                 return Ok(track);
             }
             catch (Exception ex)

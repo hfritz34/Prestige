@@ -12,13 +12,14 @@ namespace Prestige.Api.Endpoints.Prestige
 {
     public class PrestigeServices : BaseService
     {
+        private readonly SpotifyServices _spotifyServices;
 
-        public PrestigeServices(PrestigeContext db, ILogger<PrestigeServices> logger, ClaimsPrincipal principal, IConfiguration config) : base(db, logger, principal, config)
+        public PrestigeServices(PrestigeContext db, ILogger<PrestigeServices> logger, ClaimsPrincipal principal, IConfiguration config, SpotifyServices spotifyServices) : base(db, logger, principal, config)
         {
-
+            _spotifyServices = spotifyServices;
         }
 
-        public UserTrackResponse PostUserTrack(string userId, UserTrackRequest request)
+        public async Task<UserTrackResponse> PostUserTrack(string userId, UserTrackRequest request)
         {
             var userTrack = PrestigeDb.UserTracks
                 .Include(ut => ut.Track)
@@ -33,13 +34,13 @@ namespace Prestige.Api.Endpoints.Prestige
             if (userTrack != null)
             {
                 userTrack.IncrementTotalTime(request.TotalTime);
-                PostUserAblum(userId, new UserAlbumRequest()
+                await PostUserAblum(userId, new UserAlbumRequest()
                 {
                     AlbumId = userTrack.Track.Album.Id,
                     TotalTime = request.TotalTime
                 }
                 );
-                PostUserArtist(userId, new UserArtistRequest()
+                await PostUserArtist(userId, new UserArtistRequest()
                 {
                     ArtistId = userTrack.Track.Artists.First().Id ?? throw Logger.ArtistNotFound(userTrack.Track.Artists.First().Id),
                     TotalTime = request.TotalTime
@@ -62,8 +63,28 @@ namespace Prestige.Api.Endpoints.Prestige
                     .ThenInclude(artist => artist.Images)
                 .Include(track => track.Album.Artists)
                     .ThenInclude(artist => artist.Images)
-                .FirstOrDefault(track => track.Id == request.TrackId)
-                ?? throw Logger.TrackNotFound(request.TrackId);
+                .FirstOrDefault(track => track.Id == request.TrackId);
+            
+            if (track == null)
+            {
+                // Track doesn't exist, fetch from Spotify and create it
+                var spotifyTrack = await _spotifyServices.GetTrackByIdAsync(request.TrackId);
+                if (spotifyTrack == null)
+                {
+                    throw Logger.TrackNotFound(request.TrackId);
+                }
+                
+                // Reload the track from database after it was created by SpotifyServices
+                track = PrestigeDb.Tracks
+                    .Include(track => track.Album)
+                        .ThenInclude(album => album.Images)
+                    .Include(track => track.Artists)
+                        .ThenInclude(artist => artist.Images)
+                    .Include(track => track.Album.Artists)
+                        .ThenInclude(artist => artist.Images)
+                    .FirstOrDefault(track => track.Id == request.TrackId)
+                    ?? throw Logger.TrackNotFound(request.TrackId);
+            }
             userTrack = new UserTrack(user, request.TotalTime, track);
 
             PrestigeDb.UserTracks.Add(userTrack);
@@ -81,13 +102,13 @@ namespace Prestige.Api.Endpoints.Prestige
                 ?? throw Logger.UserTrackNotFound(userId, request.TrackId);
 
             //Increment Album and Artist Total Time
-            var postAlbumResponse = PostUserAblum(userId, new UserAlbumRequest()
+            var postAlbumResponse = await PostUserAblum(userId, new UserAlbumRequest()
             {
                 AlbumId = userTrack.Track.Album.Id,
                 TotalTime = request.TotalTime
             }
             ) ?? throw Logger.UserAlbumNotFound(userId, userTrack.Track.Album.Id);
-            var postArtistResponse = PostUserArtist(userId, new UserArtistRequest()
+            var postArtistResponse = await PostUserArtist(userId, new UserArtistRequest()
             {
                 ArtistId = userTrack.Track.Artists.First().Id ?? throw Logger.ArtistNotFound(userTrack.Track.Artists.First().Id),
                 TotalTime = request.TotalTime
@@ -127,7 +148,7 @@ namespace Prestige.Api.Endpoints.Prestige
         }
 
 
-        public UserAlbumResponse PostUserAblum(string userId, UserAlbumRequest request)
+        public async Task<UserAlbumResponse> PostUserAblum(string userId, UserAlbumRequest request)
         {
             var userAlbum = PrestigeDb.UserAlbums
                 .Include(ua => ua.Album)
@@ -154,8 +175,25 @@ namespace Prestige.Api.Endpoints.Prestige
                 .Include(album => album.Artists)
                     .ThenInclude(artist => artist.Images)
                 .Include(album => album.Images)
-                .FirstOrDefault(album => album.Id == request.AlbumId)
-                ?? throw Logger.AlbumNotFound(request.AlbumId);
+                .FirstOrDefault(album => album.Id == request.AlbumId);
+            
+            if (album == null)
+            {
+                // Album doesn't exist, fetch from Spotify and create it
+                var spotifyAlbum = await _spotifyServices.GetAlbumByIdAsync(request.AlbumId);
+                if (spotifyAlbum == null)
+                {
+                    throw Logger.AlbumNotFound(request.AlbumId);
+                }
+                
+                // Reload the album from database after it was created by SpotifyServices
+                album = PrestigeDb.Albums
+                    .Include(album => album.Artists)
+                        .ThenInclude(artist => artist.Images)
+                    .Include(album => album.Images)
+                    .FirstOrDefault(album => album.Id == request.AlbumId)
+                    ?? throw Logger.AlbumNotFound(request.AlbumId);
+            }
             userAlbum = new UserAlbum(user, request.TotalTime, album);
 
             PrestigeDb.UserAlbums.Add(userAlbum);
@@ -186,7 +224,7 @@ namespace Prestige.Api.Endpoints.Prestige
             };
         }
 
-        public UserArtistResponse PostUserArtist(string userId, UserArtistRequest request)
+        public async Task<UserArtistResponse> PostUserArtist(string userId, UserArtistRequest request)
         {
             var userArtist = PrestigeDb.UserArtists
                 .Include(ua => ua.Artist)
@@ -209,8 +247,23 @@ namespace Prestige.Api.Endpoints.Prestige
                 ?? throw Logger.UserNotFound(userId);
             var artist = PrestigeDb.Artists
                 .Include(artist => artist.Images)
-                .FirstOrDefault(artist => artist.Id == request.ArtistId)
-                ?? throw Logger.ArtistNotFound(request.ArtistId);
+                .FirstOrDefault(artist => artist.Id == request.ArtistId);
+            
+            if (artist == null)
+            {
+                // Artist doesn't exist, fetch from Spotify and create it
+                var spotifyArtist = await _spotifyServices.GetArtistByIdAsync(request.ArtistId);
+                if (spotifyArtist == null)
+                {
+                    throw Logger.ArtistNotFound(request.ArtistId);
+                }
+                
+                // Reload the artist from database after it was created by SpotifyServices
+                artist = PrestigeDb.Artists
+                    .Include(artist => artist.Images)
+                    .FirstOrDefault(artist => artist.Id == request.ArtistId)
+                    ?? throw Logger.ArtistNotFound(request.ArtistId);
+            }
             userArtist = new UserArtist(user, request.TotalTime, artist);
 
             PrestigeDb.UserArtists.Add(userArtist);

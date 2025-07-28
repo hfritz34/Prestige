@@ -22,9 +22,20 @@ namespace Prestige.Functions
 
         [Function("GetImportStatus")]
         public async Task<HttpResponseData> GetImportStatus(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "import-status/{batchId}")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", "options", Route = "import-status/{batchId}")] HttpRequestData req,
             string batchId)
         {
+            // Handle CORS preflight requests
+            if (req.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                var corsResponse = req.CreateResponse(HttpStatusCode.OK);
+                corsResponse.Headers.Add("Access-Control-Allow-Origin", "*");
+                corsResponse.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                corsResponse.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                corsResponse.Headers.Add("Access-Control-Max-Age", "3600");
+                return corsResponse;
+            }
+
             _logger.LogInformation($"Getting import status for batch: {batchId}");
 
             try

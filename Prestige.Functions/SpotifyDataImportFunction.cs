@@ -42,6 +42,7 @@ namespace Prestige.Functions
         [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
     {
         _logger.LogInformation("C# HTTP trigger function processed a request.");
+        _logger.LogWarning("⚠️ DEPRECATED: This function is deprecated. Use SpotifyDataImportStreamingFunction for better performance and reliability.");
 
         try
         {
@@ -111,6 +112,18 @@ namespace Prestige.Functions
 
                     using (var memoryStream = new MemoryStream())
                     {
+                        // Check if Content-Length header exists for size validation
+                        if (section.Headers.ContainsKey("Content-Length"))
+                        {
+                            if (long.TryParse(section.Headers["Content-Length"], out var contentLength))
+                            {
+                                // Warn if file is too large for this function (>50MB)
+                                if (contentLength > 50 * 1024 * 1024)
+                                {
+                                    _logger.LogWarning($"File {fileName} is {contentLength / (1024 * 1024)}MB. Consider using SpotifyDataImportStreamingFunction for better performance.");
+                                }
+                            }
+                        }
                         await section.Body.CopyToAsync(memoryStream);
                         memoryStream.Position = 0;
                         
@@ -335,15 +348,29 @@ namespace Prestige.Functions
             await response.WriteAsJsonAsync(resultMessage);
             return response;
         }
+        catch (ObjectDisposedException ex)
+        {
+            _logger.LogError($"HTTP context disposed (likely timeout): {ex.Message}");
+            // Can't create response when context is disposed
+            throw new TimeoutException("Function execution timed out. Use the streaming import function for large files.", ex);
+        }
         catch (Exception ex)
         {
             _logger.LogError($"Exception encountered: {ex.Message}");
             _logger.LogError($"Stack trace: {ex.StackTrace}");
 
-            var responseError = req.CreateResponse(HttpStatusCode.InternalServerError);
-            responseError.Headers.Add("Access-Control-Allow-Origin", "*");
-            await responseError.WriteStringAsync($"An error occurred while processing your request: {ex.Message}");
-            return responseError;
+            try
+            {
+                var responseError = req.CreateResponse(HttpStatusCode.InternalServerError);
+                responseError.Headers.Add("Access-Control-Allow-Origin", "*");
+                await responseError.WriteStringAsync($"An error occurred while processing your request: {ex.Message}");
+                return responseError;
+            }
+            catch (ObjectDisposedException)
+            {
+                _logger.LogError("Cannot create response - HTTP context disposed");
+                throw new TimeoutException("Function execution timed out. Use the streaming import function for large files.", ex);
+            }
         }
     }
     

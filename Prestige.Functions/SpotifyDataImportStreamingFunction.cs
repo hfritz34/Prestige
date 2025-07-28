@@ -16,6 +16,7 @@ using System.Text;
 using System.Data.SqlClient;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Prestige.Functions.Helpers;
 
 namespace Prestige.Functions
 {
@@ -25,7 +26,8 @@ namespace Prestige.Functions
         private readonly Container _container;
         private readonly string _sqlConnectionString;
         private readonly BlobServiceClient _blobServiceClient;
-        private const int CHUNK_SIZE = 5000; // Process 5000 records at a time
+        private readonly CosmosBulkImporter _bulkImporter;
+        private const int CHUNK_SIZE = 10000; // Increased chunk size for bulk operations
         private const string CONTAINER_NAME = "spotify-imports";
 
         public SpotifyDataImportStreamingFunction(ILoggerFactory loggerFactory)
@@ -44,13 +46,27 @@ namespace Prestige.Functions
             // Initialize blob storage client
             string blobConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             _blobServiceClient = new BlobServiceClient(blobConnectionString);
+            
+            // Initialize bulk importer
+            _bulkImporter = new CosmosBulkImporter(connectionString, databaseId, containerId, _logger);
         }
 
         [Function("SpotifyDataImportStreamingFunction")]
         public async Task<HttpResponseData> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options")] HttpRequestData req)
         {
-            _logger.LogInformation("Streaming import function triggered");
+            _logger.LogInformation($"Streaming import function triggered with method: {req.Method}");
+
+            // Handle CORS preflight requests
+            if (req.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
+            {
+                var corsResponse = req.CreateResponse(HttpStatusCode.OK);
+                corsResponse.Headers.Add("Access-Control-Allow-Origin", "*");
+                corsResponse.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                corsResponse.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+                corsResponse.Headers.Add("Access-Control-Max-Age", "3600");
+                return corsResponse;
+            }
 
             try
             {
@@ -298,8 +314,8 @@ namespace Prestige.Functions
                         // Process chunk when we reach the chunk size
                         if (documentsToInsert.Count >= CHUNK_SIZE)
                         {
-                            await ProcessDocumentChunkAsync(documentsToInsert);
-                            _logger.LogInformation($"Processed chunk of {documentsToInsert.Count} documents. Total processed: {result.ImportedItems}");
+                            var bulkResult = await _bulkImporter.BulkImportAsync(documentsToInsert, doc => doc.userId);
+                            _logger.LogInformation($"Processed chunk of {documentsToInsert.Count} documents. Success: {bulkResult.SuccessCount}, Failed: {bulkResult.FailureCount}, RUs: {bulkResult.TotalRequestCharge:F2}");
                             documentsToInsert.Clear();
                         }
                     }
@@ -307,8 +323,8 @@ namespace Prestige.Functions
                     // Process remaining documents
                     if (documentsToInsert.Count > 0)
                     {
-                        await ProcessDocumentChunkAsync(documentsToInsert);
-                        _logger.LogInformation($"Processed final chunk of {documentsToInsert.Count} documents");
+                        var bulkResult = await _bulkImporter.BulkImportAsync(documentsToInsert, doc => doc.userId);
+                        _logger.LogInformation($"Processed final chunk of {documentsToInsert.Count} documents. Success: {bulkResult.SuccessCount}, Failed: {bulkResult.FailureCount}, RUs: {bulkResult.TotalRequestCharge:F2}");
                     }
                 }
                 
@@ -357,11 +373,6 @@ namespace Prestige.Functions
             return result;
         }
         
-        private async Task ProcessDocumentChunkAsync(List<Document> documents)
-        {
-            var tasks = documents.Select(doc => _container.UpsertItemAsync(doc, new PartitionKey(doc.userId)));
-            await Task.WhenAll(tasks);
-        }
         
         private string ExtractTrackIdFromUri(string spotifyUri)
         {

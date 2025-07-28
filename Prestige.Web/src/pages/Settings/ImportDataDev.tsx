@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
 
@@ -7,7 +7,10 @@ const SpotifyDataImportDevPage = () => {
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [useLocal, setUseLocal] = useState(true);
-  const [functionType, setFunctionType] = useState('original');
+  const [functionType, setFunctionType] = useState('streaming');
+  const [batchId, setBatchId] = useState<string | null>(null);
+  const [progress, setProgress] = useState<any>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const { user } = useAuth0();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -26,7 +29,9 @@ const SpotifyDataImportDevPage = () => {
     }
 
     setLoading(true);
-    setMessage('');
+    setMessage('Starting import...');
+    setProgress(null);
+    setBatchId(null);
 
     try {
       // Extract userId from Auth0 user.sub (format: oauth2|Spotify|userId)
@@ -62,22 +67,38 @@ const SpotifyDataImportDevPage = () => {
       
       console.log('Uploading to:', functionUrl);
       
+      // Start the import with a longer timeout
       const response = await axios.post(functionUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 300000, // 5 minute timeout
       });
 
       if (response.status === 200 || response.status === 202) {
         const data = response.data;
+        setMessage('Import completed!');
+        
         if (typeof data === 'object') {
+          console.log('Import result:', data);
           setMessage(JSON.stringify(data, null, 2));
-        } else {
-          setMessage(`Import completed! ${data}`);
         }
+        
+        // Start monitoring processing status
+        startProcessingMonitor(userId);
       }
     } catch (error: any) {
       console.error('Import error:', error);
+      
+      // Check if import might have succeeded despite timeout
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('Network Error')) {
+        const userId = user?.sub?.split('|').pop();
+        if (userId) {
+          setMessage('Import may be processing in background. Checking status...');
+          startProcessingMonitor(userId);
+          return;
+        }
+      }
       
       if (error.response?.data) {
         setMessage(`Failed to import: ${JSON.stringify(error.response.data)}`);
@@ -89,6 +110,41 @@ const SpotifyDataImportDevPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const startProcessingMonitor = (userId: string) => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+
+    const baseUrl = useLocal 
+      ? 'http://localhost:7071/api' 
+      : 'https://prestigefunctions.azurewebsites.net/api';
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await axios.get(`${baseUrl}/processing-status/${userId}`);
+        setProgress(response.data);
+        
+        if (response.data.UnprocessedTracks === 0) {
+          clearInterval(interval);
+          setPollingInterval(null);
+          setMessage('All tracks processed successfully!');
+        }
+      } catch (error) {
+        console.error('Error checking processing status:', error);
+      }
+    }, 2000); // Check every 2 seconds
+
+    setPollingInterval(interval);
+
+    // Stop polling after 5 minutes
+    setTimeout(() => {
+      if (interval) {
+        clearInterval(interval);
+        setPollingInterval(null);
+      }
+    }, 300000);
   };
 
   const testHealthCheck = async () => {
@@ -103,6 +159,15 @@ const SpotifyDataImportDevPage = () => {
       setMessage(`Health check failed: ${error.message}`);
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -136,6 +201,11 @@ const SpotifyDataImportDevPage = () => {
               <option value="streaming">Streaming (Blob Storage)</option>
               <option value="orchestrator">Orchestrator (Service Bus)</option>
             </select>
+            {functionType === 'original' && (
+              <p className="text-yellow-500 text-sm mt-1">
+                ⚠️ Original function may timeout with large files. Use Streaming for better performance.
+              </p>
+            )}
           </div>
           
           <button
@@ -188,6 +258,45 @@ const SpotifyDataImportDevPage = () => {
         {message && (
           <div className="mt-4 p-4 bg-gray-800 rounded">
             <pre className="whitespace-pre-wrap text-sm">{message}</pre>
+          </div>
+        )}
+
+        {progress && (
+          <div className="mt-6 p-4 bg-gray-800 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Processing Status</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Total Tracks:</span>
+                <span className="text-blue-400">{progress.TotalTracks}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Processed:</span>
+                <span className="text-green-400">{progress.ProcessedTracks}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Remaining:</span>
+                <span className="text-yellow-400">{progress.UnprocessedTracks}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Progress:</span>
+                <span className="text-purple-400">{progress.ProcessingPercentage?.toFixed(1)}%</span>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-700 rounded-full h-2.5 mt-3">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${progress.ProcessingPercentage || 0}%` }}
+                ></div>
+              </div>
+              
+              {progress.IsProcessing && (
+                <div className="flex items-center mt-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                  <span className="text-sm text-blue-400">Processing tracks...</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

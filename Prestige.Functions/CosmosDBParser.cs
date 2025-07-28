@@ -41,8 +41,16 @@ namespace CosmosDBParser
                
                if (!trackMetadataResponse.IsSuccessStatusCode)
                {
-                   _logger.LogError($"Track metadata request failed: {trackMetadataResponse.StatusCode} - {responseContent}");
-                   trackMetadataResponse.EnsureSuccessStatusCode();
+                   if (trackMetadataResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                   {
+                       _logger.LogWarning($"Some tracks not found on Spotify (404): {responseContent}");
+                       // Continue processing - some tracks may be deleted/unavailable
+                   }
+                   else
+                   {
+                       _logger.LogError($"Track metadata request failed: {trackMetadataResponse.StatusCode} - {responseContent}");
+                       trackMetadataResponse.EnsureSuccessStatusCode();
+                   }
                }
 
                // Group documents by user for batch processing
@@ -81,7 +89,18 @@ namespace CosmosDBParser
                                if (!userTrackResponse.IsSuccessStatusCode)
                                {
                                    var errorContent = await userTrackResponse.Content.ReadAsStringAsync();
-                                   _logger.LogError($"Failed posting track {doc.trackId}: {userTrackResponse.StatusCode} - {errorContent}");
+                                   if (userTrackResponse.StatusCode == System.Net.HttpStatusCode.NotFound)
+                                   {
+                                       _logger.LogWarning($"Track {doc.trackId} not found (404) - skipping: {errorContent}");
+                                   }
+                                   else if (userTrackResponse.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                                   {
+                                       _logger.LogWarning($"Invalid track data for {doc.trackId} (400) - skipping: {errorContent}");
+                                   }
+                                   else
+                                   {
+                                       _logger.LogError($"Failed posting track {doc.trackId}: {userTrackResponse.StatusCode} - {errorContent}");
+                                   }
                                    return false;
                                }
                                

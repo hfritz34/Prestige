@@ -14,8 +14,8 @@
             "routePrefix": "api"
         },
         "cosmosDB": {
-            "connectionMode": "Gateway",
-            "protocol": "Https",
+            "connectionMode": "Direct",
+            "protocol": "Tcp",
             "leaseOptions": {
                 "leasePrefix": "prestige"
             }
@@ -27,10 +27,15 @@
                 "http://localhost:5173",
                 "http://localhost:3000",
                 "https://localhost:5173",
-                "https://portal.azure.com"
+                "https://portal.azure.com",
+                "https://prestigefunctions.azurewebsites.net",
+                "https://prestige.azurewebsites.net",
+                "https://prestige-web.azurewebsites.net",
+                "https://*.prestige.app",
+                "https://prestige.app"
             ],
             "supportCredentials": false
         }
     },
-    "functionTimeout": "00:10:00"
+    "functionTimeout": "00:30:00"
 }
