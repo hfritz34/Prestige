@@ -1,9 +1,7 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { UserAlbumResponse } from "@/hooks/useProfile";
 import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
-import usePrestige from "@/hooks/usePrestige";
-
+import PrestigeGridCard from "./PrestigeGridCard";
 
 type TopAlbumsProps = {
   topAlbums: UserAlbumResponse[];
@@ -11,7 +9,6 @@ type TopAlbumsProps = {
 
 const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
   const { redirectToAlbumPage } = useRedirectToPrestigePages();
-  const { getAlbumPrestigeTier } = usePrestige();
 
   const handleAlbumClick = (album: UserAlbumResponse) => {
     console.log(`TopAlbums - Album Total Time (minutes): ${Math.floor(album.totalTime / 60)}`);
@@ -24,79 +21,40 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
     });
   };
 
-  const topThreeAlbums = topAlbums.slice(0, 3);
-  const otherAlbums = topAlbums.slice(3);
-
   return (
-    <div className="p-4 overflow-visible">
-      <h2 className="text-lg font-bold mt-6 mb-5 text-center">Top 3 Prestiges</h2>
-      <div className="flex justify-center mb-8">
-        <div className="flex w-full max-w-(--breakpoint-lg) justify-between px-2 md:px-0">
-          {topThreeAlbums.map((album) => {
-            const prestige = getAlbumPrestigeTier(album.totalTime);
-            return (
-              <Card
-                key={album.album.name}
-                className="w-full sm:w-1/3 bg-gray-800 text-white relative p-2 mx-1"
-                onClick={() => handleAlbumClick(album)}
-              >
-                {prestige && (
-                  <img
-                    src={`src/assets/tiers/${prestige}.png`}
-                    alt={prestige}
-                    className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                  />
-                )}
-                <CardHeader className="relative z-10">
-                  <img
-                    src={album.album.images[0]?.url}
-                    alt={album.album.name}
-                    className="w-full h-auto aspect-square object-cover rounded-t-lg"
-                  />
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <CardTitle className="text-center text-md font-bold">{album.album.name}</CardTitle>
-                  <CardDescription className="text-center text-xs text-zinc-50 font-bold">
-                    {album.album.artists.flatMap((artist) => artist.name + " ")}
-                  </CardDescription>
-                  <p className="text-center text-xs text-zinc-50 font-bold">
-                    {Math.floor(album.totalTime / 60)} minutes
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-      <h2 className="text-lg font-bold mt-6 mb-5 text-center">More Top Prestiges</h2>
-      <ul className="space-y-4">
-        {otherAlbums.map((album) => {
-          const prestige = getAlbumPrestigeTier(album.totalTime);
-          return (
-            <li
-              key={album.album.name}
-              className="flex items-center bg-gray-700 rounded-lg p-4 relative"
+    <div className="p-4">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-white mb-4 px-2">Your Top Prestiges</h2>
+        
+        {/* Grid layout - 3 columns */}
+        <div className="grid grid-cols-3 gap-4 px-2">
+          {topAlbums.map((album, index) => (
+            <PrestigeGridCard
+              key={`${album.album.id}-${index}`}
+              imageUrl={album.album.images[0]?.url || "/placeholder-album.png"}
+              name={album.album.name}
+              subtitle={album.album.artists.map(artist => artist.name).join(", ")}
+              totalTime={album.totalTime}
+              rank={index + 1}
+              type="album"
               onClick={() => handleAlbumClick(album)}
-            >
-              {prestige && (
-                <img
-                  src={`src/assets/tiers/${prestige}.png`}
-                  alt={prestige}
-                  className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                />
-              )}
-              <div className="shrink-0 w-24 h-24 relative z-10">
-                <img src={album.album.images[0]?.url} alt={album.album.name} className="w-full h-full object-cover rounded-lg" />
-              </div>
-              <div className="ml-4 relative z-10">
-                <h3 className="text-lg font-bold">{album.album.name}</h3>
-                <p className="text-zinc-50">{album.album.artists.flatMap((artist) => artist.name + " ")}</p>
-                <p className="text-zinc-50">{Math.floor(album.totalTime / 60)} minutes</p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+            />
+          ))}
+        </div>
+
+        {/* Empty state */}
+        {topAlbums.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">No Top Albums</h3>
+            <p className="text-gray-400">Listen to complete albums to build prestige</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

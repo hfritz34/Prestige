@@ -1,9 +1,7 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { UserTrackResponse } from "@/hooks/useProfile";
 import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
-import usePrestige from "@/hooks/usePrestige";
-
+import PrestigeGridCard from "./PrestigeGridCard";
 
 type TopTracksProps = {
   topTracks: UserTrackResponse[];
@@ -11,7 +9,6 @@ type TopTracksProps = {
 
 const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
   const { redirectToSongPage } = useRedirectToPrestigePages();
-    const { getTrackPrestigeTier } = usePrestige();
 
   const handleTrackClick = (track: UserTrackResponse) => {
     redirectToSongPage({
@@ -24,79 +21,40 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
     });
   };
 
-  const topThreeTracks = topTracks.slice(0, 3);
-  const otherTracks = topTracks.slice(3);
-
   return (
-    <div className="p-4 overflow-visible">
-      <h2 className="text-lg font-bold mt-6 mb-5 text-center">Top 3 Prestiges</h2>
-      <div className="flex justify-center mb-8">
-        <div className="flex w-full max-w-(--breakpoint-lg) justify-between px-2 md:px-0">
-          {topThreeTracks.map((track) => {
-            const prestige = getTrackPrestigeTier(track.totalTime);
-            return (
-              <Card
-                key={track.track.name}
-                className="w-full sm:w-1/3 bg-gray-800 text-white relative p-2 mx-1"
-                onClick={() => handleTrackClick(track)}
-              >
-                {prestige && (
-                  <img
-                    src={`src/assets/tiers/${prestige}.png`}
-                    alt={prestige}
-                    className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                  />
-                )}
-                <CardHeader className="relative z-10">
-                  <img
-                    src={track.track.album.images[0]?.url}
-                    alt={track.track.name}
-                    className="w-full h-full aspect-square rounded-t-lg object-cover"
-                  />
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <CardTitle className="text-center text-sm font-bold">{track.track.name}</CardTitle>
-                  <CardDescription className="text-center text- text-zinc-50 font-bold">
-                    {track.track.artists.flatMap((artist) => artist.name + " ")}
-                  </CardDescription>
-                  <p className="text-center text-xs text-zinc-50 font-bold">
-                    {Math.floor(track.totalTime / 60)} minutes
-                  </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-      <h2 className="text-lg font-bold mt-6 mb-5 text-center">More Top Prestiges</h2>
-      <ul className="space-y-4">
-        {otherTracks.map((track) => {
-          const prestige = getTrackPrestigeTier(track.totalTime);
-          return (
-            <li
-              key={track.track.name}
-              className="flex items-center bg-gray-700 rounded-lg p-4 relative"
+    <div className="p-4">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-white mb-4 px-2">Your Top Prestiges</h2>
+        
+        {/* Grid layout - 3 columns */}
+        <div className="grid grid-cols-3 gap-4 px-2">
+          {topTracks.map((track, index) => (
+            <PrestigeGridCard
+              key={`${track.track.id}-${index}`}
+              imageUrl={track.track.album.images[0]?.url || "/placeholder-album.png"}
+              name={track.track.name}
+              subtitle={track.track.artists.map(artist => artist.name).join(", ")}
+              totalTime={track.totalTime}
+              rank={index + 1}
+              type="track"
               onClick={() => handleTrackClick(track)}
-            >
-              {prestige && (
-                <img
-                  src={`src/assets/tiers/${prestige}.png`}
-                  alt={prestige}
-                  className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                />
-              )}
-              <div className="shrink-0 w-24 h-24 relative z-10">
-                <img src={track.track.album.images[0]?.url} alt={track.track.name} className="w-full h-full object-cover rounded-lg" />
-              </div>
-              <div className="ml-4 relative z-10">
-                <h3 className="text-lg font-bold">{track.track.name}</h3>
-                <p className="text-zinc-50">{track.track.artists.flatMap((artist) => artist.name + " ")}</p>
-                <p className="text-zinc-50">{Math.floor(track.totalTime / 60)} minutes</p>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+            />
+          ))}
+        </div>
+
+        {/* Empty state */}
+        {topTracks.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-white mb-2">No Top Tracks</h3>
+            <p className="text-gray-400">Start listening to build your prestige</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

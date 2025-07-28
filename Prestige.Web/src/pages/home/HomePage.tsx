@@ -17,7 +17,7 @@ const HomePage: React.FC = () => {
   const [viewType, setViewType] = useState<"TopTracks" | "TopAlbums" | "TopArtists">("TopTracks");
   const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   const { user } = useAuth0();
-  const TOP_LIMIT = 25;
+  const TOP_LIMIT = 60;
 
   const { data: topTracks, error: tracksError, isLoading: tracksLoading } = useQuery<UserTrackResponse[]>({
     queryKey: ["topTracks", user?.sub],
