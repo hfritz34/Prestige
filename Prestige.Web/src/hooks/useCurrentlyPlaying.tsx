@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import useHttp from "./useHttp";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useEffect } from "react";
 
 interface CurrentlyPlayingResponse {
   track: {
@@ -59,9 +58,9 @@ const useCurrentlyPlaying = () => {
     queryKey: ["currentlyPlaying", user?.sub],
     queryFn: getCurrentlyPlaying,
     enabled: !!user?.sub,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Refetch every 5 seconds if playing, every 30 seconds if not
-      return data?.isPlaying ? 5000 : 30000;
+      return query.state.data?.isPlaying ? 5000 : 30000;
     },
     retry: false,
   });

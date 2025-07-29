@@ -13,6 +13,8 @@ import {
 import TopCarousel from "./components/TopCarousel";
 import FavoritesCarousel from "./components/FavoritesCarousel";
 import RecentlyPlayed from "./components/RecentlyPlayed";
+import CurrentlyPlaying from "@/components/CurrentlyPlaying/CurrentlyPlaying";
+import useCurrentlyPlaying from "@/hooks/useCurrentlyPlaying";
 
 const ProfilePage: React.FC = () => {
 
@@ -20,6 +22,7 @@ const ProfilePage: React.FC = () => {
   const [viewTypeFavorite, setViewTypeFavorite] = useState<"FavoriteTracks" | "FavoriteAlbums" | "FavoriteArtists">("FavoriteTracks");
 
   const { getUser } = useUser();
+  const { currentlyPlaying, totalTime } = useCurrentlyPlaying();
   const userQuery = useQuery({
     queryKey: ["user"],
     queryFn: async () => {
@@ -30,6 +33,14 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {currentlyPlaying && (
+        <CurrentlyPlaying
+          track={currentlyPlaying.track}
+          isPlaying={currentlyPlaying.isPlaying}
+          progressMs={currentlyPlaying.progressMs}
+          totalTime={totalTime}
+        />
+      )}
       <div className="flex justify-between items-center p-4">
         <Link to="/settings" className="text-white hover:text-gray-400">
           <svg

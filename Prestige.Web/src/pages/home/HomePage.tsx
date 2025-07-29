@@ -12,11 +12,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import CurrentlyPlaying from "@/components/CurrentlyPlaying/CurrentlyPlaying";
+import useCurrentlyPlaying from "@/hooks/useCurrentlyPlaying";
 
 const HomePage: React.FC = () => {
   const [viewType, setViewType] = useState<"TopTracks" | "TopAlbums" | "TopArtists">("TopTracks");
   const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   const { user } = useAuth0();
+  const { currentlyPlaying, totalTime } = useCurrentlyPlaying();
   const TOP_LIMIT = 60;
 
   const { data: topTracks, error: tracksError, isLoading: tracksLoading } = useQuery<UserTrackResponse[]>({
@@ -76,6 +79,14 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="bg-gray-800 text-white min-h-screen overflow-visible">
+      {currentlyPlaying && (
+        <CurrentlyPlaying
+          track={currentlyPlaying.track}
+          isPlaying={currentlyPlaying.isPlaying}
+          progressMs={currentlyPlaying.progressMs}
+          totalTime={totalTime}
+        />
+      )}
       <h1 className="text-3xl font-bold text-center mt-4">Prestige</h1>
       <div className="flex justify-center mt-4">
         <DropdownMenu>
