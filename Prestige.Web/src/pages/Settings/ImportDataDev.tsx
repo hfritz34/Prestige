@@ -8,7 +8,6 @@ const SpotifyDataImportDevPage = () => {
   const [loading, setLoading] = useState(false);
   const [useLocal, setUseLocal] = useState(true);
   const [functionType, setFunctionType] = useState('streaming');
-  const [batchId, setBatchId] = useState<string | null>(null);
   const [progress, setProgress] = useState<any>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const { user } = useAuth0();
@@ -31,7 +30,6 @@ const SpotifyDataImportDevPage = () => {
     setLoading(true);
     setMessage('Starting import...');
     setProgress(null);
-    setBatchId(null);
 
     try {
       // Extract userId from Auth0 user.sub (format: oauth2|Spotify|userId)
