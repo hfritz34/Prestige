@@ -10,6 +10,7 @@ namespace Prestige.Api.Logging
         private static readonly Action<ILogger, string, Exception> _artistNotFound;
         private static readonly Action<ILogger, Exception> _spotifyTokenNotFound;
         private static readonly Action<ILogger, string, Exception> _searchNotFound;
+        private static readonly Action<ILogger, string, Exception> _spotifyRequestFailed;
 
         static SpotifyLogging()
         { 
@@ -42,6 +43,12 @@ namespace Prestige.Api.Logging
                 LogLevel.Error,
                 new EventId(20004, "SearchNotFound"),
                 "Search not found: search term {searchTerm}."
+            );
+
+            _spotifyRequestFailed = LoggerMessage.Define<string>(
+                LogLevel.Error,
+                new EventId(20005, "SpotifyRequestFailed"),
+                "Spotify request failed: {request}."
             );
 
         }
@@ -78,6 +85,13 @@ namespace Prestige.Api.Logging
         {
             var ex = new NotFoundException(20004, "Search not found.");
             _searchNotFound(logger, searchTerm, ex);
+            return ex;
+        }
+
+        public static Exception SpotifyRequestFailed(this ILogger logger, string request)
+        {
+            var ex = new Exception(20005, "Spotify request failed.");
+            _spotifyRequestFailed(logger, request, ex);
             return ex;
         }
 

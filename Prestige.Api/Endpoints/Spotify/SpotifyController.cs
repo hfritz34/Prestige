@@ -128,5 +128,19 @@ namespace Prestige.Api.Endpoints.Spotify
             }
         }
 
+        [HttpGet("currently-playing")]
+        public async Task<IActionResult> GetCurrentlyPlayingAsync()
+        {
+            try
+            {
+                var response = await _service.GetCurrentlyPlayingAsync();
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
     }
 }

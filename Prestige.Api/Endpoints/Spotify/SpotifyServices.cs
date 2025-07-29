@@ -7,15 +7,18 @@ using Prestige.Api.Domain;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Azure;
+using System.Text.Json;
+using Prestige.Api.Endpoints.UserEndpoints;
 
 namespace Prestige.Api.Endpoints.Spotify
 {
     public class SpotifyServices : BaseService
     {
+        private readonly UserServices _userServices;
 
-        public SpotifyServices(PrestigeContext db, ILogger<SpotifyServices> logger, ClaimsPrincipal principal, IConfiguration config) : base(db, logger, principal, config)
+        public SpotifyServices(PrestigeContext db, ILogger<SpotifyServices> logger, ClaimsPrincipal principal, IConfiguration config, UserServices userServices) : base(db, logger, principal, config)
         {
-
+            _userServices = userServices;
         }
 
         private async Task<HttpClient> getSpotifyAuthorizedClient()
@@ -47,6 +50,19 @@ namespace Prestige.Api.Endpoints.Spotify
             };
 
             spotify.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", client_credentials);
+            return spotify;
+        }
+
+        private async Task<HttpClient> getUserSpotifyAuthorizedClient()
+        {
+            var userId = Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Split("|").Last() ?? throw Logger.UserNotFound("User ID");
+            var accessToken = await _userServices.GetAccessToken(userId);
+            
+            var spotify = new HttpClient
+            {
+                BaseAddress = new Uri("https://api.spotify.com/v1/")
+            };
+            spotify.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             return spotify;
         }
 
@@ -371,6 +387,55 @@ namespace Prestige.Api.Endpoints.Spotify
                 PrestigeDb.Images.Add(image);
             }
             return image;
+        }
+
+        public async Task<CurrentlyPlayingResponse?> GetCurrentlyPlayingAsync()
+        {
+            var spotify = await getUserSpotifyAuthorizedClient();
+            
+            var response = await spotify.GetAsync("me/player/currently-playing");
+            
+            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            {
+                return null;
+            }
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                throw Logger.SpotifyRequestFailed("Currently Playing");
+            }
+            
+            var content = await response.Content.ReadAsStringAsync();
+            var json = JsonDocument.Parse(content);
+            var root = json.RootElement;
+            
+            if (!root.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
+            {
+                return null;
+            }
+            
+            var isPlaying = root.TryGetProperty("is_playing", out var playing) && playing.GetBoolean();
+            var progressMs = root.TryGetProperty("progress_ms", out var progress) ? progress.GetInt32() : 0;
+            
+            var trackResponse = item.Deserialize<TrackResponse>(new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            
+            if (trackResponse != null)
+            {
+                var track = PostTrack(trackResponse);
+                PrestigeDb.SaveChanges();
+                
+                return new CurrentlyPlayingResponse(
+                    new TrackResponse(track),
+                    isPlaying,
+                    progressMs,
+                    trackResponse.DurationMs
+                );
+            }
+            
+            return null;
         }
     }
 }
