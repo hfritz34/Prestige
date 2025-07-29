@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import useHttp from "./useHttp";
-import { useAuth0 } from "@auth0/auth0-react";
 
 interface CurrentlyPlayingResponse {
   track: {
@@ -40,40 +39,29 @@ interface CurrentlyPlayingResponse {
   durationMs: number;
 }
 
-const useCurrentlyPlaying = () => {
+const useFriendCurrentlyPlaying = (friendId: string | undefined) => {
   const { getOne } = useHttp();
-  const { user } = useAuth0();
 
-  const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse | null> => {
+  const getFriendCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse | null> => {
+    if (!friendId) return null;
+    
     try {
-      console.log("Fetching currently playing track...");
-      const response = await getOne<CurrentlyPlayingResponse | any>("spotify/currently-playing");
-      console.log("Currently playing response:", response);
-      
-      // Handle the case where backend returns a message object instead of track data
-      if (response && typeof response === 'object' && 'message' in response) {
-        console.log("No track currently playing:", response.message);
-        return null;
-      }
-      
-      // Only return response if it has the expected track structure
-      if (response && response.track) {
-        return response as CurrentlyPlayingResponse;
-      }
-      
-      return null;
+      const response = await getOne<CurrentlyPlayingResponse>(`spotify/currently-playing/${friendId}`);
+      return response;
     } catch (error) {
-      console.error("Error fetching currently playing track:", error);
+      console.error("Error fetching friend's currently playing track:", error);
       return null;
     }
   };
 
   const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ["currentlyPlaying", user?.sub],
-    queryFn: getCurrentlyPlaying,
-    enabled: !!user?.sub,
-    // Temporarily disable auto-refresh to save Auth0 tokens
-    refetchInterval: false,
+    queryKey: ["friendCurrentlyPlaying", friendId],
+    queryFn: getFriendCurrentlyPlaying,
+    enabled: !!friendId,
+    refetchInterval: (query) => {
+      // Refetch every 10 seconds if playing, every 60 seconds if not
+      return query.state.data?.isPlaying ? 10000 : 60000;
+    },
     retry: false,
   });
 
@@ -92,4 +80,4 @@ const useCurrentlyPlaying = () => {
   };
 };
 
-export default useCurrentlyPlaying;
+export default useFriendCurrentlyPlaying;

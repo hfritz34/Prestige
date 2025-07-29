@@ -37,11 +37,16 @@ const useHttp = () => {
 				},
 				cacheMode: "on"
 			})
+			console.log("API URL:", apiUri);
+			console.log("Endpoint:", relativeUri);
+			console.log("Token (first 50 chars):", token?.substring(0, 50) + "...");
+			
 			const response = await axios.get<T>(`${apiUri}/${relativeUri}`, {
 				headers: {
 					Authorization: "Bearer " + token,
 				},
 			})
+			console.log("Response status:", response.status);
 			return response.data as T
 		});
 	}

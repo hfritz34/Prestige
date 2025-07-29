@@ -61,12 +61,19 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             return (new UserResponse(user), false);
         }
 
-        public async Task<string> GetAccessToken(string id)
+        public new async Task<string> GetAccessToken(string id)
         {
 
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
             if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
             {
+                // Only refresh token if it's the current user
+                if (id != UserAuthId.Split("|").Last())
+                {
+                    // For other users, we can't refresh their token
+                    throw Logger.UserUnauthorized(id);
+                }
+                
                 var auth0User = await GetAuth0UserAsync();
 
                 user.UpdateTokens(

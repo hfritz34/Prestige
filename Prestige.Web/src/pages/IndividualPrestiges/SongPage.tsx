@@ -3,15 +3,20 @@ import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige from '@/hooks/usePrestige';
+import useCurrentlyPlaying from '@/hooks/useCurrentlyPlaying';
+import { motion } from 'framer-motion';
 
 const SongPage: React.FC = () => {
   const { getFriendsWhoListenedToTrack, getFriendTrackTimeListened, friends, loading } = useFriends();
   const { getTrackPrestigeTier } = usePrestige();
+  const { currentlyPlaying } = useCurrentlyPlaying();
   const [showFriends, setShowFriends] = useState(false);
   const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
 
   const location = useLocation();
   const track = location.state;
+  
+  const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
 
   const handleShowFriends = async () => {
     if (!showFriends) {
@@ -49,7 +54,19 @@ const SongPage: React.FC = () => {
           />
         </div>
         <div className="text-center z-10">
-          <h2 className="text-xl font-bold mb-2">{track.trackName}</h2>
+          <h2 className="text-xl font-bold mb-2">
+            {track.trackName}
+            {isNowPlaying && (
+              <motion.span
+                className="ml-3 text-blue-400 text-sm font-normal"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                🎵 Now Playing
+              </motion.span>
+            )}
+          </h2>
           <p className="text-lg">{track.artistName}</p>
           <p className="text-lg mb-4">{track.albumName}</p>
         </div>

@@ -134,6 +134,24 @@ namespace Prestige.Api.Endpoints.Spotify
             try
             {
                 var response = await _service.GetCurrentlyPlayingAsync();
+                if (response == null)
+                {
+                    return Ok(new { message = "No track currently playing", timestamp = DateTime.UtcNow });
+                }
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpGet("currently-playing/{userId}")]
+        public async Task<IActionResult> GetFriendCurrentlyPlayingAsync(string userId)
+        {
+            try
+            {
+                var response = await _service.GetFriendCurrentlyPlayingAsync(userId);
                 return Ok(response);
             }
             catch (Exception ex)

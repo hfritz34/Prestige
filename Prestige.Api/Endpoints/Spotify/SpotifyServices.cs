@@ -391,51 +391,125 @@ namespace Prestige.Api.Endpoints.Spotify
 
         public async Task<CurrentlyPlayingResponse?> GetCurrentlyPlayingAsync()
         {
-            var spotify = await getUserSpotifyAuthorizedClient();
-            
-            var response = await spotify.GetAsync("me/player/currently-playing");
-            
-            if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+            try
             {
-                return null;
-            }
-            
-            if (!response.IsSuccessStatusCode)
-            {
-                throw Logger.SpotifyRequestFailed("Currently Playing");
-            }
-            
-            var content = await response.Content.ReadAsStringAsync();
-            var json = JsonDocument.Parse(content);
-            var root = json.RootElement;
-            
-            if (!root.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
-            {
-                return null;
-            }
-            
-            var isPlaying = root.TryGetProperty("is_playing", out var playing) && playing.GetBoolean();
-            var progressMs = root.TryGetProperty("progress_ms", out var progress) ? progress.GetInt32() : 0;
-            
-            var trackResponse = item.Deserialize<TrackResponse>(new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
-            
-            if (trackResponse != null)
-            {
-                var track = PostTrack(trackResponse);
-                PrestigeDb.SaveChanges();
+                var spotify = await getUserSpotifyAuthorizedClient();
                 
-                return new CurrentlyPlayingResponse(
-                    new TrackResponse(track),
-                    isPlaying,
-                    progressMs,
-                    trackResponse.DurationMs
-                );
-            }
+                var response = await spotify.GetAsync("me/player/currently-playing");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return null;
+                }
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    // User might not have an active Spotify session or might not have granted proper scopes
+                    return null;
+                }
             
-            return null;
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonDocument.Parse(content);
+                var root = json.RootElement;
+                
+                if (!root.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
+                {
+                    return null;
+                }
+                
+                var isPlaying = root.TryGetProperty("is_playing", out var playing) && playing.GetBoolean();
+                var progressMs = root.TryGetProperty("progress_ms", out var progress) ? progress.GetInt32() : 0;
+                
+                var trackResponse = item.Deserialize<TrackResponse>(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (trackResponse != null)
+                {
+                    var track = PostTrack(trackResponse);
+                    PrestigeDb.SaveChanges();
+                    
+                    return new CurrentlyPlayingResponse(
+                        new TrackResponse(track),
+                        isPlaying,
+                        progressMs,
+                        trackResponse.DurationMs
+                    );
+                }
+                
+                return null;
+            }
+            catch (Exception)
+            {
+                // Log error but don't throw - return null to indicate no currently playing track
+                return null;
+            }
+        }
+
+        public async Task<CurrentlyPlayingResponse?> GetFriendCurrentlyPlayingAsync(string friendId)
+        {
+            try
+            {
+                // Get friend's access token
+                var friendAccessToken = await _userServices.GetAccessToken(friendId);
+                
+                var spotify = new HttpClient
+                {
+                    BaseAddress = new Uri("https://api.spotify.com/v1/")
+                };
+                spotify.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", friendAccessToken);
+                
+                var response = await spotify.GetAsync("me/player/currently-playing");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                {
+                    return null;
+                }
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Friend might not have an active Spotify session
+                    return null;
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonDocument.Parse(content);
+                var root = json.RootElement;
+                
+                if (!root.TryGetProperty("item", out var item) || item.ValueKind == JsonValueKind.Null)
+                {
+                    return null;
+                }
+                
+                var isPlaying = root.TryGetProperty("is_playing", out var playing) && playing.GetBoolean();
+                var progressMs = root.TryGetProperty("progress_ms", out var progress) ? progress.GetInt32() : 0;
+                
+                var trackResponse = item.Deserialize<TrackResponse>(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (trackResponse != null)
+                {
+                    var track = PostTrack(trackResponse);
+                    PrestigeDb.SaveChanges();
+                    
+                    return new CurrentlyPlayingResponse(
+                        new TrackResponse(track),
+                        isPlaying,
+                        progressMs,
+                        trackResponse.DurationMs
+                    );
+                }
+                
+                return null;
+            }
+            catch (Exception)
+            {
+                // Log error but don't throw - return null to indicate no currently playing track
+                return null;
+            }
         }
     }
 }

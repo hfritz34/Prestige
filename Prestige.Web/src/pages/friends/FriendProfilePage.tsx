@@ -12,6 +12,8 @@ import useFriends from "@/hooks/useFriends";
 import { useQuery } from "@tanstack/react-query";
 import FriendFavoritesCarousel from "./components/FriendFavoritesCarousel";
 import FriendTopCarousel from "./components/FriendTopCarousel";
+import CurrentlyPlaying from "@/components/CurrentlyPlaying/CurrentlyPlaying";
+import useFriendCurrentlyPlaying from "@/hooks/useFriendCurrentlyPlaying";
 
 const FriendProfilePage: React.FC = () => {
   const { friendId } = useParams<{ friendId: string }>();
@@ -19,6 +21,7 @@ const FriendProfilePage: React.FC = () => {
   const [viewTypeFavorite, setViewTypeFavorite] = useState<"FavoriteTracks" | "FavoriteAlbums" | "FavoriteArtists">("FavoriteTracks");
 
   const { getFriend } = useFriends();
+  const { currentlyPlaying, totalTime } = useFriendCurrentlyPlaying(friendId);
 
   useEffect(() => {
   }, [friendId]);
@@ -33,6 +36,14 @@ const FriendProfilePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      {currentlyPlaying && (
+        <CurrentlyPlaying
+          track={currentlyPlaying.track}
+          isPlaying={currentlyPlaying.isPlaying}
+          progressMs={currentlyPlaying.progressMs}
+          totalTime={totalTime}
+        />
+      )}
       <div className="flex justify-between items-center p-4">
       </div>
       <div className="flex flex-col items-center p-4">
