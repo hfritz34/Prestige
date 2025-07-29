@@ -19,8 +19,7 @@ const HomePage: React.FC = () => {
   const [viewType, setViewType] = useState<"TopTracks" | "TopAlbums" | "TopArtists">("TopTracks");
   const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   const { user } = useAuth0();
-  const { currentlyPlaying, totalTime, refetch } = useCurrentlyPlaying();
-  console.log("HomePage - currentlyPlaying:", currentlyPlaying);
+  const { currentlyPlaying, totalTime } = useCurrentlyPlaying();
   const TOP_LIMIT = 60;
 
   const { data: topTracks, error: tracksError, isLoading: tracksLoading } = useQuery<UserTrackResponse[]>({
@@ -80,17 +79,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="bg-gray-800 text-white min-h-screen overflow-visible">
-      {/* Debug indicator with manual refresh */}
-      <div className="fixed top-4 left-4 bg-red-500 text-white p-2 rounded z-50 flex gap-2">
-        <span>Debug: {currentlyPlaying ? "Has Data" : "No Data"}</span>
-        <button 
-          onClick={() => refetch()} 
-          className="bg-blue-600 px-2 py-1 rounded text-xs"
-        >
-          🔄 Refresh
-        </button>
-      </div>
-      
       {currentlyPlaying && (
         <CurrentlyPlaying
           track={currentlyPlaying.track}

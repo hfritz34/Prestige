@@ -3,12 +3,24 @@ using System.Net.Http.Json;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Prestige.Functions.Models;
+using System.Collections.Concurrent;
 
 namespace CosmosDBParser
 {
    public class CosmosDBParser
    {
        private readonly ILogger _logger;
+       
+       // Static token cache to persist across function executions
+       private static readonly ConcurrentDictionary<string, CachedToken> _tokenCache = new();
+       
+       // Token cache entry
+       private class CachedToken
+       {
+           public string AccessToken { get; set; } = string.Empty;
+           public DateTime ExpiresAt { get; set; }
+           public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
+       }
 
        public CosmosDBParser(ILoggerFactory loggerFactory)
        {
@@ -138,8 +150,24 @@ namespace CosmosDBParser
 
        private async Task<HttpClient> GetApiClientAsync()
        {
-           _logger.LogInformation("Getting Auth0 M2M token for Prestige API");
+           // Create cache key based on environment settings
+           var m2mClientId = Environment.GetEnvironmentVariable("FunctionM2MClientId") ?? throw new Exception("FunctionM2MClientId setting not found");
+           var apiAudience = Environment.GetEnvironmentVariable("Auth0ApiAudience") ?? throw new Exception("Auth0ApiAudience setting not found");
+           var cacheKey = $"{m2mClientId}_{apiAudience}";
+           
+           // Check if we have a valid cached token
+           if (_tokenCache.TryGetValue(cacheKey, out var cachedToken) && !cachedToken.IsExpired)
+           {
+               _logger.LogInformation("Using cached Auth0 M2M token");
+               var cachedClient = new HttpClient();
+               cachedClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", cachedToken.AccessToken);
+               cachedClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl") ?? throw new Exception("ApiBaseUrl setting not found"));
+               return cachedClient;
+           }
+
+           _logger.LogInformation("Requesting new Auth0 M2M token for Prestige API");
            var auth0Client = new HttpClient();
+           
            // Ensure domain has trailing slash for consistency
            var auth0Domain = Environment.GetEnvironmentVariable("Auth0Domain");
            if (!string.IsNullOrEmpty(auth0Domain) && !auth0Domain.EndsWith("/"))
@@ -147,11 +175,7 @@ namespace CosmosDBParser
                auth0Domain += "/";
            }
            
-           // Use dedicated settings for the M2M app calling the API
-           var m2mClientId = Environment.GetEnvironmentVariable("FunctionM2MClientId") ?? throw new Exception("FunctionM2MClientId setting not found");
            var m2mClientSecret = Environment.GetEnvironmentVariable("FunctionM2MClientSecret") ?? throw new Exception("FunctionM2MClientSecret setting not found");
-           // Use the API's audience, NOT the management API audience
-           var apiAudience = Environment.GetEnvironmentVariable("Auth0ApiAudience") ?? throw new Exception("Auth0ApiAudience setting not found"); 
 
            var request = new HttpRequestMessage(HttpMethod.Post, $"https://{auth0Domain}oauth/token"); 
            request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -159,7 +183,7 @@ namespace CosmosDBParser
                {"grant_type", "client_credentials"},
                {"client_id", m2mClientId},
                {"client_secret", m2mClientSecret},
-               {"audience", apiAudience} // Use the API audience here
+               {"audience", apiAudience}
            });
 
            try 
@@ -171,21 +195,41 @@ namespace CosmosDBParser
                if (!tokenResponse.IsSuccessStatusCode)
                {
                    _logger.LogError($"Auth0 M2M token error: {responseContent}");
-                   tokenResponse.EnsureSuccessStatusCode(); // Throw exception if failed
+                   tokenResponse.EnsureSuccessStatusCode();
                }
                
                var tokenObject = await tokenResponse.Content.ReadFromJsonAsync<Dictionary<string, object>>();
-               if (tokenObject == null || !tokenObject.TryGetValue("access_token", out object? value))
+               if (tokenObject == null || !tokenObject.TryGetValue("access_token", out object? accessTokenValue))
                {
                     _logger.LogError("Could not find access_token in Auth0 M2M response.");
                     throw new Exception("Failed to retrieve access token from Auth0 M2M response.");
                }
-               var accessToken = value.ToString();
-               _logger.LogInformation("Successfully obtained M2M access token for Prestige API.");
+               
+               var accessToken = accessTokenValue.ToString() ?? throw new Exception("Access token is null");
+               
+               // Parse expires_in from response (typically 86400 seconds = 24 hours)
+               var expiresIn = 3600; // Default to 1 hour if not specified
+               if (tokenObject.TryGetValue("expires_in", out object? expiresValue) && int.TryParse(expiresValue.ToString(), out var parsedExpires))
+               {
+                   expiresIn = parsedExpires;
+               }
+               
+               // Cache the token with 5 minute buffer before actual expiry
+               var expiresAt = DateTime.UtcNow.AddSeconds(expiresIn - 300);
+               _tokenCache.AddOrUpdate(cacheKey, new CachedToken 
+               { 
+                   AccessToken = accessToken, 
+                   ExpiresAt = expiresAt 
+               }, (key, old) => new CachedToken 
+               { 
+                   AccessToken = accessToken, 
+                   ExpiresAt = expiresAt 
+               });
+               
+               _logger.LogInformation($"Successfully obtained and cached M2M access token. Expires at: {expiresAt:yyyy-MM-dd HH:mm:ss} UTC");
 
                var apiClient = new HttpClient();
                apiClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-               // Use the API base URL configured
                apiClient.BaseAddress = new Uri(Environment.GetEnvironmentVariable("ApiBaseUrl") ?? throw new Exception("ApiBaseUrl setting not found"));
 
                return apiClient;

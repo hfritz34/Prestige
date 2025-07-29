@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace RecentlyPlayedTrigger
 {
@@ -18,6 +19,17 @@ namespace RecentlyPlayedTrigger
         private readonly CosmosClient cosmosClient;
         private readonly Database database;
         private readonly Container container;
+
+        // Static token cache to persist across function executions
+        private static readonly ConcurrentDictionary<string, CachedToken> _tokenCache = new();
+        
+        // Token cache entry
+        private class CachedToken
+        {
+            public string AccessToken { get; set; } = string.Empty;
+            public DateTime ExpiresAt { get; set; }
+            public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
+        }
 
         public RecentlyPlayedTrigger(ILoggerFactory loggerFactory)
         {
@@ -319,17 +331,32 @@ namespace RecentlyPlayedTrigger
 
         private async Task<string> GetAuth0ManagementTokenAsync()
         {
+            // Create cache key based on environment settings
+            var clientId = Environment.GetEnvironmentVariable("Auth0ClientId") ?? throw new Exception("Auth0ClientId not found");
+            var audience = Environment.GetEnvironmentVariable("Auth0Audience") ?? throw new Exception("Auth0Audience not found");
+            var cacheKey = $"mgmt_{clientId}_{audience}";
+            
+            // Check if we have a valid cached token
+            if (_tokenCache.TryGetValue(cacheKey, out var cachedToken) && !cachedToken.IsExpired)
+            {
+                _logger.LogInformation("Using cached Auth0 Management API token");
+                return cachedToken.AccessToken;
+            }
+
+            _logger.LogInformation("Requesting new Auth0 Management API token");
             var auth0Client = new HttpClient
             {
                 BaseAddress = new Uri($"https://{auth0Domain}")
             };
 
+            var clientSecret = Environment.GetEnvironmentVariable("Auth0ClientSecret") ?? throw new Exception("Auth0ClientSecret not found");
+
             var tokenData = new Dictionary<string, string>
             {
                 { "grant_type", "client_credentials" },
-                { "client_id", Environment.GetEnvironmentVariable("Auth0ClientId") ?? throw new Exception("Auth0ClientId not found") },
-                { "client_secret", Environment.GetEnvironmentVariable("Auth0ClientSecret") ?? throw new Exception("Auth0ClientSecret not found") },
-                { "audience", Environment.GetEnvironmentVariable("Auth0Audience") ?? throw new Exception("Auth0Audience not found") }
+                { "client_id", clientId },
+                { "client_secret", clientSecret },
+                { "audience", audience }
             };
 
             var tokenRequest = new HttpRequestMessage(HttpMethod.Post, "/oauth/token")
@@ -341,8 +368,30 @@ namespace RecentlyPlayedTrigger
             tokenResponse.EnsureSuccessStatusCode();
 
             var tokenContent = await tokenResponse.Content.ReadFromJsonAsync<JsonElement>();
+            var accessToken = tokenContent.GetProperty("access_token").GetString() ?? throw new Exception("Access token is null");
 
-            return tokenContent.GetProperty("access_token").GetString();
+            // Parse expires_in from response (typically 86400 seconds = 24 hours)
+            var expiresIn = 3600; // Default to 1 hour if not specified
+            if (tokenContent.TryGetProperty("expires_in", out var expiresValue) && int.TryParse(expiresValue.ToString(), out var parsedExpires))
+            {
+                expiresIn = parsedExpires;
+            }
+
+            // Cache the token with 5 minute buffer before actual expiry
+            var expiresAt = DateTime.UtcNow.AddSeconds(expiresIn - 300);
+            _tokenCache.AddOrUpdate(cacheKey, new CachedToken 
+            { 
+                AccessToken = accessToken, 
+                ExpiresAt = expiresAt 
+            }, (key, old) => new CachedToken 
+            { 
+                AccessToken = accessToken, 
+                ExpiresAt = expiresAt 
+            });
+
+            _logger.LogInformation($"Successfully obtained and cached Auth0 Management API token. Expires at: {expiresAt:yyyy-MM-dd HH:mm:ss} UTC");
+
+            return accessToken;
         }
 
         public class User

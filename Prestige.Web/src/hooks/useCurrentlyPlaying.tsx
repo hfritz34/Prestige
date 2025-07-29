@@ -46,13 +46,10 @@ const useCurrentlyPlaying = () => {
 
   const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse | null> => {
     try {
-      console.log("Fetching currently playing track...");
       const response = await getOne<CurrentlyPlayingResponse | any>("spotify/currently-playing");
-      console.log("Currently playing response:", response);
       
       // Handle the case where backend returns a message object instead of track data
       if (response && typeof response === 'object' && 'message' in response) {
-        console.log("No track currently playing:", response.message);
         return null;
       }
       
@@ -63,7 +60,6 @@ const useCurrentlyPlaying = () => {
       
       return null;
     } catch (error) {
-      console.error("Error fetching currently playing track:", error);
       return null;
     }
   };
@@ -72,8 +68,8 @@ const useCurrentlyPlaying = () => {
     queryKey: ["currentlyPlaying", user?.sub],
     queryFn: getCurrentlyPlaying,
     enabled: !!user?.sub,
-    // Temporarily disable auto-refresh to save Auth0 tokens
-    refetchInterval: false,
+    // Conservative refresh to manage token usage
+    refetchInterval: 120000, // 2 minutes
     retry: false,
   });
 
