@@ -34,7 +34,7 @@ export type ComparisonResultResponse = {
 
 const useRating = () => {
     const { getMany, post } = useHttp();
-    const baseEndpoint = "rating";
+    const baseEndpoint = "api/rating";
 
     const getRatingCategories = async (): Promise<RatingCategoryResponse[]> => {
         return await getMany<RatingCategoryResponse>(`${baseEndpoint}/categories`);

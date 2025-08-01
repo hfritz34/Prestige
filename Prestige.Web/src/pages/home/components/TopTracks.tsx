@@ -16,7 +16,9 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
   // Fetch track ratings
   const { data: trackRatings } = useQuery({
     queryKey: ['ratings', 'track'],
-    queryFn: () => getUserRatings('track')
+    queryFn: () => getUserRatings('track'),
+    retry: false,
+    throwOnError: false
   });
 
   // Helper to get rating for a track

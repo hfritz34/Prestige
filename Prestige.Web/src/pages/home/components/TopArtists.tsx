@@ -16,7 +16,9 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
   // Fetch artist ratings
   const { data: artistRatings } = useQuery({
     queryKey: ['ratings', 'artist'],
-    queryFn: () => getUserRatings('artist')
+    queryFn: () => getUserRatings('artist'),
+    retry: false,
+    throwOnError: false
   });
 
   // Helper to get rating for an artist

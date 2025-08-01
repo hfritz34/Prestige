@@ -16,7 +16,9 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
   // Fetch album ratings
   const { data: albumRatings } = useQuery({
     queryKey: ['ratings', 'album'],
-    queryFn: () => getUserRatings('album')
+    queryFn: () => getUserRatings('album'),
+    retry: false,
+    throwOnError: false
   });
 
   // Helper to get rating for an album
