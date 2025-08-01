@@ -7,6 +7,8 @@ namespace Prestige.Api.Domain
         public Album Album { get; private set; }
         public User User { get; private set; }
         public bool IsFavorite { get; private set; }
+        public decimal? PersonalRatingScore { get; private set; }
+        public int? RatingPosition { get; private set; }
 
         private UserAlbum() { }
 
@@ -25,6 +27,12 @@ namespace Prestige.Api.Domain
         public void ToggleIsFavorite()
         {
             IsFavorite = !IsFavorite;
+        }
+
+        public void UpdateRating(decimal score, int position)
+        {
+            PersonalRatingScore = score;
+            RatingPosition = position;
         }
     }
 }
