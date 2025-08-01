@@ -115,6 +115,8 @@ namespace Prestige.Api.Endpoints.Rating
             var existingRating = await PrestigeDb.Ratings
                 .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
 
+            bool isNewRating = existingRating == null;
+
             if (existingRating != null)
             {
                 // Update existing rating
@@ -129,15 +131,62 @@ namespace Prestige.Api.Endpoints.Rating
 
             await PrestigeDb.SaveChangesAsync();
 
+            // Recalculate all scores for this user and item type using Beli-style position-based scoring
+            await RecalculateUserScoresAsync(userId, itemType);
+
+            // Get the final position and score for the saved item
+            var savedRating = await PrestigeDb.Ratings
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
+
             return new RatingResponse
             {
                 ItemId = itemId,
                 ItemType = itemType,
                 CategoryId = categoryId,
-                PersonalScore = personalScore,
-                Position = 0,
-                IsNewRating = existingRating == null
+                PersonalScore = savedRating?.PersonalScore ?? personalScore,
+                Position = savedRating?.Position ?? 0,
+                IsNewRating = isNewRating
             };
+        }
+
+        private async Task RecalculateUserScoresAsync(string userId, string itemType)
+        {
+            // Get all ratings for this user and item type, ordered by personal score (highest first)
+            var userRatings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType == itemType)
+                .OrderByDescending(r => r.PersonalScore)
+                .ToListAsync();
+
+            if (userRatings.Count == 0) return;
+
+            // Implement Beli-style position-based scoring
+            // Score = 10 * (totalCount - 1 - position) / (totalCount - 1)
+            // This ensures top item gets 10.0, bottom gets 0.0, evenly distributed
+            
+            for (int i = 0; i < userRatings.Count; i++)
+            {
+                var rating = userRatings[i];
+                var position = i; // 0-based position (0 = highest rated)
+                var totalCount = userRatings.Count;
+                
+                // Calculate new score based on position
+                decimal newScore;
+                if (totalCount == 1)
+                {
+                    newScore = 10.0m; // Single item gets perfect score
+                }
+                else
+                {
+                    // Position-based scoring: higher position = higher score
+                    newScore = 10.0m * (totalCount - 1 - position) / (totalCount - 1);
+                }
+                
+                // Update both position and recalculated score
+                rating.UpdatePosition(position);
+                rating.UpdateScore(newScore);
+            }
+
+            await PrestigeDb.SaveChangesAsync();
         }
 
         private string GetUserId()

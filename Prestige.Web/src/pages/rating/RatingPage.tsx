@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import NavBar from '@/components/navigation/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RatingItemCard from './components/RatingItemCard';
@@ -19,6 +19,7 @@ interface RatingItem {
 const RatingPage: React.FC = () => {
   const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists } = useProfile();
   const { startRating, getUserRatings, saveRating } = useRating();
+  const queryClient = useQueryClient();
   
   const [selectedItem, setSelectedItem] = useState<RatingItem | null>(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -105,8 +106,12 @@ const RatingPage: React.FC = () => {
       setIsRatingModalOpen(false);
       setSelectedItem(null);
       
-      // Refresh the ratings data
-      window.location.reload(); // Quick fix to refresh data - should use proper query invalidation
+      // Invalidate and refetch rating queries to update the UI
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'track'] }),
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'album'] }),
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'artist'] })
+      ]);
     } catch (error) {
       console.error('Error completing rating:', error);
     }

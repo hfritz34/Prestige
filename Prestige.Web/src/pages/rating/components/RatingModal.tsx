@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import useRating from '@/hooks/useRating';
+import useProfile from '@/hooks/useProfile';
 import BeliComparisonUI from './BeliComparisonUI';
 
 interface RatingItem {
@@ -69,11 +70,71 @@ interface BinarySearchState {
 
 const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete }) => {
   const { getUserRatings, submitComparison } = useRating();
+  const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   
   const [step, setStep] = useState<RatingStep>('partition');
   const [selectedPartition, setSelectedPartition] = useState<'loved' | 'liked' | 'disliked' | null>(null);
   const [binarySearchState, setBinarySearchState] = useState<BinarySearchState | null>(null);
   const [currentComparison, setCurrentComparison] = useState<{ item: ComparisonItem; number: number; total: number } | null>(null);
+
+  // Helper function to get full item details with images
+  const getItemDetails = async (itemId: string, itemType: 'track' | 'album' | 'artist') => {
+    try {
+      let items = [];
+      switch (itemType) {
+        case 'track':
+          items = await getTopTracks();
+          break;
+        case 'album':
+          items = await getTopAlbums();
+          break;
+        case 'artist':
+          items = await getTopArtists();
+          break;
+      }
+
+      // Find the item in the user's collection
+      const foundItem = items.find(item => {
+        if (itemType === 'track') return item.track.id === itemId;
+        if (itemType === 'album') return item.album.id === itemId;
+        if (itemType === 'artist') return item.artist.id === itemId;
+        return false;
+      });
+
+      if (foundItem) {
+        if (itemType === 'track') {
+          return {
+            name: foundItem.track.name,
+            subtitle: `${foundItem.track.artists.map((a: any) => a.name).join(', ')} • ${foundItem.track.album.name}`,
+            imageUrl: foundItem.track.album.images[0]?.url
+          };
+        }
+        if (itemType === 'album') {
+          return {
+            name: foundItem.album.name,
+            subtitle: foundItem.album.artists.map((a: any) => a.name).join(', '),
+            imageUrl: foundItem.album.images[0]?.url
+          };
+        }
+        if (itemType === 'artist') {
+          return {
+            name: foundItem.artist.name,
+            subtitle: 'Artist',
+            imageUrl: foundItem.artist.images[0]?.url
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching item details:', error);
+    }
+
+    // Fallback if item not found
+    return {
+      name: `${itemType} ${itemId.substring(0, 8)}...`,
+      subtitle: 'Unknown',
+      imageUrl: undefined
+    };
+  };
 
   const handlePartitionSelect = async (partition: 'loved' | 'liked' | 'disliked') => {
     setSelectedPartition(partition);
@@ -81,6 +142,20 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
     try {
       // Fetch existing ratings for this item type to compare against
       const existingRatings = await getUserRatings(item?.type || 'track');
+      
+      // Ensure existingRatings is an array
+      if (!Array.isArray(existingRatings)) {
+        console.warn('getUserRatings returned non-array:', existingRatings);
+        // Skip comparison phase - no existing ratings to compare against
+        setStep('partition');
+        const partitionMidpoint = {
+          'loved': 8.5,
+          'liked': 5.5,
+          'disliked': 2.5
+        };
+        onComplete(item?.id || '', partition, partitionMidpoint[partition]);
+        return;
+      }
       
       // For tracks, only compare with tracks from the same album
       let filteredRatings = existingRatings;
@@ -110,15 +185,22 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       
       if (partitionItems.length > 0) {
         // Create sorted list for binary search (highest to lowest score)
-        const sortedItems: ComparisonItem[] = partitionItems
-          .map(rating => ({
-            id: rating.itemId,
-            name: `${item?.type} ${rating.itemId.substring(0, 8)}...`, // Abbreviated for now
-            subtitle: `Score: ${rating.personalScore?.toFixed(1)}`,
-            type: item?.type || 'track',
-            personalScore: rating.personalScore || 0,
-            imageUrl: undefined // We'd need to fetch this from Spotify
-          }))
+        // First, fetch details for all items to get names and images
+        const itemsWithDetails = await Promise.all(
+          partitionItems.map(async (rating) => {
+            const details = await getItemDetails(rating.itemId, item?.type || 'track');
+            return {
+              id: rating.itemId,
+              name: details.name,
+              subtitle: details.subtitle,
+              type: item?.type || 'track',
+              personalScore: rating.personalScore || 0,
+              imageUrl: details.imageUrl
+            };
+          })
+        );
+
+        const sortedItems: ComparisonItem[] = itemsWithDetails
           .sort((a, b) => b.personalScore - a.personalScore);
         
         // Initialize binary search
