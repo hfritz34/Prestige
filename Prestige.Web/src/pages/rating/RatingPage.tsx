@@ -17,8 +17,8 @@ interface RatingItem {
 }
 
 const RatingPage: React.FC = () => {
-  const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed } = useProfile();
-  const { startRating, getUserRatings } = useRating();
+  const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists } = useProfile();
+  const { startRating, getUserRatings, saveRating } = useRating();
   
   const [selectedItem, setSelectedItem] = useState<RatingItem | null>(null);
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
@@ -44,6 +44,16 @@ const RatingPage: React.FC = () => {
   const { data: recentlyPlayed, isLoading: recentLoading } = useQuery({
     queryKey: ['recentlyPlayed'],
     queryFn: getRecentlyPlayed
+  });
+
+  const { data: recentlyPlayedAlbums, isLoading: recentAlbumsLoading } = useQuery({
+    queryKey: ['recentlyPlayedAlbums'],
+    queryFn: getRecentlyPlayedAlbums
+  });
+
+  const { data: recentlyPlayedArtists, isLoading: recentArtistsLoading } = useQuery({
+    queryKey: ['recentlyPlayedArtists'],
+    queryFn: getRecentlyPlayedArtists
   });
 
   // Fetch existing ratings for each type
@@ -79,13 +89,24 @@ const RatingPage: React.FC = () => {
       const itemType = selectedItem?.type || 'track';
       console.log(`Rating completed: ${itemType} ${itemId} with score ${finalScore} in partition ${partition}`);
       
-      // Start the rating process with the backend
-      await startRating(itemType, itemId);
+      // Determine category ID based on partition and score
+      const getCategoryId = (partition: 'loved' | 'liked' | 'disliked', score: number) => {
+        if (score >= 7) return 1; // Loved category
+        if (score >= 4) return 2; // Liked category  
+        return 3; // Disliked category
+      };
+
+      const categoryId = getCategoryId(partition, finalScore);
       
-      // TODO: Submit the comparison results and final score
+      // Save the rating to the backend
+      await saveRating(itemType, itemId, finalScore, categoryId);
+      console.log(`Rating saved successfully: ${itemType} ${itemId} score ${finalScore}`);
       
       setIsRatingModalOpen(false);
       setSelectedItem(null);
+      
+      // Refresh the ratings data
+      window.location.reload(); // Quick fix to refresh data - should use proper query invalidation
     } catch (error) {
       console.error('Error completing rating:', error);
     }
@@ -159,72 +180,29 @@ const RatingPage: React.FC = () => {
     ])).values())
     : [];
 
-  // Infer albums from recently played tracks by matching with user's track data
-  const recentAlbumItems = React.useMemo(() => {
-    if (!recentlyPlayed || !topTracks) return [];
-    
-    const trackIdToAlbum = new Map();
-    topTracks.forEach(userTrack => {
-      trackIdToAlbum.set(userTrack.track.id, {
-        id: userTrack.track.album.id,
-        name: userTrack.track.album.name,
-        artists: userTrack.track.album.artists,
-        imageUrl: userTrack.track.album.images[0]?.url
-      });
-    });
+  // Process recently played albums
+  const recentAlbumItems = recentlyPlayedAlbums?.map(item => ({
+    id: item.id,
+    name: item.albumName,
+    subtitle: item.artistName,
+    imageUrl: item.imageUrl,
+    type: 'album' as const,
+    isRated: isItemRated(item.id, 'album'),
+    score: getItemRating(item.id, 'album'),
+    albumId: undefined
+  })) || [];
 
-    const albumMap = new Map();
-    recentlyPlayed.forEach(recentTrack => {
-      const albumInfo = trackIdToAlbum.get(recentTrack.id);
-      if (albumInfo && !albumMap.has(albumInfo.id)) {
-        albumMap.set(albumInfo.id, {
-          id: albumInfo.id,
-          name: albumInfo.name,
-          subtitle: albumInfo.artists.map((a: any) => a.name).join(', '),
-          imageUrl: albumInfo.imageUrl,
-          type: 'album' as const,
-          isRated: isItemRated(albumInfo.id, 'album'),
-          score: getItemRating(albumInfo.id, 'album'),
-          albumId: undefined
-        });
-      }
-    });
-
-    return Array.from(albumMap.values());
-  }, [recentlyPlayed, topTracks]);
-
-  // Infer artists from recently played tracks by matching with user's track data
-  const recentArtistItems = React.useMemo(() => {
-    if (!recentlyPlayed || !topTracks) return [];
-    
-    const trackIdToArtists = new Map();
-    topTracks.forEach(userTrack => {
-      trackIdToArtists.set(userTrack.track.id, userTrack.track.artists);
-    });
-
-    const artistMap = new Map();
-    recentlyPlayed.forEach(recentTrack => {
-      const artists = trackIdToArtists.get(recentTrack.id);
-      if (artists) {
-        artists.forEach((artist: any) => {
-          if (!artistMap.has(artist.id)) {
-            artistMap.set(artist.id, {
-              id: artist.id,
-              name: artist.name,
-              subtitle: 'Artist',
-              imageUrl: artist.images[0]?.url,
-              type: 'artist' as const,
-              isRated: isItemRated(artist.id, 'artist'),
-              score: getItemRating(artist.id, 'artist'),
-              albumId: undefined
-            });
-          }
-        });
-      }
-    });
-
-    return Array.from(artistMap.values());
-  }, [recentlyPlayed, topTracks]);
+  // Process recently played artists
+  const recentArtistItems = recentlyPlayedArtists?.map(item => ({
+    id: item.id,
+    name: item.artistName,
+    subtitle: 'Artist',
+    imageUrl: item.imageUrl,
+    type: 'artist' as const,
+    isRated: isItemRated(item.id, 'artist'),
+    score: getItemRating(item.id, 'artist'),
+    albumId: undefined
+  })) || [];
 
   // Get current type items
   const getCurrentTypeItems = () => {
@@ -316,7 +294,7 @@ const RatingPage: React.FC = () => {
               <h2 className="text-xl font-semibold mb-4">
                 Recently Played {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}s
               </h2>
-              {recentLoading || trackRatingsLoading ? (
+              {recentLoading || recentAlbumsLoading || recentArtistsLoading || trackRatingsLoading || albumRatingsLoading || artistRatingsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>

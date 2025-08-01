@@ -26,6 +26,18 @@ namespace Prestige.Api.Domain
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public Rating(User user, string itemId, string itemType, RatingCategory category, int position, decimal personalScore)
+        {
+            User = user;
+            ItemId = itemId;
+            ItemType = itemType;
+            Category = category;
+            Position = position;
+            PersonalScore = personalScore;
+            CreatedAt = DateTime.UtcNow;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
         public void UpdatePosition(int position)
         {
             Position = position;
@@ -41,6 +53,14 @@ namespace Prestige.Api.Domain
         public void UpdateCategory(RatingCategory category)
         {
             Category = category;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateRating(decimal personalScore, RatingCategory category, int position)
+        {
+            PersonalScore = personalScore;
+            Category = category;
+            Position = position;
             UpdatedAt = DateTime.UtcNow;
         }
     }

@@ -75,6 +75,34 @@ namespace Prestige.Api.Endpoints.Profile
             }
         }
 
+        [HttpGet("{id}/recently-played-albums")]
+        public async Task<IActionResult> GetRecentlyPlayedAlbums(string id)
+        {
+            try
+            {
+                var recentlyPlayedAlbums = await _service.GetRecentlyPlayedAlbumsAsync(id);
+                return Ok(recentlyPlayedAlbums);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpGet("{id}/recently-played-artists")]
+        public async Task<IActionResult> GetRecentlyPlayedArtists(string id)
+        {
+            try
+            {
+                var recentlyPlayedArtists = await _service.GetRecentlyPlayedArtistsAsync(id);
+                return Ok(recentlyPlayedArtists);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
         [HttpGet("{userId}/favorites/tracks")]
         public IActionResult GetFavoriteTracks(string userId)
         {

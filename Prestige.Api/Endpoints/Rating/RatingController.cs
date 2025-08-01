@@ -28,22 +28,66 @@ namespace Prestige.Api.Endpoints.Rating
         [HttpPost("rate/{itemType}/{itemId}")]
         public async Task<IActionResult> StartRating(string itemType, string itemId)
         {
-            _logger.LogInformation("Starting rating process for {ItemType} {ItemId}", itemType, itemId);
-            return Ok();
+            try
+            {
+                _logger.LogInformation("Starting rating process for {ItemType} {ItemId}", itemType, itemId);
+                var result = await _ratingServices.StartRatingAsync(itemType, itemId);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error starting rating for {ItemType} {ItemId}", itemType, itemId);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPost("compare")]
         public async Task<IActionResult> SubmitComparison([FromBody] ComparisonRequest request)
         {
-            _logger.LogInformation("Submitting comparison for {ItemType}", request.ItemType);
-            return Ok();
+            try
+            {
+                _logger.LogInformation("Submitting comparison for {ItemType}", request.ItemType);
+                var result = await _ratingServices.SubmitComparisonAsync(request);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error submitting comparison for {ItemType}", request.ItemType);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("user/{itemType}")]
         public async Task<IActionResult> GetUserRatings(string itemType)
         {
-            _logger.LogInformation("Getting user ratings for {ItemType}", itemType);
-            return Ok();
+            try
+            {
+                _logger.LogInformation("Getting user ratings for {ItemType}", itemType);
+                var result = await _ratingServices.GetUserRatingsAsync(itemType);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error getting user ratings for {ItemType}", itemType);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPost("save")]
+        public async Task<IActionResult> SaveRating([FromBody] SaveRatingRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Saving rating for {ItemType} {ItemId} with score {Score}", 
+                    request.ItemType, request.ItemId, request.PersonalScore);
+                var result = await _ratingServices.SaveRatingAsync(request.ItemType, request.ItemId, request.PersonalScore, request.CategoryId);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error saving rating for {ItemType} {ItemId}", request.ItemType, request.ItemId);
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpGet("suggestions")]

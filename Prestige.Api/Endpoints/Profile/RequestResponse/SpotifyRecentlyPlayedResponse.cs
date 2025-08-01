@@ -31,12 +31,24 @@ namespace Prestige.Api.Endpoints.Profile
 
     public class SpotifyArtist
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
         [JsonPropertyName("name")]
         public string Name { get; set; }
     }
 
     public class SpotifyAlbum
     {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("artists")]
+        public List<SpotifyArtist> Artists { get; set; }
+
         [JsonPropertyName("images")]
         public List<SpotifyImage> Images { get; set; }
     }

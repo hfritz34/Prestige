@@ -33,6 +33,19 @@ export type RecentlyPlayedResponse = {
     id: string;
 };
 
+export type RecentlyPlayedAlbumResponse = {
+    albumName: string;
+    artistName: string;
+    imageUrl: string;
+    id: string;
+};
+
+export type RecentlyPlayedArtistResponse = {
+    artistName: string;
+    imageUrl: string;
+    id: string;
+};
+
 export type UserTrackResponse = {
     track: TrackResponse,
     userId: string,
@@ -83,11 +96,19 @@ const useProfile = () => {
         return await getMany<RecentlyPlayedResponse>(`${baseEndpoint}/${userId}/recently-played`);
     };
 
+    const getRecentlyPlayedAlbums = async (): Promise<RecentlyPlayedAlbumResponse[]> => {
+        return await getMany<RecentlyPlayedAlbumResponse>(`${baseEndpoint}/${userId}/recently-played-albums`);
+    };
+
+    const getRecentlyPlayedArtists = async (): Promise<RecentlyPlayedArtistResponse[]> => {
+        return await getMany<RecentlyPlayedArtistResponse>(`${baseEndpoint}/${userId}/recently-played-artists`);
+    };
+
     const patchFavorites = async (type : string, trackId : string) : Promise<FavoritesResponse> => patch<FavoritesResponse, Record<string, never>>({}, `profiles/${userId}/favorites/${type}/${trackId}`);
 
     const getFavorites = async (type : string) : Promise<FavoritesResponse> => getOne<FavoritesResponse>(`profiles/${userId}/favorites/${type}`);
 
-    return { getTopTracks, getTopAlbums, getTopArtists, patchFavorites, getFavorites , getRecentlyPlayed };
+    return { getTopTracks, getTopAlbums, getTopArtists, patchFavorites, getFavorites , getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists };
 };
 
 

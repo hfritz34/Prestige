@@ -56,12 +56,22 @@ const useRating = () => {
         return await getMany<any>(`${baseEndpoint}/suggestions`);
     };
 
+    const saveRating = async (itemType: string, itemId: string, personalScore: number, categoryId: number): Promise<RatingResponse> => {
+        return await post<RatingResponse, any>({
+            itemId,
+            itemType,
+            personalScore,
+            categoryId
+        }, `${baseEndpoint}/save`);
+    };
+
     return { 
         getRatingCategories, 
         startRating, 
         submitComparison, 
         getUserRatings, 
-        getRatingSuggestions 
+        getRatingSuggestions,
+        saveRating
     };
 };
 

@@ -83,6 +83,63 @@ namespace Prestige.Api.Endpoints.Rating
             };
         }
 
+        public async Task<IEnumerable<RatingResponse>> GetUserRatingsAsync(string itemType)
+        {
+            var userId = GetUserId();
+            
+            var ratings = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .Where(r => r.User.Id == userId && r.ItemType == itemType)
+                .Select(r => new RatingResponse
+                {
+                    ItemId = r.ItemId,
+                    ItemType = r.ItemType,
+                    CategoryId = r.Category.Id,
+                    PersonalScore = r.PersonalScore,
+                    Position = r.Position,
+                    IsNewRating = false
+                })
+                .ToListAsync();
+
+            return ratings;
+        }
+
+        public async Task<RatingResponse> SaveRatingAsync(string itemType, string itemId, decimal personalScore, int categoryId)
+        {
+            var userId = GetUserId();
+            var user = await GetUserAsync(userId);
+            var category = await PrestigeDb.RatingCategories.FindAsync(categoryId)
+                ?? throw new NotFoundException(404, $"Category {categoryId} not found");
+
+            // Check if rating already exists
+            var existingRating = await PrestigeDb.Ratings
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
+
+            if (existingRating != null)
+            {
+                // Update existing rating
+                existingRating.UpdateRating(personalScore, category, 0); // Position will be calculated later
+            }
+            else
+            {
+                // Create new rating
+                var newRating = new Domain.Rating(user, itemId, itemType, category, 0, personalScore);
+                PrestigeDb.Ratings.Add(newRating);
+            }
+
+            await PrestigeDb.SaveChangesAsync();
+
+            return new RatingResponse
+            {
+                ItemId = itemId,
+                ItemType = itemType,
+                CategoryId = categoryId,
+                PersonalScore = personalScore,
+                Position = 0,
+                IsNewRating = existingRating == null
+            };
+        }
+
         private string GetUserId()
         {
             return Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Split("|").Last() 
