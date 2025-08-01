@@ -23,7 +23,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
 
   // Helper to get rating for a track
   const getTrackRating = (trackId: string) => {
-    return trackRatings?.find(rating => rating.itemId === trackId)?.personalScore;
+    return Array.isArray(trackRatings) ? trackRatings.find(rating => rating.itemId === trackId)?.personalScore : undefined;
   };
 
   const handleTrackClick = (track: UserTrackResponse) => {

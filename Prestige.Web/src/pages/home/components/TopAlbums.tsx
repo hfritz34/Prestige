@@ -23,7 +23,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
 
   // Helper to get rating for an album
   const getAlbumRating = (albumId: string) => {
-    return albumRatings?.find(rating => rating.itemId === albumId)?.personalScore;
+    return Array.isArray(albumRatings) ? albumRatings.find(rating => rating.itemId === albumId)?.personalScore : undefined;
   };
 
   const handleAlbumClick = (album: UserAlbumResponse) => {

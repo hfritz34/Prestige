@@ -23,7 +23,7 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
 
   // Helper to get rating for an artist
   const getArtistRating = (artistId: string) => {
-    return artistRatings?.find(rating => rating.itemId === artistId)?.personalScore;
+    return Array.isArray(artistRatings) ? artistRatings.find(rating => rating.itemId === artistId)?.personalScore : undefined;
   };
 
   const handleArtistClick = (artist: UserArtistResponse) => {

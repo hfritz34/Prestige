@@ -94,13 +94,13 @@ const RatingPage: React.FC = () => {
   // Helper function to check if item is already rated
   const isItemRated = (itemId: string, type: 'track' | 'album' | 'artist') => {
     const ratings = type === 'track' ? trackRatings : type === 'album' ? albumRatings : artistRatings;
-    return ratings?.some(rating => rating.itemId === itemId) || false;
+    return Array.isArray(ratings) ? ratings.some(rating => rating.itemId === itemId) : false;
   };
 
   // Helper function to get item rating score
   const getItemRating = (itemId: string, type: 'track' | 'album' | 'artist') => {
     const ratings = type === 'track' ? trackRatings : type === 'album' ? albumRatings : artistRatings;
-    return ratings?.find(rating => rating.itemId === itemId)?.personalScore;
+    return Array.isArray(ratings) ? ratings.find(rating => rating.itemId === itemId)?.personalScore : undefined;
   };
 
   // Process tracks
