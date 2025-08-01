@@ -14,6 +14,8 @@ namespace Prestige.Api.Data.Configurations
             builder.Property<string>("AlbumId").IsRequired();
             builder.Property<int>("TotalTime").IsRequired();
             builder.Property<bool>("IsFavorite").IsRequired();
+            builder.Property<decimal?>("PersonalRatingScore").HasPrecision(5, 2);
+            builder.Property<int?>("RatingPosition");
 
             builder.HasOne(ua => ua.Album)
                    .WithMany()

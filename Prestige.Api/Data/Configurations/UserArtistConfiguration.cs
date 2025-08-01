@@ -12,6 +12,8 @@ namespace Prestige.Api.Data.Configurations
 
             builder.Property<string>("UserId").IsRequired();
             builder.Property<string>("ArtistId").IsRequired();
+            builder.Property<decimal?>("PersonalRatingScore").HasPrecision(5, 2);
+            builder.Property<int?>("RatingPosition");
 
             builder.HasOne(ua => ua.Artist)
                    .WithMany()

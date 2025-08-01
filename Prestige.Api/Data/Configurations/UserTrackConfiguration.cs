@@ -12,6 +12,8 @@ namespace Prestige.Api.Data.Configurations
 
             builder.Property<string>("UserId").IsRequired();
             builder.Property<string>("TrackId").IsRequired();
+            builder.Property<decimal?>("PersonalRatingScore").HasPrecision(5, 2);
+            builder.Property<int?>("RatingPosition");
 
             builder.HasOne(ut => ut.Track)
                    .WithMany()
