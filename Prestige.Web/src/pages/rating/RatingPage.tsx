@@ -169,24 +169,38 @@ const RatingPage: React.FC = () => {
           Rate Your Music
         </h1>
         
-        <Tabs defaultValue="prestige" className="w-full">
+        {/* Type Selector */}
+        <div className="mb-6">
+          <Tabs value={selectedType} onValueChange={(value) => setSelectedType(value as 'track' | 'album' | 'artist')} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="track">Tracks</TabsTrigger>
+              <TabsTrigger value="album">Albums</TabsTrigger>
+              <TabsTrigger value="artist">Artists</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        {/* Content Tabs */}
+        <Tabs defaultValue="unrated" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="prestige">My Prestige</TabsTrigger>
+            <TabsTrigger value="unrated">Unrated</TabsTrigger>
             <TabsTrigger value="recent">Recently Played</TabsTrigger>
-            <TabsTrigger value="liked">Liked Songs</TabsTrigger>
+            <TabsTrigger value="rated">Rate Again</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="prestige">
+          <TabsContent value="unrated">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
-              <h2 className="text-xl font-semibold mb-4">Rate from Your Prestige Collection</h2>
-              {tracksLoading || albumsLoading || artistsLoading ? (
+              <h2 className="text-xl font-semibold mb-4">
+                Unrated {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}s from Your Collection
+              </h2>
+              {tracksLoading || albumsLoading || artistsLoading || trackRatingsLoading || albumRatingsLoading || artistRatingsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {prestigeItems.length > 0 ? (
-                    prestigeItems.map((item) => (
+                  {unratedItems.length > 0 ? (
+                    unratedItems.map((item) => (
                       <RatingItemCard
                         key={`${item.type}-${item.id}`}
                         id={item.id}
@@ -199,7 +213,7 @@ const RatingPage: React.FC = () => {
                     ))
                   ) : (
                     <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                      No prestige items found. Start listening to build your collection!
+                      No unrated {selectedType}s found. All your {selectedType}s have been rated!
                     </p>
                   )}
                 </div>
@@ -209,15 +223,15 @@ const RatingPage: React.FC = () => {
           
           <TabsContent value="recent">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
-              <h2 className="text-xl font-semibold mb-4">Rate Recently Played</h2>
-              {recentLoading ? (
+              <h2 className="text-xl font-semibold mb-4">Rate Recently Played Tracks</h2>
+              {recentLoading || trackRatingsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recentItems.length > 0 ? (
-                    recentItems.slice(0, 50).map((item, index) => (
+                  {unratedRecentItems.length > 0 ? (
+                    unratedRecentItems.slice(0, 50).map((item, index) => (
                       <RatingItemCard
                         key={`recent-${item.id}-${index}`}
                         id={item.id}
@@ -230,7 +244,7 @@ const RatingPage: React.FC = () => {
                     ))
                   ) : (
                     <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                      No recently played tracks found.
+                      No unrated recently played tracks found.
                     </p>
                   )}
                 </div>
@@ -238,22 +252,24 @@ const RatingPage: React.FC = () => {
             </div>
           </TabsContent>
           
-          <TabsContent value="liked">
+          <TabsContent value="rated">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
-              <h2 className="text-xl font-semibold mb-4">Rate Your Liked Songs</h2>
-              {likedLoading ? (
+              <h2 className="text-xl font-semibold mb-4">
+                Your Rated {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}s
+              </h2>
+              {tracksLoading || albumsLoading || artistsLoading || trackRatingsLoading || albumRatingsLoading || artistRatingsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {likedItems.length > 0 ? (
-                    likedItems.map((item) => (
+                  {ratedItems.length > 0 ? (
+                    ratedItems.map((item) => (
                       <RatingItemCard
-                        key={`liked-${item.id}`}
+                        key={`rated-${item.id}`}
                         id={item.id}
                         name={item.name}
-                        subtitle={item.subtitle}
+                        subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
                         imageUrl={item.imageUrl}
                         type={item.type}
                         onRate={handleRate}
@@ -261,7 +277,7 @@ const RatingPage: React.FC = () => {
                     ))
                   ) : (
                     <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                      No liked songs found. Like some songs on Spotify to see them here!
+                      No rated {selectedType}s found. Start rating to see them here!
                     </p>
                   )}
                 </div>
