@@ -143,7 +143,7 @@ const RatingPage: React.FC = () => {
   })) || [];
 
   // Recent items - only tracks from recently played, deduplicated
-  const recentItems = recentlyPlayed ? 
+  const recentTrackItems = recentlyPlayed ? 
     Array.from(new Map(recentlyPlayed.map(item => [
       item.id, 
       {
@@ -159,6 +159,73 @@ const RatingPage: React.FC = () => {
     ])).values())
     : [];
 
+  // Infer albums from recently played tracks by matching with user's track data
+  const recentAlbumItems = React.useMemo(() => {
+    if (!recentlyPlayed || !topTracks) return [];
+    
+    const trackIdToAlbum = new Map();
+    topTracks.forEach(userTrack => {
+      trackIdToAlbum.set(userTrack.track.id, {
+        id: userTrack.track.album.id,
+        name: userTrack.track.album.name,
+        artists: userTrack.track.album.artists,
+        imageUrl: userTrack.track.album.images[0]?.url
+      });
+    });
+
+    const albumMap = new Map();
+    recentlyPlayed.forEach(recentTrack => {
+      const albumInfo = trackIdToAlbum.get(recentTrack.id);
+      if (albumInfo && !albumMap.has(albumInfo.id)) {
+        albumMap.set(albumInfo.id, {
+          id: albumInfo.id,
+          name: albumInfo.name,
+          subtitle: albumInfo.artists.map((a: any) => a.name).join(', '),
+          imageUrl: albumInfo.imageUrl,
+          type: 'album' as const,
+          isRated: isItemRated(albumInfo.id, 'album'),
+          score: getItemRating(albumInfo.id, 'album'),
+          albumId: undefined
+        });
+      }
+    });
+
+    return Array.from(albumMap.values());
+  }, [recentlyPlayed, topTracks]);
+
+  // Infer artists from recently played tracks by matching with user's track data
+  const recentArtistItems = React.useMemo(() => {
+    if (!recentlyPlayed || !topTracks) return [];
+    
+    const trackIdToArtists = new Map();
+    topTracks.forEach(userTrack => {
+      trackIdToArtists.set(userTrack.track.id, userTrack.track.artists);
+    });
+
+    const artistMap = new Map();
+    recentlyPlayed.forEach(recentTrack => {
+      const artists = trackIdToArtists.get(recentTrack.id);
+      if (artists) {
+        artists.forEach((artist: any) => {
+          if (!artistMap.has(artist.id)) {
+            artistMap.set(artist.id, {
+              id: artist.id,
+              name: artist.name,
+              subtitle: 'Artist',
+              imageUrl: artist.images[0]?.url,
+              type: 'artist' as const,
+              isRated: isItemRated(artist.id, 'artist'),
+              score: getItemRating(artist.id, 'artist'),
+              albumId: undefined
+            });
+          }
+        });
+      }
+    });
+
+    return Array.from(artistMap.values());
+  }, [recentlyPlayed, topTracks]);
+
   // Get current type items
   const getCurrentTypeItems = () => {
     switch (selectedType) {
@@ -171,6 +238,17 @@ const RatingPage: React.FC = () => {
   const currentItems = getCurrentTypeItems();
   const unratedItems = currentItems.filter(item => !item.isRated);
   const ratedItems = currentItems.filter(item => item.isRated);
+  
+  // Get recent items based on selected type
+  const getRecentItemsByType = () => {
+    switch (selectedType) {
+      case 'track': return recentTrackItems;
+      case 'album': return recentAlbumItems;
+      case 'artist': return recentArtistItems;
+    }
+  };
+  
+  const recentItems = getRecentItemsByType();
   const unratedRecentItems = recentItems.filter(item => !item.isRated);
 
   return (
@@ -235,7 +313,9 @@ const RatingPage: React.FC = () => {
           
           <TabsContent value="recent">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
-              <h2 className="text-xl font-semibold mb-4">Rate Recently Played Tracks</h2>
+              <h2 className="text-xl font-semibold mb-4">
+                Recently Played {selectedType.charAt(0).toUpperCase() + selectedType.slice(1)}s
+              </h2>
               {recentLoading || trackRatingsLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -257,7 +337,7 @@ const RatingPage: React.FC = () => {
                     ))
                   ) : (
                     <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                      No unrated recently played tracks found.
+                      No unrated recently played {selectedType}s found.
                     </p>
                   )}
                 </div>
