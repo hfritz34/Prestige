@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import useRating from '@/hooks/useRating';
+import BeliComparisonUI from './BeliComparisonUI';
 
 interface RatingItem {
   id: string;
@@ -57,14 +58,21 @@ interface ComparisonItem extends RatingItem {
   personalScore: number;
 }
 
+// Beli-style binary search state
+interface BinarySearchState {
+  sortedList: ComparisonItem[];
+  low: number;
+  high: number;
+  currentMid: number;
+}
+
 const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete }) => {
   const { getUserRatings, submitComparison } = useRating();
   
   const [step, setStep] = useState<RatingStep>('partition');
   const [selectedPartition, setSelectedPartition] = useState<'loved' | 'liked' | 'disliked' | null>(null);
-  const [comparisonItems, setComparisonItems] = useState<ComparisonItem[]>([]);
-  const [currentComparisonIndex, setCurrentComparisonIndex] = useState(0);
-  const [tentativeScore, setTentativeScore] = useState(0);
+  const [binarySearchState, setBinarySearchState] = useState<BinarySearchState | null>(null);
+  const [currentComparison, setCurrentComparison] = useState<{ item: ComparisonItem; number: number; total: number } | null>(null);
 
   const handlePartitionSelect = async (partition: 'loved' | 'liked' | 'disliked') => {
     setSelectedPartition(partition);
@@ -89,30 +97,37 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         rating.personalScore <= range.max
       );
       
-      // Sort by score for proper binary search insertion
-      partitionItems.sort((a, b) => (b.personalScore || 0) - (a.personalScore || 0));
-      
       if (partitionItems.length > 0) {
-        // Use up to 5 items for comparison to avoid fatigue
-        const itemsToCompare = partitionItems.slice(0, Math.min(5, partitionItems.length));
+        // Create sorted list for binary search (highest to lowest score)
+        const sortedItems: ComparisonItem[] = partitionItems
+          .map(rating => ({
+            id: rating.itemId,
+            name: `${item?.type} ${rating.itemId.substring(0, 8)}...`, // Abbreviated for now
+            subtitle: `Score: ${rating.personalScore?.toFixed(1)}`,
+            type: item?.type || 'track',
+            personalScore: rating.personalScore || 0,
+            imageUrl: undefined // We'd need to fetch this from Spotify
+          }))
+          .sort((a, b) => b.personalScore - a.personalScore);
         
-        const comparisonItems: ComparisonItem[] = itemsToCompare.map(rating => ({
-          id: rating.itemId,
-          name: `${item?.type} ${rating.itemId.substring(0, 8)}...`, // Abbreviated for now
-          subtitle: `Score: ${rating.personalScore?.toFixed(1)}`,
-          type: item?.type || 'track',
-          personalScore: rating.personalScore || 0
-        }));
+        // Initialize binary search
+        const binaryState: BinarySearchState = {
+          sortedList: sortedItems,
+          low: 0,
+          high: sortedItems.length - 1,
+          currentMid: Math.floor(sortedItems.length / 2)
+        };
         
-        setComparisonItems(comparisonItems);
-        setCurrentComparisonIndex(0);
-        
-        // Start with middle score of partition range
-        setTentativeScore(Math.floor((range.min + range.max) / 2));
+        setBinarySearchState(binaryState);
+        setCurrentComparison({
+          item: sortedItems[binaryState.currentMid],
+          number: 1,
+          total: Math.ceil(Math.log2(sortedItems.length + 1)) // Maximum comparisons needed
+        });
         setStep('comparison');
       } else {
         // No items to compare against, assign default score for partition
-        const defaultScore = Math.floor((range.min + range.max) / 2);
+        const defaultScore = (range.min + range.max) / 2;
         onComplete(item!.id, partition, defaultScore);
         handleClose();
       }
@@ -125,86 +140,77 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
     }
   };
 
-  const handleComparison = async (liked: boolean) => {
-    const currentItem = comparisonItems[currentComparisonIndex];
+  const handleComparison = async (selectedItemId: string) => {
+    if (!binarySearchState || !currentComparison || !item) return;
+    
+    const userPrefersNewItem = selectedItemId === item.id;
     
     try {
       // Submit comparison to backend
       const comparisonRequest = {
-        itemId1: item!.id,
-        itemId2: currentItem.id,
-        itemType: item!.type,
-        winnerId: liked ? item!.id : currentItem.id
+        itemId1: item.id,
+        itemId2: currentComparison.item.id,
+        itemType: item.type,
+        winnerId: selectedItemId
       };
       
-      const result = await submitComparison(comparisonRequest);
-      
-      if (result.updatedScore !== undefined) {
-        setTentativeScore(result.updatedScore);
-      } else {
-        // Implement Beli-style binary search positioning (10-point scale)
-        if (liked) {
-          // New item is better than current item - should be ranked higher
-          const increment = Math.max(0.1, (10 - currentItem.personalScore) / (comparisonItems.length + 1));
-          setTentativeScore(Math.min(10, currentItem.personalScore + increment));
-        } else {
-          // Current item is better - new item should be ranked lower
-          const decrement = Math.max(0.1, currentItem.personalScore / (comparisonItems.length + 1));
-          setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
-        }
-      }
-
-      if (currentComparisonIndex < comparisonItems.length - 1) {
-        setCurrentComparisonIndex(currentComparisonIndex + 1);
-      } else {
-        // Comparison complete - calculate final position-based score
-        const finalScore = calculatePositionBasedScore();
-        onComplete(item!.id, selectedPartition!, finalScore);
-        handleClose();
-      }
+      await submitComparison(comparisonRequest);
     } catch (error) {
       console.error('Error submitting comparison:', error);
-      // Continue with local Beli-style calculation (10-point scale)
-      if (liked) {
-        const increment = Math.max(0.1, (10 - currentItem.personalScore) / (comparisonItems.length + 1));
-        setTentativeScore(Math.min(10, currentItem.personalScore + increment));
-      } else {
-        const decrement = Math.max(0.1, currentItem.personalScore / (comparisonItems.length + 1));
-        setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
-      }
-
-      if (currentComparisonIndex < comparisonItems.length - 1) {
-        setCurrentComparisonIndex(currentComparisonIndex + 1);
-      } else {
-        const finalScore = calculatePositionBasedScore();
-        onComplete(item!.id, selectedPartition!, finalScore);
-        handleClose();
-      }
     }
+    
+    // Perform binary search step
+    const newState = { ...binarySearchState };
+    
+    if (userPrefersNewItem) {
+      // New item is better - search in upper half
+      newState.high = newState.currentMid - 1;
+    } else {
+      // Comparison item is better - search in lower half  
+      newState.low = newState.currentMid + 1;
+    }
+    
+    // Check if binary search is complete
+    if (newState.low > newState.high) {
+      // Binary search complete - calculate final position and score
+      let insertPosition;
+      
+      if (userPrefersNewItem) {
+        insertPosition = newState.currentMid;
+      } else {
+        insertPosition = newState.currentMid + 1;
+      }
+      
+      // Calculate score based on position in sorted list
+      const totalItems = newState.sortedList.length + 1; // +1 for new item
+      const normalizedPosition = insertPosition / (totalItems - 1);
+      
+      // Convert to 10-point scale, with higher positions getting higher scores
+      const finalScore = Math.max(0, Math.min(10, 10 * (1 - normalizedPosition)));
+      const roundedScore = Math.round(finalScore * 10) / 10;
+      
+      onComplete(item.id, selectedPartition!, roundedScore);
+      handleClose();
+      return;
+    }
+    
+    // Continue binary search
+    newState.currentMid = Math.floor((newState.low + newState.high) / 2);
+    setBinarySearchState(newState);
+    
+    setCurrentComparison({
+      item: newState.sortedList[newState.currentMid],
+      number: currentComparison.number + 1,
+      total: currentComparison.total
+    });
   };
 
-  const calculatePositionBasedScore = () => {
-    // Beli-style position-based scoring
-    // Create a virtual ranked list including the new item
-    const allScores = [...comparisonItems.map(item => item.personalScore), tentativeScore];
-    allScores.sort((a, b) => b - a); // Sort descending
-    
-    const position = allScores.indexOf(tentativeScore);
-    const totalCount = allScores.length;
-    
-    // Convert position to score: score = 10 * (position from top) / (total count - 1)
-    // But we want higher positions to have higher scores, so invert it
-    const normalizedScore = totalCount === 1 ? 10 : 10 * (totalCount - 1 - position) / (totalCount - 1);
-    
-    return Math.max(0, Math.min(10, Math.round(normalizedScore * 10) / 10));
-  };
 
   const handleClose = () => {
     setStep('partition');
     setSelectedPartition(null);
-    setComparisonItems([]);
-    setCurrentComparisonIndex(0);
-    setTentativeScore(0);
+    setBinarySearchState(null);
+    setCurrentComparison(null);
     onClose();
   };
 
@@ -270,48 +276,20 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
             </div>
           )}
 
-          {step === 'comparison' && currentComparisonIndex < comparisonItems.length && (
-            <div className="space-y-4">
-              <p className="text-center text-gray-600">
-                Did you like <strong>{item.name}</strong> more than this?
-              </p>
-              <p className="text-center text-sm text-gray-500">
-                ({currentComparisonIndex + 1} of {comparisonItems.length})
-              </p>
-              
-              <Card className="border-2 border-blue-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-md bg-gray-200 flex-shrink-0 flex items-center justify-center">
-                      <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-medium">{comparisonItems[currentComparisonIndex].name}</h4>
-                      <p className="text-sm text-gray-600">{comparisonItems[currentComparisonIndex].subtitle}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="flex space-x-4">
-                <Button 
-                  variant="outline" 
-                  className="flex-1 h-12 border-red-300 hover:bg-red-50"
-                  onClick={() => handleComparison(false)}
-                >
-                  No, I liked the comparison more
-                </Button>
-                <Button 
-                  variant="outline"
-                  className="flex-1 h-12 border-green-300 hover:bg-green-50"
-                  onClick={() => handleComparison(true)}
-                >
-                  Yes, I liked "{item.name}" more
-                </Button>
-              </div>
-            </div>
+          {step === 'comparison' && currentComparison && (
+            <BeliComparisonUI
+              newItem={{
+                id: item.id,
+                name: item.name,
+                subtitle: item.subtitle,
+                imageUrl: item.imageUrl,
+                type: item.type
+              }}
+              comparisonItem={currentComparison.item}
+              onSelect={handleComparison}
+              comparisonNumber={currentComparison.number}
+              totalComparisons={currentComparison.total}
+            />
           )}
         </div>
       </DialogContent>
