@@ -11,6 +11,7 @@ interface RatingItem {
   subtitle: string;
   imageUrl?: string;
   type: 'track' | 'album' | 'artist';
+  albumId?: string;
 }
 
 interface RatingModalProps {
@@ -81,7 +82,17 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       // Fetch existing ratings for this item type to compare against
       const existingRatings = await getUserRatings(item?.type || 'track');
       
-      // Filter ratings based on partition score range (10-point scale)
+      // For tracks, only compare with tracks from the same album
+      let filteredRatings = existingRatings;
+      
+      if (item?.type === 'track' && item?.albumId) {
+        // TODO: We need album information in the rating response to filter by album
+        // For now, we'll use all track ratings but this should be filtered by album
+        console.log(`Track rating: Should only compare with tracks from album ${item.albumId}`);
+        filteredRatings = existingRatings; // Placeholder - should filter by album
+      }
+      
+      // Filter ratings based on partition score range (10-point scale)  
       const getPartitionRange = (partition: 'loved' | 'liked' | 'disliked') => {
         switch (partition) {
           case 'loved': return { min: 7, max: 10 };
@@ -91,7 +102,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       };
       
       const range = getPartitionRange(partition);
-      const partitionItems = existingRatings.filter(rating => 
+      const partitionItems = filteredRatings.filter(rating => 
         rating.personalScore !== undefined && 
         rating.personalScore >= range.min && 
         rating.personalScore <= range.max

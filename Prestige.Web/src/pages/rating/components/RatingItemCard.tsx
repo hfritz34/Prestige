@@ -8,7 +8,8 @@ interface RatingItemCardProps {
   subtitle: string;
   imageUrl?: string;
   type: 'track' | 'album' | 'artist';
-  onRate: (id: string, type: string, name: string, subtitle: string, imageUrl?: string) => void;
+  onRate: (id: string, type: string, name: string, subtitle: string, imageUrl?: string, albumId?: string) => void;
+  albumId?: string;
 }
 
 const RatingItemCard: React.FC<RatingItemCardProps> = ({
@@ -17,7 +18,8 @@ const RatingItemCard: React.FC<RatingItemCardProps> = ({
   subtitle,
   imageUrl,
   type,
-  onRate
+  onRate,
+  albumId
 }) => {
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -52,7 +54,7 @@ const RatingItemCard: React.FC<RatingItemCardProps> = ({
           </div>
           
           <Button 
-            onClick={() => onRate(id, type, name, subtitle, imageUrl)}
+            onClick={() => onRate(id, type, name, subtitle, imageUrl, albumId)}
             variant="outline"
             size="sm"
           >

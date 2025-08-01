@@ -13,6 +13,7 @@ interface RatingItem {
   subtitle: string;
   imageUrl?: string;
   type: 'track' | 'album' | 'artist';
+  albumId?: string;
 }
 
 const RatingPage: React.FC = () => {
@@ -61,13 +62,14 @@ const RatingPage: React.FC = () => {
     queryFn: () => getUserRatings('artist')
   });
 
-  const handleRate = (id: string, type: string, name: string, subtitle: string, imageUrl?: string) => {
+  const handleRate = (id: string, type: string, name: string, subtitle: string, imageUrl?: string, albumId?: string) => {
     setSelectedItem({
       id,
       name,
       subtitle,
       imageUrl,
-      type: type as 'track' | 'album' | 'artist'
+      type: type as 'track' | 'album' | 'artist',
+      albumId
     });
     setIsRatingModalOpen(true);
   };
@@ -110,7 +112,8 @@ const RatingPage: React.FC = () => {
     type: 'track' as const,
     totalTime: item.totalTime,
     isRated: isItemRated(item.track.id, 'track'),
-    score: getItemRating(item.track.id, 'track')
+    score: getItemRating(item.track.id, 'track'),
+    albumId: item.track.album.id
   })) || [];
 
   // Process albums  
@@ -122,7 +125,8 @@ const RatingPage: React.FC = () => {
     type: 'album' as const,
     totalTime: item.totalTime,
     isRated: isItemRated(item.album.id, 'album'),
-    score: getItemRating(item.album.id, 'album')
+    score: getItemRating(item.album.id, 'album'),
+    albumId: undefined
   })) || [];
 
   // Process artists
@@ -134,7 +138,8 @@ const RatingPage: React.FC = () => {
     type: 'artist' as const,
     totalTime: item.totalTime,
     isRated: isItemRated(item.artist.id, 'artist'),
-    score: getItemRating(item.artist.id, 'artist')
+    score: getItemRating(item.artist.id, 'artist'),
+    albumId: undefined
   })) || [];
 
   // Recent items - only tracks from recently played, deduplicated
@@ -148,7 +153,8 @@ const RatingPage: React.FC = () => {
         imageUrl: item.imageUrl,
         type: 'track' as const,
         isRated: isItemRated(item.id, 'track'),
-        score: getItemRating(item.id, 'track')
+        score: getItemRating(item.id, 'track'),
+        albumId: undefined // Recently played doesn't have album info yet
       }
     ])).values())
     : [];
@@ -214,6 +220,7 @@ const RatingPage: React.FC = () => {
                         imageUrl={item.imageUrl}
                         type={item.type}
                         onRate={handleRate}
+                        albumId={item.albumId}
                       />
                     ))
                   ) : (
@@ -245,6 +252,7 @@ const RatingPage: React.FC = () => {
                         imageUrl={item.imageUrl}
                         type={item.type}
                         onRate={handleRate}
+                        albumId={item.albumId}
                       />
                     ))
                   ) : (
@@ -278,6 +286,7 @@ const RatingPage: React.FC = () => {
                         imageUrl={item.imageUrl}
                         type={item.type}
                         onRate={handleRate}
+                        albumId={item.albumId}
                       />
                     ))
                   ) : (
