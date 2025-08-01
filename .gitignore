@@ -8,6 +8,7 @@ ImportDataExample.txt
 CosmosDbExample.txt
 local.settings.json
 PRESTIGE_APPLICATION_OVERVIEW.txt
+BeliExplanation.md
 
 # Build artifacts
 *.zip
