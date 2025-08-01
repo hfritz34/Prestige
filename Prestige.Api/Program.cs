@@ -10,6 +10,7 @@ using Prestige.Api.Domain;
 using Prestige.Api.Endpoints.Prestige;
 using Prestige.Api.Endpoints.Profile;
 using Prestige.Api.Endpoints.Spotify;
+using Prestige.Api.Endpoints.Rating;
 
 // using Prestige.Api.Endpoints.AlbumEndpoints;
 // using Prestige.Api.Endpoints.ArtistEndpoints;
@@ -101,6 +102,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<ProfileServices>();
             builder.Services.AddScoped<FriendshipService>();
             builder.Services.AddScoped<PrestigeServices>();
+            builder.Services.AddScoped<RatingServices>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
