@@ -37,16 +37,16 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   
   const prestige = getPrestige();
   
-  // Get rating color based on score
+  // Get rating color based on score (10-point scale)
   const getRatingColor = (score: number) => {
-    if (score >= 70) return 'text-green-400'; // Loved
-    if (score >= 40) return 'text-yellow-400'; // Liked  
+    if (score >= 7) return 'text-green-400'; // Loved
+    if (score >= 4) return 'text-yellow-400'; // Liked  
     return 'text-red-400'; // Disliked
   };
   
   const getRatingIcon = (score: number) => {
-    if (score >= 70) return '⭐'; // Loved
-    if (score >= 40) return '👍'; // Liked
+    if (score >= 7) return '⭐'; // Loved
+    if (score >= 4) return '👍'; // Liked
     return '👎'; // Disliked
   };
 
@@ -77,7 +77,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
                 <div className="bg-black bg-opacity-70 rounded-md px-1.5 py-0.5 flex items-center space-x-1">
                   <span className="text-xs">{getRatingIcon(ratingScore)}</span>
                   <span className={`text-xs font-bold ${getRatingColor(ratingScore)}`}>
-                    {ratingScore.toFixed(0)}
+                    {ratingScore.toFixed(1)}
                   </span>
                 </div>
               )}

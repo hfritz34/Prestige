@@ -137,16 +137,21 @@ const RatingPage: React.FC = () => {
     score: getItemRating(item.artist.id, 'artist')
   })) || [];
 
-  // Recent items - only tracks from recently played
-  const recentItems = recentlyPlayed?.map(item => ({
-    id: item.id,
-    name: item.trackName,
-    subtitle: item.artistName,
-    imageUrl: item.imageUrl,
-    type: 'track' as const,
-    isRated: isItemRated(item.id, 'track'),
-    score: getItemRating(item.id, 'track')
-  })) || [];
+  // Recent items - only tracks from recently played, deduplicated
+  const recentItems = recentlyPlayed ? 
+    Array.from(new Map(recentlyPlayed.map(item => [
+      item.id, 
+      {
+        id: item.id,
+        name: item.trackName,
+        subtitle: item.artistName,
+        imageUrl: item.imageUrl,
+        type: 'track' as const,
+        isRated: isItemRated(item.id, 'track'),
+        score: getItemRating(item.id, 'track')
+      }
+    ])).values())
+    : [];
 
   // Get current type items
   const getCurrentTypeItems = () => {

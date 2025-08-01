@@ -73,12 +73,12 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       // Fetch existing ratings for this item type to compare against
       const existingRatings = await getUserRatings(item?.type || 'track');
       
-      // Filter ratings based on partition score range
+      // Filter ratings based on partition score range (10-point scale)
       const getPartitionRange = (partition: 'loved' | 'liked' | 'disliked') => {
         switch (partition) {
-          case 'loved': return { min: 70, max: 100 };
-          case 'liked': return { min: 40, max: 69 };
-          case 'disliked': return { min: 0, max: 39 };
+          case 'loved': return { min: 7, max: 10 };
+          case 'liked': return { min: 4, max: 6.9 };
+          case 'disliked': return { min: 0, max: 3.9 };
         }
       };
       
@@ -118,8 +118,8 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       }
     } catch (error) {
       console.error('Error fetching ratings for comparison:', error);
-      // Fall back to default scores
-      const defaultScore = partition === 'loved' ? 85 : partition === 'liked' ? 55 : 25;
+      // Fall back to default scores (10-point scale)
+      const defaultScore = partition === 'loved' ? 8.5 : partition === 'liked' ? 5.5 : 2.5;
       onComplete(item!.id, partition, defaultScore);
       handleClose();
     }
@@ -142,14 +142,14 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       if (result.updatedScore !== undefined) {
         setTentativeScore(result.updatedScore);
       } else {
-        // Implement Beli-style binary search positioning
+        // Implement Beli-style binary search positioning (10-point scale)
         if (liked) {
           // New item is better than current item - should be ranked higher
-          const increment = Math.max(1, Math.floor((100 - currentItem.personalScore) / (comparisonItems.length + 1)));
-          setTentativeScore(Math.min(100, currentItem.personalScore + increment));
+          const increment = Math.max(0.1, (10 - currentItem.personalScore) / (comparisonItems.length + 1));
+          setTentativeScore(Math.min(10, currentItem.personalScore + increment));
         } else {
           // Current item is better - new item should be ranked lower
-          const decrement = Math.max(1, Math.floor(currentItem.personalScore / (comparisonItems.length + 1)));
+          const decrement = Math.max(0.1, currentItem.personalScore / (comparisonItems.length + 1));
           setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
         }
       }
@@ -164,12 +164,12 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       }
     } catch (error) {
       console.error('Error submitting comparison:', error);
-      // Continue with local Beli-style calculation
+      // Continue with local Beli-style calculation (10-point scale)
       if (liked) {
-        const increment = Math.max(1, Math.floor((100 - currentItem.personalScore) / (comparisonItems.length + 1)));
-        setTentativeScore(Math.min(100, currentItem.personalScore + increment));
+        const increment = Math.max(0.1, (10 - currentItem.personalScore) / (comparisonItems.length + 1));
+        setTentativeScore(Math.min(10, currentItem.personalScore + increment));
       } else {
-        const decrement = Math.max(1, Math.floor(currentItem.personalScore / (comparisonItems.length + 1)));
+        const decrement = Math.max(0.1, currentItem.personalScore / (comparisonItems.length + 1));
         setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
       }
 
@@ -192,11 +192,11 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
     const position = allScores.indexOf(tentativeScore);
     const totalCount = allScores.length;
     
-    // Convert position to score: score = 100 * (position from top) / (total count - 1)
+    // Convert position to score: score = 10 * (position from top) / (total count - 1)
     // But we want higher positions to have higher scores, so invert it
-    const normalizedScore = totalCount === 1 ? 100 : 100 * (totalCount - 1 - position) / (totalCount - 1);
+    const normalizedScore = totalCount === 1 ? 10 : 10 * (totalCount - 1 - position) / (totalCount - 1);
     
-    return Math.max(0, Math.min(100, Math.round(normalizedScore)));
+    return Math.max(0, Math.min(10, Math.round(normalizedScore * 10) / 10));
   };
 
   const handleClose = () => {
