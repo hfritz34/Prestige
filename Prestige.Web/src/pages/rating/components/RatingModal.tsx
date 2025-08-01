@@ -73,31 +73,53 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       // Fetch existing ratings for this item type to compare against
       const existingRatings = await getUserRatings(item?.type || 'track');
       
-      // Filter ratings that are in the same partition
-      // For now, mock the partition filtering since we need the category information
-      const mockItems: ComparisonItem[] = existingRatings.slice(0, 3).map((rating, index) => ({
-        id: rating.itemId,
-        name: `Item ${index + 1}`, // We'd need to fetch actual names from Spotify
-        subtitle: `From your ${item?.type} collection`,
-        type: item?.type || 'track',
-        personalScore: rating.personalScore || (partition === 'loved' ? 85 : partition === 'liked' ? 65 : 35)
-      }));
+      // Filter ratings based on partition score range
+      const getPartitionRange = (partition: 'loved' | 'liked' | 'disliked') => {
+        switch (partition) {
+          case 'loved': return { min: 70, max: 100 };
+          case 'liked': return { min: 40, max: 69 };
+          case 'disliked': return { min: 0, max: 39 };
+        }
+      };
       
-      if (mockItems.length > 0) {
-        setComparisonItems(mockItems);
+      const range = getPartitionRange(partition);
+      const partitionItems = existingRatings.filter(rating => 
+        rating.personalScore !== undefined && 
+        rating.personalScore >= range.min && 
+        rating.personalScore <= range.max
+      );
+      
+      // Sort by score for proper binary search insertion
+      partitionItems.sort((a, b) => (b.personalScore || 0) - (a.personalScore || 0));
+      
+      if (partitionItems.length > 0) {
+        // Use up to 5 items for comparison to avoid fatigue
+        const itemsToCompare = partitionItems.slice(0, Math.min(5, partitionItems.length));
+        
+        const comparisonItems: ComparisonItem[] = itemsToCompare.map(rating => ({
+          id: rating.itemId,
+          name: `${item?.type} ${rating.itemId.substring(0, 8)}...`, // Abbreviated for now
+          subtitle: `Score: ${rating.personalScore?.toFixed(1)}`,
+          type: item?.type || 'track',
+          personalScore: rating.personalScore || 0
+        }));
+        
+        setComparisonItems(comparisonItems);
         setCurrentComparisonIndex(0);
-        setTentativeScore(partition === 'loved' ? 80 : partition === 'liked' ? 60 : 40);
+        
+        // Start with middle score of partition range
+        setTentativeScore(Math.floor((range.min + range.max) / 2));
         setStep('comparison');
       } else {
         // No items to compare against, assign default score for partition
-        const defaultScore = partition === 'loved' ? 80 : partition === 'liked' ? 60 : 40;
+        const defaultScore = Math.floor((range.min + range.max) / 2);
         onComplete(item!.id, partition, defaultScore);
         handleClose();
       }
     } catch (error) {
       console.error('Error fetching ratings for comparison:', error);
-      // Fall back to no comparison
-      const defaultScore = partition === 'loved' ? 80 : partition === 'liked' ? 60 : 40;
+      // Fall back to default scores
+      const defaultScore = partition === 'loved' ? 85 : partition === 'liked' ? 55 : 25;
       onComplete(item!.id, partition, defaultScore);
       handleClose();
     }
@@ -120,37 +142,61 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       if (result.updatedScore !== undefined) {
         setTentativeScore(result.updatedScore);
       } else {
-        // Fall back to local calculation
+        // Implement Beli-style binary search positioning
         if (liked) {
-          setTentativeScore(Math.max(tentativeScore, currentItem.personalScore + 1));
+          // New item is better than current item - should be ranked higher
+          const increment = Math.max(1, Math.floor((100 - currentItem.personalScore) / (comparisonItems.length + 1)));
+          setTentativeScore(Math.min(100, currentItem.personalScore + increment));
         } else {
-          setTentativeScore(Math.min(tentativeScore, currentItem.personalScore - 1));
+          // Current item is better - new item should be ranked lower
+          const decrement = Math.max(1, Math.floor(currentItem.personalScore / (comparisonItems.length + 1)));
+          setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
         }
       }
 
       if (currentComparisonIndex < comparisonItems.length - 1) {
         setCurrentComparisonIndex(currentComparisonIndex + 1);
       } else {
-        // Comparison complete
-        onComplete(item!.id, selectedPartition!, tentativeScore);
+        // Comparison complete - calculate final position-based score
+        const finalScore = calculatePositionBasedScore();
+        onComplete(item!.id, selectedPartition!, finalScore);
         handleClose();
       }
     } catch (error) {
       console.error('Error submitting comparison:', error);
-      // Continue with local calculation
+      // Continue with local Beli-style calculation
       if (liked) {
-        setTentativeScore(Math.max(tentativeScore, currentItem.personalScore + 1));
+        const increment = Math.max(1, Math.floor((100 - currentItem.personalScore) / (comparisonItems.length + 1)));
+        setTentativeScore(Math.min(100, currentItem.personalScore + increment));
       } else {
-        setTentativeScore(Math.min(tentativeScore, currentItem.personalScore - 1));
+        const decrement = Math.max(1, Math.floor(currentItem.personalScore / (comparisonItems.length + 1)));
+        setTentativeScore(Math.max(0, currentItem.personalScore - decrement));
       }
 
       if (currentComparisonIndex < comparisonItems.length - 1) {
         setCurrentComparisonIndex(currentComparisonIndex + 1);
       } else {
-        onComplete(item!.id, selectedPartition!, tentativeScore);
+        const finalScore = calculatePositionBasedScore();
+        onComplete(item!.id, selectedPartition!, finalScore);
         handleClose();
       }
     }
+  };
+
+  const calculatePositionBasedScore = () => {
+    // Beli-style position-based scoring
+    // Create a virtual ranked list including the new item
+    const allScores = [...comparisonItems.map(item => item.personalScore), tentativeScore];
+    allScores.sort((a, b) => b - a); // Sort descending
+    
+    const position = allScores.indexOf(tentativeScore);
+    const totalCount = allScores.length;
+    
+    // Convert position to score: score = 100 * (position from top) / (total count - 1)
+    // But we want higher positions to have higher scores, so invert it
+    const normalizedScore = totalCount === 1 ? 100 : 100 * (totalCount - 1 - position) / (totalCount - 1);
+    
+    return Math.max(0, Math.min(100, Math.round(normalizedScore)));
   };
 
   const handleClose = () => {
