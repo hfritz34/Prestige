@@ -1,6 +1,8 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { UserAlbumResponse } from "@/hooks/useProfile";
 import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
+import useRating from "@/hooks/useRating";
 import PrestigeGridCard from "./PrestigeGridCard";
 
 type TopAlbumsProps = {
@@ -9,6 +11,18 @@ type TopAlbumsProps = {
 
 const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
   const { redirectToAlbumPage } = useRedirectToPrestigePages();
+  const { getUserRatings } = useRating();
+
+  // Fetch album ratings
+  const { data: albumRatings } = useQuery({
+    queryKey: ['ratings', 'album'],
+    queryFn: () => getUserRatings('album')
+  });
+
+  // Helper to get rating for an album
+  const getAlbumRating = (albumId: string) => {
+    return albumRatings?.find(rating => rating.itemId === albumId)?.personalScore;
+  };
 
   const handleAlbumClick = (album: UserAlbumResponse) => {
     console.log(`TopAlbums - Album Total Time (minutes): ${Math.floor(album.totalTime / 60)}`);
@@ -37,6 +51,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
               totalTime={album.totalTime}
               rank={index + 1}
               type="album"
+              ratingScore={getAlbumRating(album.album.id)}
               onClick={() => handleAlbumClick(album)}
             />
           ))}

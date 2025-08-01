@@ -1,6 +1,8 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { UserTrackResponse } from "@/hooks/useProfile";
 import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
+import useRating from "@/hooks/useRating";
 import PrestigeGridCard from "./PrestigeGridCard";
 
 type TopTracksProps = {
@@ -9,6 +11,18 @@ type TopTracksProps = {
 
 const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
   const { redirectToSongPage } = useRedirectToPrestigePages();
+  const { getUserRatings } = useRating();
+
+  // Fetch track ratings
+  const { data: trackRatings } = useQuery({
+    queryKey: ['ratings', 'track'],
+    queryFn: () => getUserRatings('track')
+  });
+
+  // Helper to get rating for a track
+  const getTrackRating = (trackId: string) => {
+    return trackRatings?.find(rating => rating.itemId === trackId)?.personalScore;
+  };
 
   const handleTrackClick = (track: UserTrackResponse) => {
     redirectToSongPage({
@@ -37,6 +51,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
               totalTime={track.totalTime}
               rank={index + 1}
               type="track"
+              ratingScore={getTrackRating(track.track.id)}
               onClick={() => handleTrackClick(track)}
             />
           ))}

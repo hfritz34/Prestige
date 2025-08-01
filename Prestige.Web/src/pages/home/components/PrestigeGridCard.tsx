@@ -9,6 +9,7 @@ type PrestigeGridCardProps = {
   rank: number;
   onClick: () => void;
   type?: 'track' | 'album' | 'artist';
+  ratingScore?: number;
 };
 
 const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
@@ -18,7 +19,8 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   totalTime,
   rank,
   onClick,
-  type = 'track'
+  type = 'track',
+  ratingScore
 }) => {
   const { getTrackPrestigeTier, getAlbumPrestigeTier, getArtistPrestigeTier } = usePrestige();
   
@@ -34,6 +36,19 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   };
   
   const prestige = getPrestige();
+  
+  // Get rating color based on score
+  const getRatingColor = (score: number) => {
+    if (score >= 70) return 'text-green-400'; // Loved
+    if (score >= 40) return 'text-yellow-400'; // Liked  
+    return 'text-red-400'; // Disliked
+  };
+  
+  const getRatingIcon = (score: number) => {
+    if (score >= 70) return '⭐'; // Loved
+    if (score >= 40) return '👍'; // Liked
+    return '👎'; // Disliked
+  };
 
   return (
     <div 
@@ -53,11 +68,19 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
           )}
           
           <div className="relative z-10 h-full flex flex-col">
-            {/* Rank badge */}
-            <div className="flex justify-start mb-2">
+            {/* Rank badge and Rating */}
+            <div className="flex justify-between items-start mb-2">
               <div className="w-5 h-5 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">{rank}</span>
               </div>
+              {ratingScore !== undefined && (
+                <div className="bg-black bg-opacity-70 rounded-md px-1.5 py-0.5 flex items-center space-x-1">
+                  <span className="text-xs">{getRatingIcon(ratingScore)}</span>
+                  <span className={`text-xs font-bold ${getRatingColor(ratingScore)}`}>
+                    {ratingScore.toFixed(0)}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Album artwork */}

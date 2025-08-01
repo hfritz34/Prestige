@@ -1,6 +1,8 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { UserArtistResponse } from "@/hooks/useProfile";
 import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
+import useRating from "@/hooks/useRating";
 import PrestigeGridCard from "./PrestigeGridCard";
 
 type TopArtistsProps = {
@@ -9,6 +11,18 @@ type TopArtistsProps = {
 
 const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
   const { redirectToArtistPage } = useRedirectToPrestigePages();
+  const { getUserRatings } = useRating();
+
+  // Fetch artist ratings
+  const { data: artistRatings } = useQuery({
+    queryKey: ['ratings', 'artist'],
+    queryFn: () => getUserRatings('artist')
+  });
+
+  // Helper to get rating for an artist
+  const getArtistRating = (artistId: string) => {
+    return artistRatings?.find(rating => rating.itemId === artistId)?.personalScore;
+  };
 
   const handleArtistClick = (artist: UserArtistResponse) => {
     console.log(`TopArtists - Artist Total Time (minutes): ${Math.floor(artist.totalTime / 60)}`);
@@ -36,6 +50,7 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
               totalTime={artist.totalTime}
               rank={index + 1}
               type="artist"
+              ratingScore={getArtistRating(artist.artist.id)}
               onClick={() => handleArtistClick(artist)}
             />
           ))}
