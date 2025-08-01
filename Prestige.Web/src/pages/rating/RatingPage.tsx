@@ -1,14 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import NavBar from '@/components/navigation/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RatingItemCard from './components/RatingItemCard';
+import RatingModal from './components/RatingModal';
 import useProfile from '@/hooks/useProfile';
 import useSpotify from '@/hooks/useSpotify';
+import useRating from '@/hooks/useRating';
+
+interface RatingItem {
+  id: string;
+  name: string;
+  subtitle: string;
+  imageUrl?: string;
+  type: 'track' | 'album' | 'artist';
+}
 
 const RatingPage: React.FC = () => {
   const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed } = useProfile();
   const { getLikedTracks } = useSpotify();
+  const { startRating } = useRating();
+  
+  const [selectedItem, setSelectedItem] = useState<RatingItem | null>(null);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
 
   // Fetch prestige data
   const { data: topTracks, isLoading: tracksLoading } = useQuery({
@@ -38,9 +52,32 @@ const RatingPage: React.FC = () => {
     queryFn: () => getLikedTracks(100)
   });
 
-  const handleRate = (id: string, type: string) => {
-    console.log(`Rating ${type} with id: ${id}`);
-    // TODO: Implement rating logic
+  const handleRate = (id: string, type: string, name: string, subtitle: string, imageUrl?: string) => {
+    setSelectedItem({
+      id,
+      name,
+      subtitle,
+      imageUrl,
+      type: type as 'track' | 'album' | 'artist'
+    });
+    setIsRatingModalOpen(true);
+  };
+
+  const handleRatingComplete = async (itemId: string, partition: 'loved' | 'liked' | 'disliked', finalScore: number) => {
+    try {
+      const itemType = selectedItem?.type || 'track';
+      console.log(`Rating completed: ${itemType} ${itemId} with score ${finalScore} in partition ${partition}`);
+      
+      // Start the rating process with the backend
+      await startRating(itemType, itemId);
+      
+      // TODO: Submit the comparison results and final score
+      
+      setIsRatingModalOpen(false);
+      setSelectedItem(null);
+    } catch (error) {
+      console.error('Error completing rating:', error);
+    }
   };
 
   const prestigeItems = [
@@ -49,21 +86,24 @@ const RatingPage: React.FC = () => {
       name: item.track.name,
       subtitle: `${item.track.artists.map(a => a.name).join(', ')} • ${item.track.album.name}`,
       imageUrl: item.track.album.images[0]?.url,
-      type: 'track' as const
+      type: 'track' as const,
+      totalTime: item.totalTime
     })) || []),
     ...(topAlbums?.map(item => ({
       id: item.album.id,
       name: item.album.name,
       subtitle: item.album.artists.map(a => a.name).join(', '),
       imageUrl: item.album.images[0]?.url,
-      type: 'album' as const
+      type: 'album' as const,
+      totalTime: item.totalTime
     })) || []),
     ...(topArtists?.map(item => ({
       id: item.artist.id,
       name: item.artist.name,
       subtitle: 'Artist',
       imageUrl: item.artist.images[0]?.url,
-      type: 'artist' as const
+      type: 'artist' as const,
+      totalTime: item.totalTime
     })) || [])
   ];
 
@@ -191,6 +231,16 @@ const RatingPage: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => {
+          setIsRatingModalOpen(false);
+          setSelectedItem(null);
+        }}
+        item={selectedItem}
+        onComplete={handleRatingComplete}
+      />
       
       <NavBar />
     </div>
