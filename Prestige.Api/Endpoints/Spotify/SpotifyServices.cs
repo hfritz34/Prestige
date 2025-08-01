@@ -511,5 +511,46 @@ namespace Prestige.Api.Endpoints.Spotify
                 return null;
             }
         }
+
+        public async Task<IEnumerable<TrackResponse>> GetUserLikedTracksAsync(int limit = 50)
+        {
+            var spotify = await getUserSpotifyAuthorizedClient();
+            var response = await spotify.GetAsync($"me/tracks?limit={limit}");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                throw Logger.SearchNotFound("liked tracks");
+            }
+
+            var content = await response.Content.ReadAsStringAsync();
+            var json = JsonDocument.Parse(content);
+            var root = json.RootElement;
+
+            if (!root.TryGetProperty("items", out var items))
+            {
+                return new List<TrackResponse>();
+            }
+
+            var tracks = new List<TrackResponse>();
+            foreach (var item in items.EnumerateArray())
+            {
+                if (item.TryGetProperty("track", out var trackElement))
+                {
+                    var trackResponse = trackElement.Deserialize<TrackResponse>(new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+                    
+                    if (trackResponse != null)
+                    {
+                        tracks.Add(trackResponse);
+                        PostTrack(trackResponse);
+                    }
+                }
+            }
+
+            PrestigeDb.SaveChanges();
+            return tracks;
+        }
     }
 }

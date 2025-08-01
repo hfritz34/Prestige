@@ -160,5 +160,19 @@ namespace Prestige.Api.Endpoints.Spotify
             }
         }
 
+        [HttpGet("liked-tracks")]
+        public async Task<IActionResult> GetUserLikedTracksAsync([FromQuery] int limit = 50)
+        {
+            try
+            {
+                var response = await _service.GetUserLikedTracksAsync(limit);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
     }
 }

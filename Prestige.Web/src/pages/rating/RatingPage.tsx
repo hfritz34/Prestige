@@ -1,8 +1,88 @@
 import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import NavBar from '@/components/navigation/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import RatingItemCard from './components/RatingItemCard';
+import useProfile from '@/hooks/useProfile';
+import useSpotify from '@/hooks/useSpotify';
 
 const RatingPage: React.FC = () => {
+  const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed } = useProfile();
+  const { getLikedTracks } = useSpotify();
+
+  // Fetch prestige data
+  const { data: topTracks, isLoading: tracksLoading } = useQuery({
+    queryKey: ['topTracks'],
+    queryFn: getTopTracks
+  });
+
+  const { data: topAlbums, isLoading: albumsLoading } = useQuery({
+    queryKey: ['topAlbums'],
+    queryFn: getTopAlbums
+  });
+
+  const { data: topArtists, isLoading: artistsLoading } = useQuery({
+    queryKey: ['topArtists'],
+    queryFn: getTopArtists
+  });
+
+  // Fetch recently played
+  const { data: recentlyPlayed, isLoading: recentLoading } = useQuery({
+    queryKey: ['recentlyPlayed'],
+    queryFn: getRecentlyPlayed
+  });
+
+  // Fetch liked songs
+  const { data: likedTracks, isLoading: likedLoading } = useQuery({
+    queryKey: ['likedTracks'],
+    queryFn: () => getLikedTracks(100)
+  });
+
+  const handleRate = (id: string, type: string) => {
+    console.log(`Rating ${type} with id: ${id}`);
+    // TODO: Implement rating logic
+  };
+
+  const prestigeItems = [
+    ...(topTracks?.map(item => ({
+      id: item.track.id,
+      name: item.track.name,
+      subtitle: `${item.track.artists.map(a => a.name).join(', ')} • ${item.track.album.name}`,
+      imageUrl: item.track.album.images[0]?.url,
+      type: 'track' as const
+    })) || []),
+    ...(topAlbums?.map(item => ({
+      id: item.album.id,
+      name: item.album.name,
+      subtitle: item.album.artists.map(a => a.name).join(', '),
+      imageUrl: item.album.images[0]?.url,
+      type: 'album' as const
+    })) || []),
+    ...(topArtists?.map(item => ({
+      id: item.artist.id,
+      name: item.artist.name,
+      subtitle: 'Artist',
+      imageUrl: item.artist.images[0]?.url,
+      type: 'artist' as const
+    })) || [])
+  ];
+
+  const recentItems = recentlyPlayed?.map(item => ({
+    id: item.id,
+    name: item.trackName,
+    subtitle: item.artistName,
+    imageUrl: item.imageUrl,
+    type: 'track' as const
+  })) || [];
+
+  const likedItems = likedTracks?.map(track => ({
+    id: track.id,
+    name: track.name,
+    subtitle: `${track.artists.map(a => a.name).join(', ')} • ${track.album.name}`,
+    imageUrl: track.album.images[0]?.url,
+    type: 'track' as const
+  })) || [];
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
@@ -20,27 +100,93 @@ const RatingPage: React.FC = () => {
           <TabsContent value="prestige">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
               <h2 className="text-xl font-semibold mb-4">Rate from Your Prestige Collection</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Browse through your prestige tiers and rate albums, artists, and tracks.
-              </p>
+              {tracksLoading || albumsLoading || artistsLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {prestigeItems.length > 0 ? (
+                    prestigeItems.map((item) => (
+                      <RatingItemCard
+                        key={`${item.type}-${item.id}`}
+                        id={item.id}
+                        name={item.name}
+                        subtitle={item.subtitle}
+                        imageUrl={item.imageUrl}
+                        type={item.type}
+                        onRate={handleRate}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+                      No prestige items found. Start listening to build your collection!
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
           
           <TabsContent value="recent">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
               <h2 className="text-xl font-semibold mb-4">Rate Recently Played</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Rate music you've listened to recently on Spotify.
-              </p>
+              {recentLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentItems.length > 0 ? (
+                    recentItems.slice(0, 50).map((item, index) => (
+                      <RatingItemCard
+                        key={`recent-${item.id}-${index}`}
+                        id={item.id}
+                        name={item.name}
+                        subtitle={item.subtitle}
+                        imageUrl={item.imageUrl}
+                        type={item.type}
+                        onRate={handleRate}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+                      No recently played tracks found.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
           
           <TabsContent value="liked">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mt-4">
               <h2 className="text-xl font-semibold mb-4">Rate Your Liked Songs</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                Rate songs from your Spotify liked songs playlist.
-              </p>
+              {likedLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {likedItems.length > 0 ? (
+                    likedItems.map((item) => (
+                      <RatingItemCard
+                        key={`liked-${item.id}`}
+                        id={item.id}
+                        name={item.name}
+                        subtitle={item.subtitle}
+                        imageUrl={item.imageUrl}
+                        type={item.type}
+                        onRate={handleRate}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-600 dark:text-gray-400 text-center py-8">
+                      No liked songs found. Like some songs on Spotify to see them here!
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

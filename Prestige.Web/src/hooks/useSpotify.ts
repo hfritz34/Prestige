@@ -46,7 +46,7 @@ const pure = (response : TrackResponse[] | AlbumResponse[] | ArtistResponse[], t
 
 
 const useSpotify = () => {
-    const { getOne } = useHttp();
+    const { getOne, getMany } = useHttp();
 
     const search = async (query: string, searchType: SearchType): Promise<SearchResponse> => {
         return getOne<TrackResponse[] | AlbumResponse[] | ArtistResponse[]>(`spotify/${searchType}s/search?Query=${query}`)
@@ -55,7 +55,11 @@ const useSpotify = () => {
         });
     }
 
-    return {search};
+    const getLikedTracks = async (limit: number = 50): Promise<TrackResponse[]> => {
+        return await getMany<TrackResponse>(`spotify/liked-tracks?limit=${limit}`);
+    }
+
+    return {search, getLikedTracks};
 }
 
 export default useSpotify;
