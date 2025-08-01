@@ -31,7 +31,7 @@ namespace Prestige.Api.Data.Configurations
                 .HasForeignKey("UserId")
                 .OnDelete(DeleteBehavior.Cascade);
 
-            builder.HasIndex(rc => new { rc.User, rc.ItemType, rc.ComparisonDate });
+            builder.HasIndex("UserId", "ItemType", "ComparisonDate");
             builder.HasIndex(rc => rc.ComparisonDate);
         }
     }

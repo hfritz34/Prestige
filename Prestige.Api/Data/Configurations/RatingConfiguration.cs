@@ -31,7 +31,7 @@ namespace Prestige.Api.Data.Configurations
                 .HasForeignKey("CategoryId")
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasIndex(r => new { r.User, r.ItemId, r.ItemType })
+            builder.HasIndex("UserId", "ItemId", "ItemType")
                 .IsUnique();
 
             builder.HasIndex(r => r.ItemType);
