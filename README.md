@@ -123,7 +123,7 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 
 ## 🎨 Screenshots
 
-*Coming soon - Screenshots of the beautiful Prestige interface*
+*Coming soon*
 
 ## 🤝 Contributing
 
