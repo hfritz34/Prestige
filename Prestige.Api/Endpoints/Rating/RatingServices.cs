@@ -97,6 +97,9 @@ namespace Prestige.Api.Endpoints.Rating
                     CategoryId = r.Category.Id,
                     PersonalScore = r.PersonalScore,
                     Position = r.Position,
+                    // When rating tracks, AlbumId helps client filter comparisons to the same album
+                    AlbumId = r.ItemType == "track" ?
+                        PrestigeDb.Tracks.Where(t => t.Id == r.ItemId).Select(t => t.Album.Id).FirstOrDefault() : null,
                     IsNewRating = false
                 })
                 .ToListAsync();

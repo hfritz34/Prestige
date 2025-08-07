@@ -15,6 +15,7 @@ export type RatingResponse = {
     categoryId?: number;
     personalScore?: number;
     position?: number;
+    albumId?: string;
     isNewRating: boolean;
 };
 

@@ -161,10 +161,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       let filteredRatings = existingRatings;
       
       if (item?.type === 'track' && item?.albumId) {
-        // TODO: We need album information in the rating response to filter by album
-        // For now, we'll use all track ratings but this should be filtered by album
-        console.log(`Track rating: Should only compare with tracks from album ${item.albumId}`);
-        filteredRatings = existingRatings; // Placeholder - should filter by album
+        filteredRatings = existingRatings.filter((r: any) => r.albumId === item.albumId);
       }
       
       // Filter ratings based on partition score range (10-point scale)  
