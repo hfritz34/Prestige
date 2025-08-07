@@ -31,6 +31,10 @@ const RatingItemCard: React.FC<RatingItemCardProps> = ({
                 src={imageUrl} 
                 alt={name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/placeholder-album.png";
+                }}
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center">

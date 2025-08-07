@@ -360,7 +360,7 @@ namespace Prestige.Api.Endpoints.Profile
                     .ToListAsync();
 
                 var artistImageFromDb = dbArtists
-                    .ToDictionary(a => a.Id, a => a.Images.FirstOrDefault()?.Url);
+                    .ToDictionary(a => a.Id, a => a.Images.OrderByDescending(img => img.Height).FirstOrDefault()?.Url);
 
                 // Group artists from Spotify response to get names and prefer album image fallback
                 var artists = spotifyResponse.Items
