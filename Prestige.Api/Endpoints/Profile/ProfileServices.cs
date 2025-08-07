@@ -362,22 +362,21 @@ namespace Prestige.Api.Endpoints.Profile
                 var artistImageFromDb = dbArtists
                     .ToDictionary(a => a.Id, a => a.Images.OrderByDescending(img => img.Height).FirstOrDefault()?.Url);
 
-                // Group artists from Spotify response to get names and prefer album image fallback
+                // Group artists from Spotify response and use cached Spotify artist images from our DB
                 var artists = spotifyResponse.Items
                     .Where(item => item.Track?.Artists != null)
-                    .SelectMany(item => item.Track!.Artists!
-                        .Select(artist => new { Artist = artist, AlbumImage = item.Track!.Album?.Images?.FirstOrDefault()?.Url }))
-                    .GroupBy(x => x.Artist.Id)
+                    .SelectMany(item => item.Track!.Artists!)
+                    .GroupBy(artist => artist.Id)
                     .Select(group =>
                     {
                         var first = group.First();
-                        var id = first.Artist.Id ?? Guid.NewGuid().ToString();
-                        var name = first.Artist.Name ?? "Unknown Artist";
+                        var id = first.Id ?? Guid.NewGuid().ToString();
+                        var name = first.Name ?? "Unknown Artist";
 
-                        // Prefer album image from the recently played item; fallback to DB cached image; otherwise placeholder
-                        var albumImage = group.Select(g => g.AlbumImage).FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
-                        var imageUrl = albumImage
-                            ?? (artistImageFromDb.TryGetValue(id, out var dbUrl) && !string.IsNullOrWhiteSpace(dbUrl) ? dbUrl : "No Image Available");
+                        // Use artist image stored in SQL DB (cached from Spotify). No album image fallback.
+                        var imageUrl = (artistImageFromDb.TryGetValue(id, out var dbUrl) && !string.IsNullOrWhiteSpace(dbUrl))
+                            ? dbUrl!
+                            : "No Image Available";
 
                         return new RecentlyPlayedArtistResponse(name, imageUrl, id);
                     })
