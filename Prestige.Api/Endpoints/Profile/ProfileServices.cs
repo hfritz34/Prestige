@@ -344,16 +344,44 @@ namespace Prestige.Api.Endpoints.Profile
                     throw new Exception(10013, "Invalid response from Spotify API: Items is null after deserialization");
                 }
 
+                // Build distinct list of artist IDs from recently played
+                var artistIds = spotifyResponse.Items
+                    .Where(item => item.Track?.Artists != null)
+                    .SelectMany(item => item.Track!.Artists!)
+                    .Select(a => a.Id)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct()
+                    .ToList();
+
+                // Attempt to fetch cached images for these artists from our DB
+                var dbArtists = await PrestigeDb.Artists
+                    .Where(a => artistIds.Contains(a.Id))
+                    .Include(a => a.Images)
+                    .ToListAsync();
+
+                var artistImageFromDb = dbArtists
+                    .ToDictionary(a => a.Id, a => a.Images.FirstOrDefault()?.Url);
+
+                // Group artists from Spotify response to get names and prefer album image fallback
                 var artists = spotifyResponse.Items
                     .Where(item => item.Track?.Artists != null)
-                    .SelectMany(item => item.Track.Artists)
-                    .GroupBy(artist => artist.Id)
-                    .Select(group => group.First())
-                    .Select(artist => new RecentlyPlayedArtistResponse(
-                        artist.Name ?? "Unknown Artist",
-                        "No Image Available", // Artists from recently played don't have images
-                        artist.Id ?? Guid.NewGuid().ToString()
-                    )).ToList();
+                    .SelectMany(item => item.Track!.Artists!
+                        .Select(artist => new { Artist = artist, AlbumImage = item.Track!.Album?.Images?.FirstOrDefault()?.Url }))
+                    .GroupBy(x => x.Artist.Id)
+                    .Select(group =>
+                    {
+                        var first = group.First();
+                        var id = first.Artist.Id ?? Guid.NewGuid().ToString();
+                        var name = first.Artist.Name ?? "Unknown Artist";
+
+                        // Prefer album image from the recently played item; fallback to DB cached image; otherwise placeholder
+                        var albumImage = group.Select(g => g.AlbumImage).FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
+                        var imageUrl = albumImage
+                            ?? (artistImageFromDb.TryGetValue(id, out var dbUrl) && !string.IsNullOrWhiteSpace(dbUrl) ? dbUrl : "No Image Available");
+
+                        return new RecentlyPlayedArtistResponse(name, imageUrl, id);
+                    })
+                    .ToList();
 
                 _logger.LogInformation($"GetRecentlyPlayedArtistsAsync: Successfully processed {artists.Count} recently played artists for user {userId}");
                 return artists;
