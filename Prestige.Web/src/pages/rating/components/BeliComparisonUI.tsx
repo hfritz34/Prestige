@@ -37,16 +37,16 @@ const BeliComparisonUI: React.FC<BeliComparisonUIProps> = ({
         </p>
       </div>
       
-      <div className="flex space-x-4">
+      <div className="grid grid-cols-3 gap-4 items-stretch">
         {/* New Item */}
-        <div className="flex-1">
+        <div className="col-span-1">
           <Button
             variant="outline"
-            className="w-full h-auto p-0 border-2 hover:border-blue-500 transition-colors"
+            className="w-full h-full p-0 border-2 hover:border-blue-500 transition-colors"
             onClick={() => onSelect(newItem.id)}
           >
-            <Card className="w-full border-0">
-              <CardContent className="p-4">
+            <Card className="w-full h-full border-0">
+              <CardContent className="p-4 h-full">
                 <div className="space-y-3">
                   {/* Image */}
                   <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
@@ -55,6 +55,10 @@ const BeliComparisonUI: React.FC<BeliComparisonUIProps> = ({
                         src={newItem.imageUrl} 
                         alt={newItem.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const t = e.target as HTMLImageElement;
+                          t.src = "/placeholder-album.png";
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -84,21 +88,21 @@ const BeliComparisonUI: React.FC<BeliComparisonUIProps> = ({
         </div>
 
         {/* VS Divider */}
-        <div className="flex items-center justify-center px-2">
+        <div className="col-span-1 flex items-center justify-center px-2">
           <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
             <span className="text-xs font-bold text-gray-600 dark:text-gray-400">VS</span>
           </div>
         </div>
 
         {/* Comparison Item */}
-        <div className="flex-1">
+        <div className="col-span-1">
           <Button
             variant="outline"
-            className="w-full h-auto p-0 border-2 hover:border-blue-500 transition-colors"
+            className="w-full h-full p-0 border-2 hover:border-blue-500 transition-colors"
             onClick={() => onSelect(comparisonItem.id)}
           >
-            <Card className="w-full border-0">
-              <CardContent className="p-4">
+            <Card className="w-full h-full border-0">
+              <CardContent className="p-4 h-full">
                 <div className="space-y-3">
                   {/* Image */}
                   <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
@@ -107,6 +111,10 @@ const BeliComparisonUI: React.FC<BeliComparisonUIProps> = ({
                         src={comparisonItem.imageUrl} 
                         alt={comparisonItem.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const t = e.target as HTMLImageElement;
+                          t.src = "/placeholder-album.png";
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">

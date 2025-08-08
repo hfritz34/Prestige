@@ -166,10 +166,11 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       
       // Filter ratings based on partition score range (10-point scale)  
       const getPartitionRange = (partition: 'loved' | 'liked' | 'disliked') => {
+        // Caps: loved 6.8-10, liked 3.4-6.7, disliked 0-3.3
         switch (partition) {
-          case 'loved': return { min: 7, max: 10 };
-          case 'liked': return { min: 4, max: 6.9 };
-          case 'disliked': return { min: 0, max: 3.9 };
+          case 'loved': return { min: 6.8, max: 10 };
+          case 'liked': return { min: 3.4, max: 6.7 };
+          case 'disliked': return { min: 0, max: 3.3 };
         }
       };
       
@@ -216,9 +217,10 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         });
         setStep('comparison');
       } else {
-        // No items to compare against, assign default score for partition
-        const defaultScore = (range.min + range.max) / 2;
-        onComplete(item!.id, partition, defaultScore);
+        // No items to compare against
+        // If user loved it and there are no items in this section yet, give a perfect 10
+        const defaultScore = partition === 'loved' ? 10 : (range.min + range.max) / 2;
+        onComplete(item!.id, partition, Math.round(defaultScore * 10) / 10);
         handleClose();
       }
     } catch (error) {
