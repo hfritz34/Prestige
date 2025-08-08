@@ -143,7 +143,7 @@ namespace Prestige.Api.Endpoints.Rating
 
             // Get the final position and score for the saved item
             var savedRating = await PrestigeDb.Ratings
-                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
 
             return new RatingResponse
             {

@@ -37,7 +37,7 @@ const BeliComparisonUI: React.FC<BeliComparisonUIProps> = ({
         </p>
       </div>
       
-      <div className="grid grid-cols-3 gap-4 items-stretch">
+      <div className="grid grid-cols-3 gap-4 items-stretch w-full">
         {/* New Item */}
         <div className="col-span-1">
           <Button

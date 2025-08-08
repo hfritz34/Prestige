@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import useRating from '@/hooks/useRating';
-import useProfile from '@/hooks/useProfile';
 import BeliComparisonUI from './BeliComparisonUI';
+import { UserAlbumResponse, UserArtistResponse, UserTrackResponse } from '@/hooks/useProfile';
 
 interface RatingItem {
   id: string;
@@ -20,6 +20,9 @@ interface RatingModalProps {
   onClose: () => void;
   item: RatingItem | null;
   onComplete: (itemId: string, partition: 'loved' | 'liked' | 'disliked', finalScore: number) => void;
+  topTracks?: UserTrackResponse[];
+  topAlbums?: UserAlbumResponse[];
+  topArtists?: UserArtistResponse[];
 }
 
 interface PartitionChoice {
@@ -66,9 +69,8 @@ interface BinarySearchState {
   currentMid: number; // used as linear scan index
 }
 
-const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete }) => {
+const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete, topTracks = [], topAlbums = [], topArtists = [] }) => {
   const { getUserRatings, submitComparison } = useRating();
-  const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   
   const [step, setStep] = useState<RatingStep>('partition');
   const [selectedPartition, setSelectedPartition] = useState<'loved' | 'liked' | 'disliked' | null>(null);
@@ -79,23 +81,15 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
   const getItemDetails = async (itemId: string, itemType: 'track' | 'album' | 'artist') => {
     try {
       let items: Array<any> = [];
-      switch (itemType) {
-        case 'track':
-          items = await getTopTracks();
-          break;
-        case 'album':
-          items = await getTopAlbums();
-          break;
-        case 'artist':
-          items = await getTopArtists();
-          break;
-      }
+      if (itemType === 'track') items = topTracks;
+      if (itemType === 'album') items = topAlbums;
+      if (itemType === 'artist') items = topArtists;
 
       // Find the item in the user's collection
       const foundItem = items.find((it: any) => {
-        if (itemType === 'track') return (it as any).track?.id === itemId || (it as any).trackId === itemId;
-        if (itemType === 'album') return (it as any).album?.id === itemId || (it as any).albumId === itemId;
-        if (itemType === 'artist') return (it as any).artist?.id === itemId || (it as any).artistId === itemId;
+        if (itemType === 'track') return it?.track?.id === itemId || it?.trackId === itemId;
+        if (itemType === 'album') return it?.album?.id === itemId || it?.albumId === itemId;
+        if (itemType === 'artist') return it?.artist?.id === itemId || it?.artistId === itemId;
         return false;
       });
 
@@ -219,10 +213,9 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         });
         setStep('comparison');
       } else {
-        // No items to compare against
-        // If user loved it and there are no items in this section yet, give a perfect 10
-        const defaultScore = partition === 'loved' ? 10 : (range.min + range.max) / 2;
-        onComplete(item!.id, partition, Math.round(defaultScore * 10) / 10);
+        // No items in this category yet -> baseline partition scores
+        const defaultScore = partition === 'loved' ? 10 : partition === 'liked' ? 6.7 : 3.3;
+        onComplete(item!.id, partition, defaultScore);
         handleClose();
       }
     } catch (error) {
@@ -306,7 +299,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
   if (!item) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-2xl" aria-describedby="rating-description">
         <DialogHeader>
           <DialogTitle>

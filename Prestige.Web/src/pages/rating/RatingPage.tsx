@@ -355,21 +355,21 @@ const RatingPage: React.FC = () => {
                 <div className="space-y-3">
                   {ratedItems.length > 0 ? (
                     ratedItems.map((item) => (
-                      <div key={`rated-${item.id}`} className="flex items-center gap-3">
-                        <div className="flex-1">
-                          <RatingItemCard
-                            id={item.id}
-                            name={item.name}
-                            subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
-                            imageUrl={item.imageUrl}
-                            type={item.type}
-                            onRate={handleRate}
-                            albumId={item.albumId}
-                          />
+                      <div key={`rated-${item.id}`} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                        <RatingItemCard
+                          id={item.id}
+                          name={item.name}
+                          subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
+                          imageUrl={item.imageUrl}
+                          type={item.type}
+                          onRate={handleRate}
+                          albumId={item.albumId}
+                        />
+                        <div className="justify-self-end">
+                          <Button variant="destructive" size="sm" onClick={() => handleUnrate(item.id, item.type)}>
+                            Remove rating
+                          </Button>
                         </div>
-                        <Button variant="destructive" size="sm" onClick={() => handleUnrate(item.id, item.type)}>
-                          Remove rating
-                        </Button>
                       </div>
                     ))
                   ) : (
@@ -392,6 +392,9 @@ const RatingPage: React.FC = () => {
         }}
         item={selectedItem}
         onComplete={handleRatingComplete}
+        topTracks={topTracks || []}
+        topAlbums={topAlbums || []}
+        topArtists={topArtists || []}
       />
       
       <NavBar />
