@@ -156,6 +156,35 @@ namespace Prestige.Api.Endpoints.Rating
             };
         }
 
+        public async Task<RatingResponse> DeleteRatingAsync(string itemType, string itemId)
+        {
+            var userId = GetUserId();
+            var normalizedType = itemType.ToLowerInvariant();
+            var rating = await PrestigeDb.Ratings
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
+
+            if (rating == null)
+            {
+                throw new NotFoundException(404, $"Rating not found for {normalizedType} {itemId}");
+            }
+
+            PrestigeDb.Ratings.Remove(rating);
+            await PrestigeDb.SaveChangesAsync();
+
+            // Recalculate remaining scores and positions for this type
+            await RecalculateUserScoresAsync(userId, normalizedType);
+
+            return new RatingResponse
+            {
+                ItemId = itemId,
+                ItemType = normalizedType,
+                IsNewRating = false,
+                PersonalScore = null,
+                Position = null,
+                CategoryId = null
+            };
+        }
+
         private async Task RecalculateUserScoresAsync(string userId, string itemType)
         {
             // Get all ratings for this user and item type, ordered by personal score (highest first)

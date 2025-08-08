@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import NavBar from '@/components/navigation/NavBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RatingItemCard from './components/RatingItemCard';
@@ -18,7 +19,7 @@ interface RatingItem {
 
 const RatingPage: React.FC = () => {
   const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists } = useProfile();
-  const { startRating, getUserRatings, saveRating } = useRating();
+  const { startRating, getUserRatings, saveRating, deleteRating } = useRating();
   const queryClient = useQueryClient();
   
   const [selectedItem, setSelectedItem] = useState<RatingItem | null>(null);
@@ -127,6 +128,19 @@ const RatingPage: React.FC = () => {
   const getItemRating = (itemId: string, type: 'track' | 'album' | 'artist') => {
     const ratings = type === 'track' ? trackRatings : type === 'album' ? albumRatings : artistRatings;
     return Array.isArray(ratings) ? ratings.find(rating => rating.itemId === itemId)?.personalScore : undefined;
+  };
+
+  const handleUnrate = async (itemId: string, type: 'track' | 'album' | 'artist') => {
+    try {
+      await deleteRating(type, itemId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'track'] }),
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'album'] }),
+        queryClient.invalidateQueries({ queryKey: ['ratings', 'artist'] })
+      ]);
+    } catch (e) {
+      console.error('Failed to delete rating', e);
+    }
   };
 
   // Process tracks
@@ -341,16 +355,22 @@ const RatingPage: React.FC = () => {
                 <div className="space-y-3">
                   {ratedItems.length > 0 ? (
                     ratedItems.map((item) => (
-                      <RatingItemCard
-                        key={`rated-${item.id}`}
-                        id={item.id}
-                        name={item.name}
-                        subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
-                        imageUrl={item.imageUrl}
-                        type={item.type}
-                        onRate={handleRate}
-                        albumId={item.albumId}
-                      />
+                      <div key={`rated-${item.id}`} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <RatingItemCard
+                            id={item.id}
+                            name={item.name}
+                            subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
+                            imageUrl={item.imageUrl}
+                            type={item.type}
+                            onRate={handleRate}
+                            albumId={item.albumId}
+                          />
+                        </div>
+                        <Button variant="destructive" size="sm" onClick={() => handleUnrate(item.id, item.type)}>
+                          Remove rating
+                        </Button>
+                      </div>
                     ))
                   ) : (
                     <p className="text-gray-600 dark:text-gray-400 text-center py-8">

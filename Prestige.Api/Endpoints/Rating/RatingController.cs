@@ -90,6 +90,22 @@ namespace Prestige.Api.Endpoints.Rating
             }
         }
 
+        [HttpDelete("user/{itemType}/{itemId}")]
+        public async Task<IActionResult> DeleteRating(string itemType, string itemId)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting rating for {ItemType} {ItemId}", itemType, itemId);
+                var result = await _ratingServices.DeleteRatingAsync(itemType, itemId);
+                return Ok(result);
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting rating for {ItemType} {ItemId}", itemType, itemId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
         [HttpGet("suggestions")]
         public async Task<IActionResult> GetRatingSuggestions()
         {

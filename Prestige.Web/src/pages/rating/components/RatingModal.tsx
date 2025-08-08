@@ -157,11 +157,11 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         return;
       }
       
-      // For tracks, only compare with tracks from the same album
+      // For tracks, only compare with tracks from the same album when possible
       let filteredRatings = existingRatings;
-      
       if (item?.type === 'track' && item?.albumId) {
-        filteredRatings = existingRatings.filter((r: any) => r.albumId === item.albumId);
+        const sameAlbum = existingRatings.filter((r: any) => r.albumId === item.albumId);
+        filteredRatings = sameAlbum.length > 0 ? sameAlbum : existingRatings;
       }
       
       // Filter ratings based on partition score range (10-point scale)  
@@ -175,17 +175,20 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       };
       
       const range = getPartitionRange(partition);
-      const partitionItems = filteredRatings.filter(rating => 
+      const partitionItems = filteredRatings.filter((rating: any) => 
         rating.personalScore !== undefined && 
         rating.personalScore >= range.min && 
         rating.personalScore <= range.max
       );
       
-      if (partitionItems.length > 0) {
+      // If no items in this partition, fall back to all available ratings for this type
+      const candidateRatings = partitionItems.length > 0 ? partitionItems : filteredRatings;
+      
+      if (candidateRatings.length > 0) {
         // Create sorted list for binary search (highest to lowest score)
         // First, fetch details for all items to get names and images
         const itemsWithDetails = await Promise.all(
-          partitionItems.map(async (rating) => {
+          candidateRatings.map(async (rating: any) => {
             const details = await getItemDetails(rating.itemId, item?.type || 'track');
             return {
               id: rating.itemId,

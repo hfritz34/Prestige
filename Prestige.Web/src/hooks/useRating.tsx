@@ -34,7 +34,7 @@ export type ComparisonResultResponse = {
 };
 
 const useRating = () => {
-    const { getMany, post } = useHttp();
+    const { getMany, post, del } = useHttp();
     const baseEndpoint = "api/rating";
 
     const getRatingCategories = async (): Promise<RatingCategoryResponse[]> => {
@@ -65,6 +65,10 @@ const useRating = () => {
             categoryId
         }, `${baseEndpoint}/save`);
     };
+    
+    const deleteRating = async (itemType: string, itemId: string): Promise<RatingResponse> => {
+        return await del<RatingResponse>(`${baseEndpoint}/user/${itemType}/${itemId}`);
+    };
 
     return { 
         getRatingCategories, 
@@ -72,7 +76,8 @@ const useRating = () => {
         submitComparison, 
         getUserRatings, 
         getRatingSuggestions,
-        saveRating
+        saveRating,
+        deleteRating
     };
 };
 
