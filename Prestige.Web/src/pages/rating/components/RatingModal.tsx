@@ -78,7 +78,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
   // Helper function to get full item details with images
   const getItemDetails = async (itemId: string, itemType: 'track' | 'album' | 'artist') => {
     try {
-      let items = [];
+      let items: Array<any> = [];
       switch (itemType) {
         case 'track':
           items = await getTopTracks();
@@ -92,33 +92,36 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       }
 
       // Find the item in the user's collection
-      const foundItem = items.find(item => {
-        if (itemType === 'track') return item.track.id === itemId;
-        if (itemType === 'album') return item.album.id === itemId;
-        if (itemType === 'artist') return item.artist.id === itemId;
+      const foundItem = items.find((it: any) => {
+        if (itemType === 'track') return (it as any).track?.id === itemId || (it as any).trackId === itemId;
+        if (itemType === 'album') return (it as any).album?.id === itemId || (it as any).albumId === itemId;
+        if (itemType === 'artist') return (it as any).artist?.id === itemId || (it as any).artistId === itemId;
         return false;
       });
 
       if (foundItem) {
         if (itemType === 'track') {
+          const track = (foundItem as any).track ?? foundItem;
           return {
-            name: foundItem.track.name,
-            subtitle: `${foundItem.track.artists.map((a: any) => a.name).join(', ')} • ${foundItem.track.album.name}`,
-            imageUrl: foundItem.track.album.images[0]?.url
+            name: track.name ?? foundItem.trackName,
+            subtitle: `${(track.artists ?? foundItem.artists ?? []).map((a: any) => a.name).join(', ') || foundItem.artistName} • ${(track.album?.name) ?? foundItem.albumName ?? ''}`,
+            imageUrl: track.album?.images?.[0]?.url ?? foundItem.imageUrl
           };
         }
         if (itemType === 'album') {
+          const album = (foundItem as any).album ?? foundItem;
           return {
-            name: foundItem.album.name,
-            subtitle: foundItem.album.artists.map((a: any) => a.name).join(', '),
-            imageUrl: foundItem.album.images[0]?.url
+            name: album.name ?? foundItem.albumName,
+            subtitle: (album.artists ?? []).map((a: any) => a.name).join(', ') || foundItem.artistName,
+            imageUrl: album.images?.[0]?.url ?? foundItem.imageUrl
           };
         }
         if (itemType === 'artist') {
+          const artist = (foundItem as any).artist ?? foundItem;
           return {
-            name: foundItem.artist.name,
+            name: artist.name ?? foundItem.artistName,
             subtitle: 'Artist',
-            imageUrl: foundItem.artist.images[0]?.url
+            imageUrl: artist.images?.[0]?.url ?? foundItem.imageUrl
           };
         }
       }

@@ -19,7 +19,7 @@ interface RatingItem {
 
 const RatingPage: React.FC = () => {
   const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists } = useProfile();
-  const { startRating, getUserRatings, saveRating, deleteRating } = useRating();
+  const { getUserRatings, saveRating, deleteRating } = useRating();
   const queryClient = useQueryClient();
   
   const [selectedItem, setSelectedItem] = useState<RatingItem | null>(null);
@@ -86,19 +86,19 @@ const RatingPage: React.FC = () => {
     setIsRatingModalOpen(true);
   };
 
-  const handleRatingComplete = async (itemId: string, partition: 'loved' | 'liked' | 'disliked', finalScore: number) => {
+  const handleRatingComplete = async (itemId: string, _partition: 'loved' | 'liked' | 'disliked', finalScore: number) => {
     try {
       const itemType = selectedItem?.type || 'track';
-      console.log(`Rating completed: ${itemType} ${itemId} with score ${finalScore} in partition ${partition}`);
+      console.log(`Rating completed: ${itemType} ${itemId} with score ${finalScore}`);
       
       // Determine category ID based on partition and score
-      const getCategoryId = (partition: 'loved' | 'liked' | 'disliked', score: number) => {
+      const getCategoryId = (_partition: 'loved' | 'liked' | 'disliked', score: number) => {
         if (score >= 7) return 1; // Loved category
         if (score >= 4) return 2; // Liked category  
         return 3; // Disliked category
       };
 
-      const categoryId = getCategoryId(partition, finalScore);
+      const categoryId = getCategoryId(_partition, finalScore);
       
       // Save the rating to the backend
       await saveRating(itemType, itemId, finalScore, categoryId);
