@@ -35,19 +35,20 @@ namespace Prestige.Api.Endpoints.Rating
         public async Task<RatingResponse> StartRatingAsync(string itemType, string itemId)
         {
             var userId = GetUserId();
+            var normalizedType = itemType.ToLowerInvariant();
             var user = await GetUserAsync(userId);
 
             // Check if item already rated
             var existingRating = await PrestigeDb.Ratings
                 .Include(r => r.Category)
-                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
 
             if (existingRating != null)
             {
                 return new RatingResponse
                 {
                     ItemId = itemId,
-                    ItemType = itemType,
+                    ItemType = normalizedType,
                     CategoryId = existingRating.Category.Id,
                     PersonalScore = existingRating.PersonalScore,
                     Position = existingRating.Position,
@@ -58,7 +59,7 @@ namespace Prestige.Api.Endpoints.Rating
             return new RatingResponse
             {
                 ItemId = itemId,
-                ItemType = itemType,
+                ItemType = normalizedType,
                 IsNewRating = true
             };
         }
@@ -67,9 +68,10 @@ namespace Prestige.Api.Endpoints.Rating
         {
             var userId = GetUserId();
             var user = await GetUserAsync(userId);
+            var normalizedType = request.ItemType.ToLowerInvariant();
 
             // Record the comparison
-            var comparison = new RatingComparison(user, request.ItemId1, request.ItemId2, request.ItemType, request.WinnerId);
+            var comparison = new RatingComparison(user, request.ItemId1, request.ItemId2, normalizedType, request.WinnerId);
             PrestigeDb.RatingComparisons.Add(comparison);
 
             // TODO: Implement binary search logic to determine position and score
@@ -86,10 +88,11 @@ namespace Prestige.Api.Endpoints.Rating
         public async Task<IEnumerable<RatingResponse>> GetUserRatingsAsync(string itemType)
         {
             var userId = GetUserId();
+            var normalizedType = itemType.ToLowerInvariant();
             
             var ratings = await PrestigeDb.Ratings
                 .Include(r => r.Category)
-                .Where(r => r.User.Id == userId && r.ItemType == itemType)
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == normalizedType)
                 .Select(r => new RatingResponse
                 {
                     ItemId = r.ItemId,
@@ -98,7 +101,7 @@ namespace Prestige.Api.Endpoints.Rating
                     PersonalScore = r.PersonalScore,
                     Position = r.Position,
                     // When rating tracks, AlbumId helps client filter comparisons to the same album
-                    AlbumId = r.ItemType == "track" ?
+                    AlbumId = r.ItemType.ToLower() == "track" ?
                         PrestigeDb.Tracks.Where(t => t.Id == r.ItemId).Select(t => t.Album.Id).FirstOrDefault() : null,
                     IsNewRating = false
                 })
@@ -110,13 +113,14 @@ namespace Prestige.Api.Endpoints.Rating
         public async Task<RatingResponse> SaveRatingAsync(string itemType, string itemId, decimal personalScore, int categoryId)
         {
             var userId = GetUserId();
+            var normalizedType = itemType.ToLowerInvariant();
             var user = await GetUserAsync(userId);
             var category = await PrestigeDb.RatingCategories.FindAsync(categoryId)
                 ?? throw new NotFoundException(404, $"Category {categoryId} not found");
 
             // Check if rating already exists
             var existingRating = await PrestigeDb.Ratings
-                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType == itemType);
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
 
             bool isNewRating = existingRating == null;
 
@@ -128,14 +132,14 @@ namespace Prestige.Api.Endpoints.Rating
             else
             {
                 // Create new rating
-                var newRating = new Domain.Rating(user, itemId, itemType, category, 0, personalScore);
+                var newRating = new Domain.Rating(user, itemId, normalizedType, category, 0, personalScore);
                 PrestigeDb.Ratings.Add(newRating);
             }
 
             await PrestigeDb.SaveChangesAsync();
 
             // Recalculate all scores for this user and item type using Beli-style position-based scoring
-            await RecalculateUserScoresAsync(userId, itemType);
+            await RecalculateUserScoresAsync(userId, normalizedType);
 
             // Get the final position and score for the saved item
             var savedRating = await PrestigeDb.Ratings
@@ -144,7 +148,7 @@ namespace Prestige.Api.Endpoints.Rating
             return new RatingResponse
             {
                 ItemId = itemId,
-                ItemType = itemType,
+                ItemType = normalizedType,
                 CategoryId = categoryId,
                 PersonalScore = savedRating?.PersonalScore ?? personalScore,
                 Position = savedRating?.Position ?? 0,
