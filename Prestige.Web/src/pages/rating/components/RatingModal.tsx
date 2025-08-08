@@ -63,9 +63,7 @@ interface ComparisonItem extends RatingItem {
 // Beli-style binary search state
 interface BinarySearchState {
   sortedList: ComparisonItem[];
-  low: number;
-  high: number;
-  currentMid: number;
+  currentMid: number; // used as linear scan index
 }
 
 const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete }) => {
@@ -205,18 +203,16 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
           .sort((a, b) => b.personalScore - a.personalScore);
         
         // Initialize binary search
-        const binaryState: BinarySearchState = {
+        const linearState: BinarySearchState = {
           sortedList: sortedItems,
-          low: 0,
-          high: sortedItems.length - 1,
-          currentMid: Math.floor(sortedItems.length / 2)
+          currentMid: 0
         };
-        
-        setBinarySearchState(binaryState);
+
+        setBinarySearchState(linearState);
         setCurrentComparison({
-          item: sortedItems[binaryState.currentMid],
+          item: sortedItems[0],
           number: 1,
-          total: Math.ceil(Math.log2(sortedItems.length + 1)) // Maximum comparisons needed
+          total: sortedItems.length
         });
         setStep('comparison');
       } else {
@@ -239,7 +235,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
     if (!binarySearchState || !currentComparison || !item) return;
     
     const userPrefersNewItem = selectedItemId === item.id;
-    
+
     try {
       // Submit comparison to backend
       const comparisonRequest = {
@@ -253,51 +249,46 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
     } catch (error) {
       console.error('Error submitting comparison:', error);
     }
-    
-    // Perform binary search step
+
+    // Linear scan through the ranked list to determine exact position
     const newState = { ...binarySearchState };
-    
+    const currentIndex = newState.currentMid;
+
     if (userPrefersNewItem) {
-      // New item is better - search in upper half
-      newState.high = newState.currentMid - 1;
-    } else {
-      // Comparison item is better - search in lower half  
-      newState.low = newState.currentMid + 1;
-    }
-    
-    // Check if binary search is complete
-    if (newState.low > newState.high) {
-      // Binary search complete - calculate final position and score
-      let insertPosition;
-      
-      if (userPrefersNewItem) {
-        insertPosition = newState.currentMid;
-      } else {
-        insertPosition = newState.currentMid + 1;
-      }
-      
-      // Calculate score based on position in sorted list
-      const totalItems = newState.sortedList.length + 1; // +1 for new item
+      // Insert before the current index
+      const insertPosition = currentIndex;
+      const totalItems = newState.sortedList.length + 1;
       const normalizedPosition = insertPosition / (totalItems - 1);
-      
-      // Convert to 10-point scale, with higher positions getting higher scores
       const finalScore = Math.max(0, Math.min(10, 10 * (1 - normalizedPosition)));
       const roundedScore = Math.round(finalScore * 10) / 10;
-      
+
       onComplete(item.id, selectedPartition!, roundedScore);
       handleClose();
       return;
+    } else {
+      // Keep scanning downward
+      const nextIndex = currentIndex + 1;
+      if (nextIndex >= newState.sortedList.length) {
+        // New item is worse than all others; insert at end
+        const insertPosition = newState.sortedList.length; // end position
+        const totalItems = newState.sortedList.length + 1;
+        const normalizedPosition = insertPosition / (totalItems - 1);
+        const finalScore = Math.max(0, Math.min(10, 10 * (1 - normalizedPosition)));
+        const roundedScore = Math.round(finalScore * 10) / 10;
+
+        onComplete(item.id, selectedPartition!, roundedScore);
+        handleClose();
+        return;
+      }
+
+      newState.currentMid = nextIndex;
+      setBinarySearchState(newState);
+      setCurrentComparison({
+        item: newState.sortedList[newState.currentMid],
+        number: currentComparison.number + 1,
+        total: newState.sortedList.length
+      });
     }
-    
-    // Continue binary search
-    newState.currentMid = Math.floor((newState.low + newState.high) / 2);
-    setBinarySearchState(newState);
-    
-    setCurrentComparison({
-      item: newState.sortedList[newState.currentMid],
-      number: currentComparison.number + 1,
-      total: currentComparison.total
-    });
   };
 
 
