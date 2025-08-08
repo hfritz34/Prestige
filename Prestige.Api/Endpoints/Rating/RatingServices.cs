@@ -189,6 +189,7 @@ namespace Prestige.Api.Endpoints.Rating
         {
             // Get all ratings for this user and item type, ordered by personal score (highest first)
             var userRatings = await PrestigeDb.Ratings
+                .Include(r => r.Category)
                 .Where(r => r.User.Id == userId && r.ItemType == itemType)
                 .OrderByDescending(r => r.PersonalScore)
                 .ToListAsync();
@@ -217,6 +218,12 @@ namespace Prestige.Api.Endpoints.Rating
                     newScore = 10.0m * (totalCount - 1 - position) / (totalCount - 1);
                 }
                 
+                // Clamp by selected category bounds (partition guardrails)
+                if (rating.Category != null)
+                {
+                    newScore = Math.Max(rating.Category.MinScore, Math.Min(rating.Category.MaxScore, newScore));
+                }
+
                 // Update both position and recalculated score
                 rating.UpdatePosition(position);
                 rating.UpdateScore(newScore);
