@@ -307,7 +307,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby="rating-description">
         <DialogHeader>
           <DialogTitle>
             {step === 'partition' ? 'How did you feel about this?' : 'Compare with your other ratings'}
@@ -315,6 +315,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         </DialogHeader>
 
         <div className="space-y-6">
+          <p id="rating-description" className="sr-only">Rate and compare your selection to determine its position.</p>
           {/* Current Item Display */}
           <Card className="border-2">
             <CardContent className="p-4">

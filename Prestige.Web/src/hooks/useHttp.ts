@@ -137,7 +137,9 @@ const useHttp = () => {
 		});
 	}
 	
-	return { getOne, getMany, post, patch, put, deleteOne }
+	// Back-compat: expose both deleteOne and del
+	const del = deleteOne;
+	return { getOne, getMany, post, patch, put, deleteOne, del }
 }
 
 export default useHttp
