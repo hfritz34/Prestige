@@ -142,21 +142,23 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       if (!Array.isArray(existingRatings)) {
         console.warn('getUserRatings returned non-array:', existingRatings);
         // Skip comparison phase - no existing ratings to compare against
-        setStep('partition');
-        const partitionMidpoint = {
-          'loved': 8.5,
-          'liked': 5.5,
-          'disliked': 2.5
-        };
-        onComplete(item?.id || '', partition, partitionMidpoint[partition]);
+        // First item gets position 0
+        onComplete(item?.id || '', partition, 0);
         return;
       }
       
-      // For tracks, only compare with tracks from the same album when possible
+      // For tracks, only compare with tracks from the same album
       let filteredRatings = existingRatings;
       if (item?.type === 'track' && item?.albumId) {
-        const sameAlbum = existingRatings.filter((r: any) => r.albumId === item.albumId);
-        filteredRatings = sameAlbum.length > 0 ? sameAlbum : existingRatings;
+        filteredRatings = existingRatings.filter((r: any) => r.albumId === item.albumId);
+        
+        // If no tracks from same album exist, skip comparison phase
+        if (filteredRatings.length === 0) {
+          // First item in this album category gets position 0
+          onComplete(item.id, partition, 0);
+          handleClose();
+          return;
+        }
       }
       
       // Filter ratings based on partition score range (10-point scale)  
@@ -196,33 +198,46 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
           })
         );
 
-        const sortedItems: ComparisonItem[] = itemsWithDetails
+        // Filter out any items with missing data (empty names or IDs)
+        const validItems = itemsWithDetails.filter(item => 
+          item.id && item.id.length > 0 && 
+          item.name && item.name !== `${item.type} ${item.id.substring(0, 8)}...`
+        );
+
+        const sortedItems: ComparisonItem[] = validItems
           .sort((a, b) => b.personalScore - a.personalScore);
         
-        // Initialize binary search
-        const linearState: BinarySearchState = {
+        // Check if we have valid items after filtering
+        if (sortedItems.length === 0) {
+          // No valid items to compare against -> first item in category gets position 0
+          onComplete(item!.id, partition, 0);
+          handleClose();
+          return;
+        }
+        
+        // Initialize linear insertion - start from the BOTTOM (lowest scored item)
+        const startIndex = sortedItems.length - 1; // Start with lowest scored item
+        const insertionState: BinarySearchState = {
           sortedList: sortedItems,
-          currentMid: 0
+          currentMid: startIndex
         };
 
-        setBinarySearchState(linearState);
+        setBinarySearchState(insertionState);
         setCurrentComparison({
-          item: sortedItems[0],
+          item: sortedItems[startIndex],
           number: 1,
-          total: sortedItems.length
+          total: sortedItems.length // Maximum comparisons needed
         });
         setStep('comparison');
       } else {
-        // No items in this category yet -> baseline partition scores
-        const defaultScore = partition === 'loved' ? 10 : partition === 'liked' ? 6.7 : 3.3;
-        onComplete(item!.id, partition, defaultScore);
+        // No items in this category yet -> first item gets position 0
+        onComplete(item!.id, partition, 0);
         handleClose();
       }
     } catch (error) {
       console.error('Error fetching ratings for comparison:', error);
-      // Fall back to default scores (10-point scale)
-      const defaultScore = partition === 'loved' ? 8.5 : partition === 'liked' ? 5.5 : 2.5;
-      onComplete(item!.id, partition, defaultScore);
+      // Fall back to position 0 for first item
+      onComplete(item!.id, partition, 0);
       handleClose();
     }
   };
@@ -246,44 +261,45 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       console.error('Error submitting comparison:', error);
     }
 
-    // Linear scan through the ranked list to determine exact position
-    const newState = { ...binarySearchState };
-    const currentIndex = newState.currentMid;
+    // Linear insertion logic - working from lowest to highest
+    const currentIndex = binarySearchState.currentMid;
 
     if (userPrefersNewItem) {
-      // Insert before the current index
-      const insertPosition = currentIndex;
-      const totalItems = newState.sortedList.length + 1;
-      const normalizedPosition = insertPosition / (totalItems - 1);
-      const finalScore = Math.max(0, Math.min(10, 10 * (1 - normalizedPosition)));
-      const roundedScore = Math.round(finalScore * 10) / 10;
-
-      onComplete(item.id, selectedPartition!, roundedScore);
-      handleClose();
-      return;
-    } else {
-      // Keep scanning downward
-      const nextIndex = currentIndex + 1;
-      if (nextIndex >= newState.sortedList.length) {
-        // New item is worse than all others; insert at end
-        const insertPosition = newState.sortedList.length; // end position
-        const totalItems = newState.sortedList.length + 1;
-        const normalizedPosition = insertPosition / (totalItems - 1);
-        const finalScore = Math.max(0, Math.min(10, 10 * (1 - normalizedPosition)));
-        const roundedScore = Math.round(finalScore * 10) / 10;
-
-        onComplete(item.id, selectedPartition!, roundedScore);
+      // New item is BETTER than current comparison
+      // Move to next HIGHER scored item (lower index)
+      const nextIndex = currentIndex - 1;
+      
+      if (nextIndex < 0) {
+        // New item is better than all existing items - it's the new #1
+        onComplete(item.id, selectedPartition!, 0);
         handleClose();
         return;
       }
-
-      newState.currentMid = nextIndex;
-      setBinarySearchState(newState);
-      setCurrentComparison({
-        item: newState.sortedList[newState.currentMid],
-        number: currentComparison.number + 1,
-        total: newState.sortedList.length
+      
+      // Continue comparing with next higher-scored item
+      const nextItem = binarySearchState.sortedList[nextIndex];
+      if (!nextItem) {
+        // Fallback if item is undefined - complete rating at position after current
+        onComplete(item.id, selectedPartition!, currentIndex);
+        handleClose();
+        return;
+      }
+      
+      setBinarySearchState({
+        ...binarySearchState,
+        currentMid: nextIndex
       });
+      setCurrentComparison({
+        item: nextItem,
+        number: currentComparison.number + 1,
+        total: binarySearchState.sortedList.length
+      });
+    } else {
+      // Current comparison item is BETTER than new item
+      // Insert new item AFTER current item (at position currentIndex + 1)
+      const insertPosition = currentIndex + 1;
+      onComplete(item.id, selectedPartition!, insertPosition);
+      handleClose();
     }
   };
 
@@ -307,7 +323,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6" id="rating-modal-content">
           <p id="rating-description" className="sr-only">Rate and compare your selection to determine its position.</p>
           {/* Current Item Display */}
           <Card className="border-2">

@@ -100,9 +100,7 @@ namespace Prestige.Api.Endpoints.Rating
                     CategoryId = r.Category.Id,
                     PersonalScore = r.PersonalScore,
                     Position = r.Position,
-                    // When rating tracks, AlbumId helps client filter comparisons to the same album
-                    AlbumId = r.ItemType.ToLower() == "track" ?
-                        PrestigeDb.Tracks.Where(t => t.Id == r.ItemId).Select(t => t.Album.Id).FirstOrDefault() : null,
+                    AlbumId = r.AlbumId, // Now directly from the Rating entity
                     IsNewRating = false
                 })
                 .ToListAsync();
@@ -118,28 +116,41 @@ namespace Prestige.Api.Endpoints.Rating
             var category = await PrestigeDb.RatingCategories.FindAsync(categoryId)
                 ?? throw new NotFoundException(404, $"Category {categoryId} not found");
 
+            // Get album ID if this is a track
+            string? albumId = null;
+            if (normalizedType == "track")
+            {
+                var track = await PrestigeDb.Tracks
+                    .Include(t => t.Album)
+                    .FirstOrDefaultAsync(t => t.Id == itemId);
+                albumId = track?.Album?.Id;
+            }
+
             // Check if rating already exists
             var existingRating = await PrestigeDb.Ratings
                 .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
 
             bool isNewRating = existingRating == null;
 
+            // personalScore is actually the position from frontend (0 = best, higher = worse)
+            var position = (int)personalScore;
+            
             if (existingRating != null)
             {
-                // Update existing rating
-                existingRating.UpdateRating(personalScore, category, 0); // Position will be calculated later
+                // Update existing rating with new position
+                existingRating.UpdateRating(0, category, position); // Score will be calculated later
             }
             else
             {
-                // Create new rating
-                var newRating = new Domain.Rating(user, itemId, normalizedType, category, 0, personalScore);
+                // Create new rating with position and album ID
+                var newRating = new Domain.Rating(user, itemId, normalizedType, category, position, 0, albumId);
                 PrestigeDb.Ratings.Add(newRating);
             }
 
             await PrestigeDb.SaveChangesAsync();
 
-            // Recalculate all scores for this user and item type using Beli-style position-based scoring
-            await RecalculateUserScoresAsync(userId, normalizedType);
+            // Recalculate all scores based on new positions
+            await RecalculateUserScoresWithPositionAsync(userId, normalizedType, itemId, position);
 
             // Get the final position and score for the saved item
             var savedRating = await PrestigeDb.Ratings
@@ -187,49 +198,196 @@ namespace Prestige.Api.Endpoints.Rating
 
         private async Task RecalculateUserScoresAsync(string userId, string itemType)
         {
-            // Get all ratings for this user and item type, ordered by personal score (highest first)
+            // Batch load all necessary data in a single query
             var userRatings = await PrestigeDb.Ratings
                 .Include(r => r.Category)
                 .Where(r => r.User.Id == userId && r.ItemType == itemType)
-                .OrderByDescending(r => r.PersonalScore)
                 .ToListAsync();
 
             if (userRatings.Count == 0) return;
 
-            // Implement Beli-style position-based scoring
-            // Score = 10 * (totalCount - 1 - position) / (totalCount - 1)
-            // This ensures top item gets 10.0, bottom gets 0.0, evenly distributed
-            
-            for (int i = 0; i < userRatings.Count; i++)
+            // For tracks, recalculate scores within each album separately
+            if (itemType == "track")
             {
-                var rating = userRatings[i];
-                var position = i; // 0-based position (0 = highest rated)
-                var totalCount = userRatings.Count;
+                // Group by album and recalculate within each group
+                var albumGroups = userRatings.GroupBy(r => r.AlbumId ?? "singles");
                 
-                // Calculate new score based on position
-                decimal newScore;
-                if (totalCount == 1)
+                foreach (var albumGroup in albumGroups)
                 {
-                    newScore = 10.0m; // Single item gets perfect score
+                    var albumRatings = albumGroup.OrderByDescending(r => r.PersonalScore).ToList();
+                    RecalculateGroupScores(albumRatings);
+                }
+            }
+            else
+            {
+                // For albums and artists, calculate globally
+                var sortedRatings = userRatings.OrderByDescending(r => r.PersonalScore).ToList();
+                RecalculateGroupScores(sortedRatings);
+            }
+
+            // Single save operation for all changes
+            await PrestigeDb.SaveChangesAsync();
+        }
+
+        private async Task RecalculateUserScoresWithPositionAsync(string userId, string itemType, string newItemId, int insertPosition)
+        {
+            // Get all ratings for this user and item type
+            var allRatings = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .Where(r => r.User.Id == userId && r.ItemType == itemType)
+                .ToListAsync();
+
+            if (allRatings.Count == 0) return;
+
+            // For tracks, handle album-based grouping
+            if (itemType == "track")
+            {
+                var newItem = allRatings.FirstOrDefault(r => r.ItemId == newItemId);
+                var albumId = newItem?.AlbumId;
+                
+                if (!string.IsNullOrEmpty(albumId))
+                {
+                    // Only recalculate within the same album
+                    var albumRatings = allRatings.Where(r => r.AlbumId == albumId).ToList();
+                    RecalculatePositionBasedScores(albumRatings, newItemId, insertPosition);
                 }
                 else
                 {
-                    // Position-based scoring: higher position = higher score
-                    newScore = 10.0m * (totalCount - 1 - position) / (totalCount - 1);
+                    // Singles or unknown album - recalculate all tracks
+                    RecalculatePositionBasedScores(allRatings, newItemId, insertPosition);
                 }
-                
-                // Clamp by selected category bounds (partition guardrails)
-                if (rating.Category != null)
-                {
-                    newScore = Math.Max(rating.Category.MinScore, Math.Min(rating.Category.MaxScore, newScore));
-                }
-
-                // Update both position and recalculated score
-                rating.UpdatePosition(position);
-                rating.UpdateScore(newScore);
+            }
+            else
+            {
+                // For albums and artists, recalculate globally
+                RecalculatePositionBasedScores(allRatings, newItemId, insertPosition);
             }
 
             await PrestigeDb.SaveChangesAsync();
+        }
+
+        private void RecalculatePositionBasedScores(List<Domain.Rating> ratings, string newItemId, int insertPosition)
+        {
+            if (ratings.Count == 0) return;
+
+            // Group by category
+            var categoryGroups = ratings.GroupBy(r => r.Category.Id).ToList();
+            
+            foreach (var categoryGroup in categoryGroups)
+            {
+                var categoryRatings = categoryGroup.ToList();
+                var categoryBounds = categoryGroup.First().Category;
+                var newItem = categoryRatings.FirstOrDefault(r => r.ItemId == newItemId);
+                
+                // Only process the category that contains the new item
+                if (newItem == null) continue;
+
+                // Remove new item temporarily
+                var existingItems = categoryRatings.Where(r => r.ItemId != newItemId).ToList();
+                
+                // Sort existing items by current position
+                existingItems.Sort((a, b) => a.Position.CompareTo(b.Position));
+                
+                // Insert new item at specified position
+                var finalList = new List<Domain.Rating>();
+                
+                // Clamp insert position to valid range
+                var insertIndex = Math.Max(0, Math.Min(insertPosition, existingItems.Count));
+                
+                Logger.LogInformation($"Inserting new item {newItemId} at position {insertIndex} out of {existingItems.Count} existing items");
+                
+                // Add items before insert position
+                for (int i = 0; i < insertIndex; i++)
+                {
+                    finalList.Add(existingItems[i]);
+                }
+                
+                // Add new item
+                finalList.Add(newItem);
+                
+                // Add remaining items (they get pushed down by 1 position)
+                for (int i = insertIndex; i < existingItems.Count; i++)
+                {
+                    finalList.Add(existingItems[i]);
+                }
+                
+                // Recalculate scores - position 0 gets ceiling, others distributed evenly
+                var minScore = categoryBounds.MinScore;
+                var maxScore = categoryBounds.MaxScore;
+                
+                Logger.LogInformation($"Recalculating scores for {finalList.Count} items in category {categoryBounds.Name} (range: {minScore}-{maxScore})");
+                
+                for (int i = 0; i < finalList.Count; i++)
+                {
+                    var rating = finalList[i];
+                    decimal newScore;
+                    
+                    if (finalList.Count == 1)
+                    {
+                        newScore = maxScore; // Single item gets ceiling
+                    }
+                    else
+                    {
+                        // Beli formula: position 0 gets maxScore, evenly distribute to minScore
+                        // When new items are added, ALL scores redistribute
+                        var normalizedPosition = (decimal)i / (finalList.Count - 1);
+                        newScore = maxScore - (normalizedPosition * (maxScore - minScore));
+                    }
+                    
+                    // Ensure score stays within bounds
+                    newScore = Math.Max(minScore, Math.Min(maxScore, newScore));
+                    
+                    Logger.LogInformation($"Item {rating.ItemId} at position {i}: old score = {rating.PersonalScore:F2}, new score = {newScore:F2}");
+                    
+                    rating.UpdatePosition(i);
+                    rating.UpdateScore(newScore);
+                }
+            }
+        }
+
+        private void RecalculateGroupScores(List<Domain.Rating> ratings)
+        {
+            if (ratings.Count == 0) return;
+
+            // Group ratings by category to calculate scores within each partition
+            var categoryGroups = ratings.GroupBy(r => r.Category.Id).ToList();
+            
+            foreach (var categoryGroup in categoryGroups)
+            {
+                var categoryRatings = categoryGroup.OrderBy(r => r.Position).ToList();
+                var categoryBounds = categoryGroup.First().Category;
+                
+                // Calculate scores within category bounds
+                // IMPORTANT: Top item ALWAYS gets the ceiling (maxScore)
+                var minScore = categoryBounds.MinScore;
+                var maxScore = categoryBounds.MaxScore;
+                
+                for (int i = 0; i < categoryRatings.Count; i++)
+                {
+                    var rating = categoryRatings[i];
+                    
+                    decimal newScore;
+                    if (categoryRatings.Count == 1)
+                    {
+                        // Single item gets the ceiling
+                        newScore = maxScore;
+                    }
+                    else
+                    {
+                        // Beli formula: Score = max - (position / (count - 1)) * (max - min)
+                        // This ensures top item (position 0) gets maxScore
+                        // and scores are evenly distributed down to minScore
+                        var normalizedPosition = (decimal)i / (categoryRatings.Count - 1);
+                        newScore = maxScore - (normalizedPosition * (maxScore - minScore));
+                    }
+                    
+                    // Ensure score stays within bounds
+                    newScore = Math.Max(minScore, Math.Min(maxScore, newScore));
+                    
+                    rating.UpdatePosition(i);
+                    rating.UpdateScore(newScore);
+                }
+            }
         }
 
         private string GetUserId()

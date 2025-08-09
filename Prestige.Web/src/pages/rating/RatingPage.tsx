@@ -86,23 +86,24 @@ const RatingPage: React.FC = () => {
     setIsRatingModalOpen(true);
   };
 
-  const handleRatingComplete = async (itemId: string, _partition: 'loved' | 'liked' | 'disliked', finalScore: number) => {
+  const handleRatingComplete = async (itemId: string, partition: 'loved' | 'liked' | 'disliked', positionOrScore: number) => {
     try {
       const itemType = selectedItem?.type || 'track';
-      console.log(`Rating completed: ${itemType} ${itemId} with score ${finalScore}`);
+      console.log(`Rating completed: ${itemType} ${itemId} in ${partition} partition at position/score ${positionOrScore}`);
       
-      // Determine category ID based on partition and score
-      const getCategoryId = (_partition: 'loved' | 'liked' | 'disliked', score: number) => {
-        if (score >= 7) return 1; // Loved category
-        if (score >= 4) return 2; // Liked category  
-        return 3; // Disliked category
+      // Determine category ID based on partition
+      const getCategoryId = (partition: 'loved' | 'liked' | 'disliked') => {
+        if (partition === 'loved') return 1;
+        if (partition === 'liked') return 2;
+        return 3; // disliked
       };
 
-      const categoryId = getCategoryId(_partition, finalScore);
+      const categoryId = getCategoryId(partition);
       
-      // Save the rating to the backend
-      await saveRating(itemType, itemId, finalScore, categoryId);
-      console.log(`Rating saved successfully: ${itemType} ${itemId} score ${finalScore}`);
+      // For now, pass position as the score - backend will recalculate
+      // Position 0 = best in category, higher position = lower in ranking
+      await saveRating(itemType, itemId, positionOrScore, categoryId);
+      console.log(`Rating saved successfully: ${itemType} ${itemId} in ${partition}`);
       
       setIsRatingModalOpen(false);
       setSelectedItem(null);
@@ -255,20 +256,21 @@ const RatingPage: React.FC = () => {
           Rate Your Music
         </h1>
         
-        {/* Type Selector */}
-        <div className="mb-6">
+        {/* Combined Type and Content Selector */}
+        <div className="space-y-4 mb-6">
+          {/* Type Selector */}
           <Tabs value={selectedType} onValueChange={(value) => setSelectedType(value as 'track' | 'album' | 'artist')} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="track">Tracks</TabsTrigger>
-              <TabsTrigger value="album">Albums</TabsTrigger>
-              <TabsTrigger value="artist">Artists</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 bg-gray-100 dark:bg-gray-800">
+              <TabsTrigger value="track" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">Tracks</TabsTrigger>
+              <TabsTrigger value="album" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">Albums</TabsTrigger>
+              <TabsTrigger value="artist" className="data-[state=active]:bg-white dark:data-[state=active]:bg-gray-700">Artists</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
         
         {/* Content Tabs */}
         <Tabs defaultValue="unrated" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
             <TabsTrigger value="unrated">Unrated</TabsTrigger>
             <TabsTrigger value="recent">Recently Played</TabsTrigger>
             <TabsTrigger value="rated">Rate Again</TabsTrigger>
@@ -355,21 +357,26 @@ const RatingPage: React.FC = () => {
                 <div className="space-y-3">
                   {ratedItems.length > 0 ? (
                     ratedItems.map((item) => (
-                      <div key={`rated-${item.id}`} className="grid grid-cols-[1fr_auto] items-center gap-3">
-                        <RatingItemCard
-                          id={item.id}
-                          name={item.name}
-                          subtitle={`${item.subtitle} • Score: ${item.score?.toFixed(1) || 'N/A'}`}
-                          imageUrl={item.imageUrl}
-                          type={item.type}
-                          onRate={handleRate}
-                          albumId={item.albumId}
-                        />
-                        <div className="justify-self-end">
-                          <Button variant="destructive" size="sm" onClick={() => handleUnrate(item.id, item.type)}>
-                            Remove rating
-                          </Button>
+                      <div key={`rated-${item.id}`} className="flex items-center gap-4">
+                        <div className="flex-1">
+                          <RatingItemCard
+                            id={item.id}
+                            name={item.name}
+                            subtitle={`${item.subtitle} • ${item.type === 'track' ? 'Album Score' : 'Score'}: ${item.score?.toFixed(1) || 'N/A'}`}
+                            imageUrl={item.imageUrl}
+                            type={item.type}
+                            onRate={handleRate}
+                            albumId={item.albumId}
+                          />
                         </div>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={() => handleUnrate(item.id, item.type)}
+                          className="shrink-0"
+                        >
+                          Remove
+                        </Button>
                       </div>
                     ))
                   ) : (

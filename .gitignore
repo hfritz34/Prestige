@@ -380,3 +380,4 @@ FodyWeavers.xsd
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+.tmp-prestige-web/

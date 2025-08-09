@@ -6,6 +6,7 @@ namespace Prestige.Api.Domain
         public User User { get; private set; }
         public string ItemId { get; private set; }
         public string ItemType { get; private set; } // "Album", "Artist", "Track"
+        public string? AlbumId { get; private set; } // For tracks, stores the album ID for comparison filtering
         public RatingCategory Category { get; private set; }
         public int Position { get; private set; }
         public decimal PersonalScore { get; private set; }
@@ -14,11 +15,12 @@ namespace Prestige.Api.Domain
 
         private Rating() { }
 
-        public Rating(User user, string itemId, string itemType, RatingCategory category)
+        public Rating(User user, string itemId, string itemType, RatingCategory category, string? albumId = null)
         {
             User = user;
             ItemId = itemId;
             ItemType = itemType;
+            AlbumId = albumId;
             Category = category;
             Position = 0;
             PersonalScore = 0;
@@ -26,11 +28,12 @@ namespace Prestige.Api.Domain
             UpdatedAt = DateTime.UtcNow;
         }
 
-        public Rating(User user, string itemId, string itemType, RatingCategory category, int position, decimal personalScore)
+        public Rating(User user, string itemId, string itemType, RatingCategory category, int position, decimal personalScore, string? albumId = null)
         {
             User = user;
             ItemId = itemId;
             ItemType = itemType;
+            AlbumId = albumId;
             Category = category;
             Position = position;
             PersonalScore = personalScore;

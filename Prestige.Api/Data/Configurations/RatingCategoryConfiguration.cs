@@ -29,12 +29,11 @@ namespace Prestige.Api.Data.Configurations
 
             builder.HasIndex(rc => rc.DisplayOrder);
 
-            // Seed initial categories
+            // Seed initial categories with 10-point scale
             builder.HasData(
-                new { Id = 1, Name = "Loved", MinScore = 75.0m, MaxScore = 100.0m, ColorHex = "#22c55e", DisplayOrder = 1 },
-                new { Id = 2, Name = "Liked", MinScore = 50.0m, MaxScore = 74.99m, ColorHex = "#84cc16", DisplayOrder = 2 },
-                new { Id = 3, Name = "Okay", MinScore = 25.0m, MaxScore = 49.99m, ColorHex = "#eab308", DisplayOrder = 3 },
-                new { Id = 4, Name = "Disliked", MinScore = 0.0m, MaxScore = 24.99m, ColorHex = "#ef4444", DisplayOrder = 4 }
+                new { Id = 1, Name = "Loved", MinScore = 6.8m, MaxScore = 10.0m, ColorHex = "#22c55e", DisplayOrder = 1 },
+                new { Id = 2, Name = "Liked", MinScore = 3.4m, MaxScore = 6.7m, ColorHex = "#eab308", DisplayOrder = 2 },
+                new { Id = 3, Name = "Disliked", MinScore = 0.0m, MaxScore = 3.3m, ColorHex = "#ef4444", DisplayOrder = 3 }
             );
         }
     }

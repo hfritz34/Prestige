@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prestige.Api.Data;
 
@@ -11,9 +12,11 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    partial class PrestigeContextModelSnapshot : ModelSnapshot
+    [Migration("20250809021252_AddAlbumIdToRating")]
+    partial class AddAlbumIdToRating
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -278,25 +281,34 @@ namespace Prestige.Api.Migrations
                             Id = 1,
                             ColorHex = "#22c55e",
                             DisplayOrder = 1,
-                            MaxScore = 10.0m,
-                            MinScore = 6.8m,
+                            MaxScore = 100.0m,
+                            MinScore = 75.0m,
                             Name = "Loved"
                         },
                         new
                         {
                             Id = 2,
-                            ColorHex = "#eab308",
+                            ColorHex = "#84cc16",
                             DisplayOrder = 2,
-                            MaxScore = 6.7m,
-                            MinScore = 3.4m,
+                            MaxScore = 74.99m,
+                            MinScore = 50.0m,
                             Name = "Liked"
                         },
                         new
                         {
                             Id = 3,
-                            ColorHex = "#ef4444",
+                            ColorHex = "#eab308",
                             DisplayOrder = 3,
-                            MaxScore = 3.3m,
+                            MaxScore = 49.99m,
+                            MinScore = 25.0m,
+                            Name = "Okay"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            ColorHex = "#ef4444",
+                            DisplayOrder = 4,
+                            MaxScore = 24.99m,
                             MinScore = 0.0m,
                             Name = "Disliked"
                         });
