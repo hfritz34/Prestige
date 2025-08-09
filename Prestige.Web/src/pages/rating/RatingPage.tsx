@@ -235,7 +235,8 @@ const RatingPage: React.FC = () => {
 
   const currentItems = getCurrentTypeItems();
   const unratedItems = currentItems.filter(item => !item.isRated);
-  const ratedItems = currentItems.filter(item => item.isRated);
+  const ratedItems = currentItems.filter(item => item.isRated)
+    .sort((a, b) => (b.score || 0) - (a.score || 0)); // Sort by highest to lowest score
   
   // Get recent items based on selected type
   const getRecentItemsByType = () => {

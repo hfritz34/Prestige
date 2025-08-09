@@ -178,8 +178,16 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         rating.personalScore <= range.max
       );
       
-      // If no items in this partition, fall back to all available ratings for this type
-      const candidateRatings = partitionItems.length > 0 ? partitionItems : filteredRatings;
+      // If no items in this partition, assign first item the upper bound score for that partition
+      if (partitionItems.length === 0) {
+        // Get the upper bound score for this partition
+        const upperBoundScore = range.max;
+        onComplete(item?.id || '', partition, upperBoundScore);
+        handleClose();
+        return;
+      }
+
+      const candidateRatings = partitionItems;
       
       if (candidateRatings.length > 0) {
         // Create sorted list for binary search (highest to lowest score)
