@@ -103,6 +103,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<FriendshipService>();
             builder.Services.AddScoped<PrestigeServices>();
             builder.Services.AddScoped<RatingServices>();
+            builder.Services.AddScoped<Endpoints.Search.SearchServices>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
