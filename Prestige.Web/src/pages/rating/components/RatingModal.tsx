@@ -63,10 +63,12 @@ interface ComparisonItem extends RatingItem {
   personalScore: number;
 }
 
-// Beli-style binary search state
+// Binary search state for proper insertion logic
 interface BinarySearchState {
   sortedList: ComparisonItem[];
-  currentMid: number; // used as linear scan index
+  leftIndex: number;
+  rightIndex: number;
+  currentMid: number;
 }
 
 const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComplete, topTracks = [], topAlbums = [], topArtists = [] }) => {
@@ -223,10 +225,15 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
           return;
         }
         
-        // Initialize linear insertion - start from the BOTTOM (lowest scored item)
-        const startIndex = sortedItems.length - 1; // Start with lowest scored item
+        // Initialize binary search - start from the MIDDLE
+        // If even count, favor higher value (lower index)
+        const leftIndex = 0;
+        const rightIndex = sortedItems.length - 1;
+        const startIndex = Math.floor((leftIndex + rightIndex) / 2);
         const insertionState: BinarySearchState = {
           sortedList: sortedItems,
+          leftIndex: leftIndex,
+          rightIndex: rightIndex,
           currentMid: startIndex
         };
 
@@ -269,46 +276,44 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       console.error('Error submitting comparison:', error);
     }
 
-    // Linear insertion logic - working from lowest to highest
-    const currentIndex = binarySearchState.currentMid;
+    // Proper binary search logic
+    let newLeftIndex = binarySearchState.leftIndex;
+    let newRightIndex = binarySearchState.rightIndex;
 
     if (userPrefersNewItem) {
       // New item is BETTER than current comparison
-      // Move to next HIGHER scored item (lower index)
-      const nextIndex = currentIndex - 1;
-      
-      if (nextIndex < 0) {
-        // New item is better than all existing items - it's the new #1
-        onComplete(item.id, selectedPartition!, 0);
-        handleClose();
-        return;
-      }
-      
-      // Continue comparing with next higher-scored item
-      const nextItem = binarySearchState.sortedList[nextIndex];
-      if (!nextItem) {
-        // Fallback if item is undefined - complete rating at position after current
-        onComplete(item.id, selectedPartition!, currentIndex);
-        handleClose();
-        return;
-      }
-      
-      setBinarySearchState({
-        ...binarySearchState,
-        currentMid: nextIndex
-      });
-      setCurrentComparison({
-        item: nextItem,
-        number: currentComparison.number + 1,
-        total: binarySearchState.sortedList.length
-      });
+      // Search in the upper half (items with higher scores, lower indices)
+      newRightIndex = binarySearchState.currentMid - 1;
     } else {
       // Current comparison item is BETTER than new item
-      // Insert new item AFTER current item (at position currentIndex + 1)
-      const insertPosition = currentIndex + 1;
-      onComplete(item.id, selectedPartition!, insertPosition);
-      handleClose();
+      // Search in the lower half (items with lower scores, higher indices)
+      newLeftIndex = binarySearchState.currentMid + 1;
     }
+
+    // Check if binary search is complete
+    if (newLeftIndex > newRightIndex) {
+      // Binary search complete - insert at newLeftIndex position
+      onComplete(item.id, selectedPartition!, newLeftIndex);
+      handleClose();
+      return;
+    }
+
+    // Continue binary search - calculate new middle
+    const newMidIndex = Math.floor((newLeftIndex + newRightIndex) / 2);
+    const nextItem = binarySearchState.sortedList[newMidIndex];
+
+    setBinarySearchState({
+      ...binarySearchState,
+      leftIndex: newLeftIndex,
+      rightIndex: newRightIndex,
+      currentMid: newMidIndex
+    });
+
+    setCurrentComparison({
+      item: nextItem,
+      number: currentComparison.number + 1,
+      total: Math.ceil(Math.log2(binarySearchState.sortedList.length)) + 1 // More accurate total for binary search
+    });
   };
 
 

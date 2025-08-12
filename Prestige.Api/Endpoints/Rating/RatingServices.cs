@@ -109,7 +109,7 @@ namespace Prestige.Api.Endpoints.Rating
             return ratings;
         }
 
-        public async Task<RatingResponse> SaveRatingAsync(string itemType, string itemId, decimal personalScore, int categoryId)
+        public async Task<RatingResponse> SaveRatingAsync(string itemType, string itemId, int desiredPosition, int categoryId)
         {
             var userId = GetUserId();
             var normalizedType = itemType.ToLowerInvariant();
@@ -133,23 +133,65 @@ namespace Prestige.Api.Endpoints.Rating
 
             bool isNewRating = existingRating == null;
 
-            // CRITICAL FIX: personalScore IS the calculated score from frontend, NOT position
-            var calculatedScore = personalScore;
+            // Get existing ratings in same category/album for score calculation
+            var existingQuery = PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType == normalizedType && r.Category.Id == categoryId);
 
-            // Calculate position based on score (higher score = lower position number)
-            var position = await CalculatePositionFromScore(userId, normalizedType, categoryId, calculatedScore, albumId);
+            if (normalizedType == "track" && !string.IsNullOrEmpty(albumId))
+            {
+                existingQuery = existingQuery.Where(r => r.AlbumId == albumId);
+            }
+
+            var existingRatings = await existingQuery
+                .OrderByDescending(r => r.PersonalScore)
+                .ToListAsync();
+
+            // Calculate score based on position within category bounds
+            decimal calculatedScore;
+            if (existingRatings.Count == 0)
+            {
+                // First item gets max score
+                calculatedScore = category.MaxScore;
+            }
+            else if (desiredPosition == 0)
+            {
+                // New top item - give it max score, push others down
+                calculatedScore = category.MaxScore;
+                // Redistribute existing items' scores downward
+                await RedistributeScoresAfterNewTop(existingRatings, category);
+            }
+            else if (desiredPosition >= existingRatings.Count)
+            {
+                // New bottom item
+                var lowestScore = existingRatings.Last().PersonalScore;
+                var availableRange = lowestScore - category.MinScore;
+                calculatedScore = Math.Max(
+                    lowestScore - (availableRange / 2m),
+                    category.MinScore + 0.1m
+                );
+            }
+            else
+            {
+                // Insert between existing items
+                var higherItem = existingRatings[desiredPosition - 1];
+                var lowerItem = existingRatings[desiredPosition];
+                calculatedScore = (higherItem.PersonalScore + lowerItem.PersonalScore) / 2m;
+            }
+
+            // Calculate final position based on the new score
+            var finalPosition = await CalculatePositionFromScore(userId, normalizedType, categoryId, calculatedScore, albumId);
 
             if (existingRating != null)
             {
                 // Update existing rating
-                existingRating.UpdateRating(calculatedScore, category, position);
+                existingRating.UpdateRating(calculatedScore, category, finalPosition);
                 // Update positions of other items in the same category
                 await UpdatePositionsAfterScoreChange(userId, normalizedType, categoryId, itemId, calculatedScore, albumId);
             }
             else
             {
                 // Create new rating
-                var newRating = new Domain.Rating(user, itemId, normalizedType, category, position, calculatedScore, albumId);
+                var newRating = new Domain.Rating(user, itemId, normalizedType, category, finalPosition, calculatedScore, albumId);
                 PrestigeDb.Ratings.Add(newRating);
                 // Update positions of other items that are now ranked lower
                 await UpdatePositionsAfterInsert(userId, normalizedType, categoryId, calculatedScore, albumId);
@@ -163,7 +205,7 @@ namespace Prestige.Api.Endpoints.Rating
                 ItemType = normalizedType,
                 CategoryId = categoryId,
                 PersonalScore = calculatedScore,
-                Position = position,
+                Position = finalPosition,
                 IsNewRating = isNewRating
             };
         }
@@ -235,6 +277,23 @@ namespace Prestige.Api.Endpoints.Rating
             await PrestigeDb.SaveChangesAsync();
         }
         
+        private async Task RedistributeScoresAfterNewTop(List<Domain.Rating> existingRatings, Domain.RatingCategory category)
+        {
+            // When a new item becomes #1, push all existing items down slightly
+            // Redistribute scores evenly within the remaining range
+            if (existingRatings.Count == 0) return;
+
+            var availableRange = category.MaxScore - category.MinScore;
+            var scoreStep = availableRange / (existingRatings.Count + 1);
+
+            for (int i = 0; i < existingRatings.Count; i++)
+            {
+                var newScore = category.MaxScore - (scoreStep * (i + 1));
+                var adjustedScore = Math.Max(newScore, category.MinScore + 0.1m);
+                existingRatings[i].UpdateRating(adjustedScore, existingRatings[i].Category, i + 1);
+            }
+        }
+
         private async Task<int> CalculatePositionFromScore(string userId, string itemType, int categoryId, decimal newScore, string? albumId)
         {
             var query = PrestigeDb.Ratings

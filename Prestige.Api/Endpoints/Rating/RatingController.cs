@@ -78,9 +78,9 @@ namespace Prestige.Api.Endpoints.Rating
         {
             try
             {
-                _logger.LogInformation("Saving rating for {ItemType} {ItemId} with score {Score}", 
-                    request.ItemType, request.ItemId, request.PersonalScore);
-                var result = await _ratingServices.SaveRatingAsync(request.ItemType, request.ItemId, request.PersonalScore, request.CategoryId);
+                _logger.LogInformation("Saving rating for {ItemType} {ItemId} at position {Position}", 
+                    request.ItemType, request.ItemId, request.Position);
+                var result = await _ratingServices.SaveRatingAsync(request.ItemType, request.ItemId, request.Position, request.CategoryId);
                 return Ok(result);
             }
             catch (System.Exception ex)
