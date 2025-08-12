@@ -87,7 +87,7 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
       if (itemType === 'album') items = topAlbums;
       if (itemType === 'artist') items = topArtists;
 
-      // Find the item in the user's collection
+      // Find the item in the user's collection first (for performance)
       const foundItem = items.find((it: any) => {
         if (itemType === 'track') return it?.track?.id === itemId || it?.trackId === itemId;
         if (itemType === 'album') return it?.album?.id === itemId || it?.albumId === itemId;
@@ -120,6 +120,34 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
             imageUrl: artist.images?.[0]?.url ?? foundItem.imageUrl
           };
         }
+      }
+
+      // If not found in local arrays, fetch from API
+      console.log(`Fetching missing item details from API for ${itemType} ${itemId}`);
+      const response = await fetch(`/api/library/item/${itemType}/${itemId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const apiItem = await response.json();
+        let subtitle = '';
+        if (apiItem.artists && apiItem.artists.length > 0) {
+          subtitle = apiItem.artists.join(', ');
+          if (apiItem.albumName) {
+            subtitle += ` • ${apiItem.albumName}`;
+          }
+        } else if (apiItem.albumName) {
+          subtitle = apiItem.albumName;
+        }
+
+        return {
+          name: apiItem.name || `${itemType} ${itemId.substring(0, 8)}...`,
+          subtitle: subtitle || (itemType === 'artist' ? 'Artist' : 'Unknown'),
+          imageUrl: apiItem.imageUrl
+        };
       }
     } catch (error) {
       console.error('Error fetching item details:', error);

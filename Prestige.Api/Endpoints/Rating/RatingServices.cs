@@ -241,7 +241,7 @@ namespace Prestige.Api.Endpoints.Rating
 
         private async Task RecalculateUserScoresAsync(string userId, string itemType)
         {
-            // Recalculate positions only, based on existing scores
+            // Get all ratings for this user and item type with categories
             var userRatings = await PrestigeDb.Ratings
                 .Include(r => r.Category)
                 .Where(r => r.User.Id == userId && r.ItemType == itemType)
@@ -251,30 +251,68 @@ namespace Prestige.Api.Endpoints.Rating
 
             if (itemType == "track")
             {
+                // For tracks, redistribute within each album/category combination
                 var albumGroups = userRatings.GroupBy(r => r.AlbumId ?? "singles");
                 foreach (var albumGroup in albumGroups)
                 {
-                    var sorted = albumGroup
-                        .OrderByDescending(r => r.PersonalScore)
-                        .ToList();
-                    for (int i = 0; i < sorted.Count; i++)
+                    var categoryGroups = albumGroup.GroupBy(r => r.Category.Id);
+                    foreach (var categoryGroup in categoryGroups)
                     {
-                        sorted[i].UpdatePosition(i);
+                        await RedistributeScoresInCategory(categoryGroup.ToList(), categoryGroup.First().Category);
                     }
                 }
             }
             else
             {
-                var sorted = userRatings
-                    .OrderByDescending(r => r.PersonalScore)
-                    .ToList();
-                for (int i = 0; i < sorted.Count; i++)
+                // For albums/artists, redistribute within each category
+                var categoryGroups = userRatings.GroupBy(r => r.Category.Id);
+                foreach (var categoryGroup in categoryGroups)
                 {
-                    sorted[i].UpdatePosition(i);
+                    await RedistributeScoresInCategory(categoryGroup.ToList(), categoryGroup.First().Category);
                 }
             }
 
             await PrestigeDb.SaveChangesAsync();
+        }
+
+        private async Task RedistributeScoresInCategory(List<Domain.Rating> ratings, Domain.RatingCategory category)
+        {
+            if (ratings.Count == 0) return;
+
+            // Sort by current score (highest first) to maintain relative order
+            var sorted = ratings.OrderByDescending(r => r.PersonalScore).ToList();
+            
+            // Calculate new scores evenly distributed within category bounds
+            var scoreRange = category.MaxScore - category.MinScore;
+            var scoreStep = sorted.Count > 1 ? scoreRange / (sorted.Count - 1) : 0;
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                decimal newScore;
+                if (sorted.Count == 1)
+                {
+                    // Single item gets max score for category
+                    newScore = category.MaxScore;
+                }
+                else if (i == 0)
+                {
+                    // Top item gets max score
+                    newScore = category.MaxScore;
+                }
+                else if (i == sorted.Count - 1)
+                {
+                    // Bottom item gets min score (+ small buffer)
+                    newScore = category.MinScore + 0.1m;
+                }
+                else
+                {
+                    // Items in between are evenly distributed
+                    newScore = category.MaxScore - (scoreStep * i);
+                    newScore = Math.Max(newScore, category.MinScore + 0.1m);
+                }
+
+                sorted[i].UpdateRating(newScore, category, i);
+            }
         }
         
         private async Task RedistributeScoresAfterNewTop(List<Domain.Rating> existingRatings, Domain.RatingCategory category)

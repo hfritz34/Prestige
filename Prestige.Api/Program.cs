@@ -11,6 +11,7 @@ using Prestige.Api.Endpoints.Prestige;
 using Prestige.Api.Endpoints.Profile;
 using Prestige.Api.Endpoints.Spotify;
 using Prestige.Api.Endpoints.Rating;
+using Prestige.Api.Endpoints.Library;
 
 // using Prestige.Api.Endpoints.AlbumEndpoints;
 // using Prestige.Api.Endpoints.ArtistEndpoints;
@@ -104,6 +105,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<PrestigeServices>();
             builder.Services.AddScoped<RatingServices>();
             builder.Services.AddScoped<Endpoints.Search.SearchServices>();
+            builder.Services.AddScoped<LibraryServices>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
