@@ -31,5 +31,21 @@ namespace Prestige.Api.Endpoints.Library
                 return StatusCode(500, "Internal server error");
             }
         }
+
+        [HttpPost("items/batch")]
+        public async Task<IActionResult> GetItemDetailsBatch([FromBody] BatchItemRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Getting batch item details for {Count} items", request.Items.Count);
+                var results = await _libraryServices.GetItemDetailsBatchAsync(request.Items);
+                return Ok(new BatchItemResponse { Items = results });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting batch item details");
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 }

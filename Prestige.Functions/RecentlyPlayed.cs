@@ -10,7 +10,7 @@ using System.Collections.Concurrent;
 namespace RecentlyPlayedTrigger
 {
     public class RecentlyPlayedTrigger
-1    {
+    {
         private readonly ILogger _logger;
         private static readonly HttpClient httpClient = new HttpClient();
         private static readonly string? cosmosConnectionString = Environment.GetEnvironmentVariable("CosmosDBConnectionString");
