@@ -200,6 +200,13 @@ namespace Prestige.Api
 
         private static void AddHangfire(WebApplicationBuilder builder)
         {
+            // Feature flag to disable Hangfire from configuration without code changes
+            var disableHangfire = builder.Configuration["DisableHangfire"];
+            if (!string.IsNullOrEmpty(disableHangfire) && disableHangfire.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             var connectionString = ResolveSqlConnectionString(builder.Configuration);
 
             if (string.IsNullOrWhiteSpace(connectionString))
@@ -414,7 +421,9 @@ namespace Prestige.Api
             app.MapControllers().RequireAuthorization();
 
             // Schedule recurring background jobs only if Hangfire is configured (i.e., SQL connection exists)
-            if (!string.IsNullOrWhiteSpace(ResolveSqlConnectionString(app.Configuration)))
+            var disableHangfire = app.Configuration["DisableHangfire"];
+            if ((string.IsNullOrEmpty(disableHangfire) || !disableHangfire.Equals("true", StringComparison.OrdinalIgnoreCase))
+                && !string.IsNullOrWhiteSpace(ResolveSqlConnectionString(app.Configuration)))
             {
                 RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
                     "cleanup-old-comparisons",
