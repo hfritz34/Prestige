@@ -77,6 +77,17 @@ namespace Prestige.Api
             });
         }
 
+        private static string ResolveSqlConnectionString(IConfiguration configuration)
+        {
+            var value = configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                // Fallback to flat env var/app setting if not provided under ConnectionStrings
+                value = configuration["AZURE_SQL_CONNECTIONSTRING"];
+            }
+            return value ?? string.Empty;
+        }
+
         private static void AddCaching(WebApplicationBuilder builder)
         {
             var redisConnection = builder.Configuration.GetConnectionString("Redis");
@@ -189,9 +200,13 @@ namespace Prestige.Api
 
         private static void AddHangfire(WebApplicationBuilder builder)
         {
-            var connectionString = builder.Environment.IsDevelopment()
-                ? builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
-                : builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+            var connectionString = ResolveSqlConnectionString(builder.Configuration);
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                // Skip Hangfire initialization if no SQL connection is configured
+                return;
+            }
                 
             // Configure Hangfire
             builder.Services.AddHangfire(config =>
@@ -251,29 +266,35 @@ namespace Prestige.Api
 
         private static void AddDbContext(WebApplicationBuilder builder)
         {
-            var connection = string.Empty;
-            if (builder.Environment.IsDevelopment())
+            var connection = ResolveSqlConnectionString(builder.Configuration);
+
+            if (!string.IsNullOrWhiteSpace(connection))
             {
-                builder.Configuration.AddEnvironmentVariables().AddJsonFile("appsettings.Development.json");
-                connection = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+                // Use connection pooling for better performance
+                builder.Services.AddDbContextPool<PrestigeContext>(options =>
+                    options.UseSqlServer(connection, sqlOptions =>
+                    {
+                        sqlOptions.EnableRetryOnFailure(
+                            maxRetryCount: 3,
+                            maxRetryDelay: TimeSpan.FromSeconds(30),
+                            errorNumbersToAdd: null);
+                        sqlOptions.CommandTimeout(30);
+                    })
+                    .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
+                    poolSize: 128);
+            }
+            else if (builder.Environment.IsDevelopment())
+            {
+                // Fallback to SQLite for local development when SQL connection is not configured
+                builder.Services.AddDbContextPool<PrestigeContext>(options =>
+                    options.UseSqlite("Data Source=prestige_dev.db")
+                           .EnableSensitiveDataLogging(true),
+                    poolSize: 128);
             }
             else
             {
-                connection = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+                throw new InvalidOperationException("Database connection string is missing. Set 'ConnectionStrings:AZURE_SQL_CONNECTIONSTRING' or environment variable 'ConnectionStrings__AZURE_SQL_CONNECTIONSTRING' (or 'AZURE_SQL_CONNECTIONSTRING').");
             }
-
-            // Use connection pooling for better performance
-            builder.Services.AddDbContextPool<PrestigeContext>(options =>
-                options.UseSqlServer(connection, sqlOptions =>
-                {
-                    sqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 3,
-                        maxRetryDelay: TimeSpan.FromSeconds(30),
-                        errorNumbersToAdd: null);
-                    sqlOptions.CommandTimeout(30);
-                })
-                .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
-                poolSize: 128);
         }
 
         private static void AddServices(WebApplicationBuilder builder)
@@ -392,16 +413,19 @@ namespace Prestige.Api
             app.UseAuthorization();
             app.MapControllers().RequireAuthorization();
 
-            // Schedule recurring background jobs
-            RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
-                "cleanup-old-comparisons",
-                x => x.CleanupOldComparisonsAsync(),
-                Cron.Daily(2)); // Run daily at 2 AM
-                
-            RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
-                "optimize-database",
-                x => x.OptimizeDatabaseAsync(),
-                Cron.Weekly(DayOfWeek.Sunday, 3)); // Run weekly on Sunday at 3 AM
+            // Schedule recurring background jobs only if Hangfire is configured (i.e., SQL connection exists)
+            if (!string.IsNullOrWhiteSpace(ResolveSqlConnectionString(app.Configuration)))
+            {
+                RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
+                    "cleanup-old-comparisons",
+                    x => x.CleanupOldComparisonsAsync(),
+                    Cron.Daily(2)); // Run daily at 2 AM
+
+                RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
+                    "optimize-database",
+                    x => x.OptimizeDatabaseAsync(),
+                    Cron.Weekly(DayOfWeek.Sunday, 3)); // Run weekly on Sunday at 3 AM
+            }
 
             app.Run();
         }

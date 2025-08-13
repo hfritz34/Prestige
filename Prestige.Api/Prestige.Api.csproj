@@ -31,8 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Update="appsettings.*.json" CopyToPublishDirectory="Never" />
-    <Content Update="appsettings.$(MSBuildThisFileName).json" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="appsettings.json" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="appsettings.Development.json" CopyToPublishDirectory="Never" />
   </ItemGroup>
 
 </Project>
