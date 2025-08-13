@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using System.IO.Compression;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -29,6 +31,7 @@ namespace Prestige.Api
 
             AddApiExplorer(builder);
             AddSwaggerGen(builder);
+            AddResponseCompression(builder);
             AddDbContext(builder);
             AddServices(builder);
             AddControllers(builder);
@@ -43,6 +46,28 @@ namespace Prestige.Api
         private static void AddApiExplorer(WebApplicationBuilder builder)
         {
             builder.Services.AddEndpointsApiExplorer();
+        }
+
+        private static void AddResponseCompression(WebApplicationBuilder builder)
+        {
+            builder.Services.AddResponseCompression(options =>
+            {
+                options.EnableForHttps = true;
+                options.Providers.Add<BrotliCompressionProvider>();
+                options.Providers.Add<GzipCompressionProvider>();
+                options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+                    new[] { "application/json", "text/json", "application/xml", "text/xml" });
+            });
+
+            builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+            {
+                options.Level = CompressionLevel.Optimal;
+            });
+
+            builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+            {
+                options.Level = CompressionLevel.Optimal;
+            });
         }
 
         private static void AddSwaggerGen(WebApplicationBuilder builder)
@@ -90,10 +115,18 @@ namespace Prestige.Api
                 connection = builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
             }
 
-            builder.Services.AddDbContext<PrestigeContext>(options =>
-                options.UseSqlServer(connection)
-                .EnableSensitiveDataLogging()
-                );
+            // Use connection pooling for better performance
+            builder.Services.AddDbContextPool<PrestigeContext>(options =>
+                options.UseSqlServer(connection, sqlOptions =>
+                {
+                    sqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 3,
+                        maxRetryDelay: TimeSpan.FromSeconds(30),
+                        errorNumbersToAdd: null);
+                    sqlOptions.CommandTimeout(30);
+                })
+                .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
+                poolSize: 128);
         }
 
         private static void AddServices(WebApplicationBuilder builder)
@@ -177,6 +210,9 @@ namespace Prestige.Api
         private static void RunApp(WebApplicationBuilder builder)
         {
             var app = builder.Build();
+
+            // Add response compression middleware
+            app.UseResponseCompression();
 
             // Add health check before other middleware
             app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
