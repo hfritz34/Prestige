@@ -22,6 +22,8 @@ using Prestige.Api.Endpoints.UserEndpoints;
 using Prestige.Api.Endpoints.FriendshipEndpoints;
 using Prestige.Api.Services;
 using AspNetCoreRateLimit;
+using Hangfire;
+using Hangfire.SqlServer;
 
 namespace Prestige.Api
 {
@@ -36,6 +38,7 @@ namespace Prestige.Api
             AddResponseCompression(builder);
             AddCaching(builder);
             AddRateLimiting(builder);
+            AddHangfire(builder);
             AddDbContext(builder);
             AddServices(builder);
             AddControllers(builder);
@@ -184,6 +187,36 @@ namespace Prestige.Api
             builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
         }
 
+        private static void AddHangfire(WebApplicationBuilder builder)
+        {
+            var connectionString = builder.Environment.IsDevelopment()
+                ? builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING")
+                : builder.Configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING");
+                
+            // Configure Hangfire
+            builder.Services.AddHangfire(config =>
+            {
+                config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                      .UseSimpleAssemblyNameTypeSerializer()
+                      .UseRecommendedSerializerSettings()
+                      .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
+                      {
+                          CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                          SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                          QueuePollInterval = TimeSpan.Zero,
+                          UseRecommendedIsolationLevel = true,
+                          DisableGlobalLocks = true
+                      });
+            });
+            
+            // Add Hangfire server
+            builder.Services.AddHangfireServer(options =>
+            {
+                options.WorkerCount = Environment.ProcessorCount * 2;
+                options.Queues = new[] { "critical", "default", "background" };
+            });
+        }
+
         private static void AddSwaggerGen(WebApplicationBuilder builder)
         {
             builder.Services.AddSwaggerGen(opt =>
@@ -253,6 +286,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<RatingServices>();
             builder.Services.AddScoped<Endpoints.Search.SearchServices>();
             builder.Services.AddScoped<LibraryServices>();
+            builder.Services.AddScoped<RatingBackgroundJobs>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
@@ -341,6 +375,12 @@ namespace Prestige.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
                 app.UseCors("AllowAll");
+                
+                // Add Hangfire dashboard for development
+                app.UseHangfireDashboard("/hangfire", new DashboardOptions
+                {
+                    Authorization = new[] { new HangfireAuthorizationFilter() }
+                });
             }
             else 
             {
@@ -351,6 +391,17 @@ namespace Prestige.Api
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers().RequireAuthorization();
+
+            // Schedule recurring background jobs
+            RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
+                "cleanup-old-comparisons",
+                x => x.CleanupOldComparisonsAsync(),
+                Cron.Daily(2)); // Run daily at 2 AM
+                
+            RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
+                "optimize-database",
+                x => x.OptimizeDatabaseAsync(),
+                Cron.Weekly(DayOfWeek.Sunday, 3)); // Run weekly on Sunday at 3 AM
 
             app.Run();
         }
