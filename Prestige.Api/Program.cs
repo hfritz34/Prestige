@@ -20,6 +20,7 @@ using Prestige.Api.Endpoints.Library;
 // using Prestige.Api.Endpoints.TrackEndpoints;
 using Prestige.Api.Endpoints.UserEndpoints;
 using Prestige.Api.Endpoints.FriendshipEndpoints;
+using Prestige.Api.Services;
 
 namespace Prestige.Api
 {
@@ -32,6 +33,7 @@ namespace Prestige.Api
             AddApiExplorer(builder);
             AddSwaggerGen(builder);
             AddResponseCompression(builder);
+            AddCaching(builder);
             AddDbContext(builder);
             AddServices(builder);
             AddControllers(builder);
@@ -68,6 +70,29 @@ namespace Prestige.Api
             {
                 options.Level = CompressionLevel.Optimal;
             });
+        }
+
+        private static void AddCaching(WebApplicationBuilder builder)
+        {
+            var redisConnection = builder.Configuration.GetConnectionString("Redis");
+            
+            if (!string.IsNullOrEmpty(redisConnection))
+            {
+                // Use Redis for distributed caching
+                builder.Services.AddStackExchangeRedisCache(options =>
+                {
+                    options.Configuration = redisConnection;
+                    options.InstanceName = "Prestige";
+                });
+            }
+            else
+            {
+                // Fallback to in-memory caching for development
+                builder.Services.AddDistributedMemoryCache();
+            }
+            
+            // Register the cache service
+            builder.Services.AddScoped<PrestigeCacheService>();
         }
 
         private static void AddSwaggerGen(WebApplicationBuilder builder)
