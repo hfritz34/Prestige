@@ -21,6 +21,7 @@ using Prestige.Api.Endpoints.Library;
 using Prestige.Api.Endpoints.UserEndpoints;
 using Prestige.Api.Endpoints.FriendshipEndpoints;
 using Prestige.Api.Services;
+using AspNetCoreRateLimit;
 
 namespace Prestige.Api
 {
@@ -34,6 +35,7 @@ namespace Prestige.Api
             AddSwaggerGen(builder);
             AddResponseCompression(builder);
             AddCaching(builder);
+            AddRateLimiting(builder);
             AddDbContext(builder);
             AddServices(builder);
             AddControllers(builder);
@@ -93,6 +95,93 @@ namespace Prestige.Api
             
             // Register the cache service
             builder.Services.AddScoped<PrestigeCacheService>();
+        }
+
+        private static void AddRateLimiting(WebApplicationBuilder builder)
+        {
+            // Configure rate limiting for memory cache
+            builder.Services.AddMemoryCache();
+            
+            // Configure IP rate limiting
+            builder.Services.Configure<IpRateLimitOptions>(options =>
+            {
+                options.EnableEndpointRateLimiting = true;
+                options.StackBlockedRequests = false;
+                options.HttpStatusCode = 429;
+                options.RealIpHeader = "X-Real-IP";
+                options.ClientIdHeader = "X-ClientId";
+                options.GeneralRules = new List<RateLimitRule>
+                {
+                    // Rating endpoints - 30 requests per minute
+                    new RateLimitRule
+                    {
+                        Endpoint = "POST:/api/rating/*",
+                        Period = "1m",
+                        Limit = 30
+                    },
+                    new RateLimitRule
+                    {
+                        Endpoint = "PUT:/api/rating/*",
+                        Period = "1m",
+                        Limit = 30
+                    },
+                    new RateLimitRule
+                    {
+                        Endpoint = "DELETE:/api/rating/*",
+                        Period = "1m",
+                        Limit = 30
+                    },
+                    // Library endpoints - 100 requests per minute
+                    new RateLimitRule
+                    {
+                        Endpoint = "GET:/api/library/*",
+                        Period = "1m",
+                        Limit = 100
+                    },
+                    new RateLimitRule
+                    {
+                        Endpoint = "POST:/api/library/*",
+                        Period = "1m",
+                        Limit = 100
+                    },
+                    // Spotify endpoints - 60 requests per minute
+                    new RateLimitRule
+                    {
+                        Endpoint = "*:/api/spotify/*",
+                        Period = "1m",
+                        Limit = 60
+                    },
+                    // General API limit - 300 requests per minute
+                    new RateLimitRule
+                    {
+                        Endpoint = "*",
+                        Period = "1m",
+                        Limit = 300
+                    }
+                };
+                options.QuotaExceededResponse = new QuotaExceededResponse
+                {
+                    Content = "{{\"error\":\"Too many requests. Please try again later.\",\"retryAfter\":\"{1}\"}}",
+                    ContentType = "application/json",
+                    StatusCode = 429
+                };
+            });
+            
+            // Configure client-specific rate limiting
+            builder.Services.Configure<ClientRateLimitOptions>(options =>
+            {
+                options.EnableEndpointRateLimiting = true;
+                options.StackBlockedRequests = false;
+                options.HttpStatusCode = 429;
+                options.ClientIdHeader = "X-ClientId";
+            });
+            
+            // Add rate limit stores
+            builder.Services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
+            builder.Services.AddSingleton<IClientPolicyStore, MemoryCacheClientPolicyStore>();
+            builder.Services.AddSingleton<IRateLimitCounterStore, MemoryCacheRateLimitCounterStore>();
+            builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+            builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
         }
 
         private static void AddSwaggerGen(WebApplicationBuilder builder)
@@ -238,6 +327,9 @@ namespace Prestige.Api
 
             // Add response compression middleware
             app.UseResponseCompression();
+            
+            // Add rate limiting middleware
+            app.UseIpRateLimiting();
 
             // Add health check before other middleware
             app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }))
