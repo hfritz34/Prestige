@@ -1,4 +1,4 @@
-# Prestige - Music Social Media Revolution 🎵✨
+# Prestige - Music Fandom🎵✨
 
 *Transform your Spotify listening habits into a competitive, achievement-based social experience*
 
