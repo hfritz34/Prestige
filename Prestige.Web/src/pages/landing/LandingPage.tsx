@@ -69,7 +69,7 @@ const LandingPage: React.FC = () => {
 						</ul>
 					</div>
 					<div className="relative">
-						<img src={tierProgress} alt="Prestige tiers progression" className="w-full rounded-xl border border-white/10 shadow-xl shadow-black/40" />
+						<img src={tierProgress} alt="Prestige tiers progression" className="w-full rounded-xl shadow-xl shadow-black/40" />
 					</div>
 				</div>
 			</section>

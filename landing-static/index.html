@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prestige — Turn your listening into Prestige</title>
+    <meta name="description" content="Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social." />
+    <meta property="og:title" content="Prestige — Turn your listening into Prestige" />
+    <meta property="og:description" content="Earn time-based badges, rate your taste, and compare with friends." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="assets/purplecrowntrans.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen w-full bg-[#0A0B0D] text-white">
+    <!-- Header -->
+    <header class="w-full sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-black/30 bg-black/40">
+      <div class="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="#" aria-label="Scroll to top" id="logoTop">
+            <img src="assets/purplecrowntrans.png" alt="Prestige crown" class="h-8 w-8" />
+          </a>
+        </div>
+        <nav class="hidden md:flex items-center gap-8 text-sm text-zinc-300">
+          <a href="#how" class="hover:text-white">How it works</a>
+          <a href="#features" class="hover:text-white">Features</a>
+          <a href="#community" class="hover:text-white">Community</a>
+          <a href="#faq" class="hover:text-white">FAQ</a>
+        </nav>
+        <div class="flex items-center gap-3">
+          <a href="#open" class="rounded-md px-4 py-2 text-sm font-medium bg-[#7C4DFF] hover:bg-[#6b3bff] transition-colors">Open Web App</a>
+          <a href="#download" class="rounded-md px-4 py-2 text-sm font-medium bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-colors">Download on iOS</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero -->
+    <section class="relative overflow-hidden border-b border-white/5">
+      <div class="absolute inset-0 -z-10" aria-hidden>
+        <div class="pointer-events-none absolute -top-40 right-1/4 h-96 w-96 rounded-full bg-[#7C4DFF]/20 blur-3xl"></div>
+        <div class="pointer-events-none absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-[#9E7CFF]/10 blur-3xl"></div>
+      </div>
+      <div class="mx-auto max-w-4xl px-4 py-24 md:py-32 text-center">
+        <h1 class="text-5xl md:text-7xl font-semibold tracking-tight">
+          Turn your listening into <span class="text-[#7C4DFF]">Prestige</span>
+        </h1>
+        <p class="mt-6 text-xl text-zinc-300">
+          Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
+        </p>
+        <div class="mt-9 flex items-center justify-center gap-3">
+          <a href="#download" class="rounded-md px-6 py-3 text-sm font-semibold bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-colors">Download on iOS</a>
+          <a href="#open" class="rounded-md px-6 py-3 text-sm font-semibold bg-white/10 hover:bg-white/20 transition-colors">Open Web App</a>
+        </div>
+        <p class="mt-4 text-xs text-zinc-400">Requires Spotify account. Private by default—share what you choose.</p>
+      </div>
+    </section>
+
+    <!-- How -->
+    <section id="how" class="mx-auto max-w-7xl px-4 py-16 md:py-24">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 class="text-2xl md:text-3xl font-semibold">Level up your Prestige with your listening time</h2>
+          <p class="mt-4 text-zinc-300">
+            Prestige is earned by minutes listened per track, album, and artist. Hit thresholds to unlock tiers—from Bronze to Dark Matter.
+          </p>
+          <ul class="mt-6 space-y-2 text-sm text-zinc-400 list-disc list-inside">
+            <li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … DarkMatter ≥ 15,000m</li>
+            <li>Albums and Artists: higher thresholds to reflect bigger commitments</li>
+          </ul>
+        </div>
+        <div class="relative">
+          <img src="assets/tierprog.png" alt="Prestige tiers progression" class="w-full rounded-xl shadow-xl shadow-black/40" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="mx-auto max-w-7xl px-4 py-12 md:py-20">
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="rounded-xl bg-white/5 border border-white/10 p-6">
+          <h3 class="text-lg font-semibold">Rate your taste</h3>
+          <p class="mt-2 text-sm text-zinc-300">Loved / Liked / Disliked. Rank within lists and build your personal score.</p>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 p-6">
+          <h3 class="text-lg font-semibold">Compare with friends</h3>
+          <p class="mt-2 text-sm text-zinc-300">See who grinds harder for your favorite tracks, albums, and artists.</p>
+        </div>
+        <div class="rounded-xl bg-white/5 border border-white/10 p-6">
+          <h3 class="text-lg font-semibold">Live + history</h3>
+          <p class="mt-2 text-sm text-zinc-300">Now Playing and full listening history beyond Spotify’s limits.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Community CTA -->
+    <section id="community" class="mx-auto max-w-7xl px-4 pb-20">
+      <div class="rounded-2xl border border-white/10 bg-gradient-to-br from-[#7C4DFF]/20 to-transparent p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div>
+          <h3 class="text-2xl font-semibold">Join the Prestige community</h3>
+          <p class="mt-2 text-zinc-300">Compete with friends. Discover new music through dedication and taste.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="#open" class="rounded-md px-5 py-3 text-sm font-semibold bg-white/10 hover:bg-white/20 transition-colors">Open Web App</a>
+          <a href="#download" class="rounded-md px-5 py-3 text-sm font-semibold bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-colors">Download on iOS</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="faq" class="border-t border-white/10">
+      <div class="mx-auto max-w-7xl px-4 py-10 grid md:grid-cols-3 gap-8 text-sm text-zinc-400">
+        <div class="space-y-3">
+          <div class="flex items-center gap-2">
+            <img src="assets/purplecrowntrans.png" alt="Prestige crown" class="h-5 w-5" />
+            <span class="text-white">Prestige</span>
+          </div>
+          <p>Turn your listening into Prestige. Private by default—share what you choose.</p>
+        </div>
+        <div>
+          <p class="text-white mb-3">FAQ</p>
+          <ul class="space-y-2">
+            <li>What is a prestige? Minutes listened → tier badges.</li>
+            <li>How do I earn prestige? Listen more; thresholds vary by item type.</li>
+            <li>Can I compare with friends? Yes—per item and on profiles.</li>
+          </ul>
+        </div>
+        <div>
+          <p class="text-white mb-3">Get the app</p>
+          <a id="download" href="#" class="inline-block rounded-md px-4 py-2 bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-colors">Download on iOS</a>
+        </div>
+      </div>
+      <div class="text-center text-xs text-zinc-500 pb-8">© <span id="year"></span> Prestige</div>
+    </footer>
+
+    <script>
+      document.getElementById('logoTop')?.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      document.getElementById('year').textContent = new Date().getFullYear().toString();
+    </script>
+  </body>
+  </html>
+
+
