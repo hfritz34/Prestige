@@ -21,9 +21,9 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
     throwOnError: false
   });
 
-  // Helper to get rating for a track
-  const getTrackRating = (trackId: string) => {
-    return Array.isArray(trackRatings) ? trackRatings.find(rating => rating.itemId === trackId)?.personalScore : undefined;
+  // Helper to get album position for a track
+  const getTrackPosition = (trackId: string) => {
+    return Array.isArray(trackRatings) ? trackRatings.find(rating => rating.itemId === trackId)?.position : undefined;
   };
 
   const handleTrackClick = (track: UserTrackResponse) => {
@@ -55,7 +55,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
               totalTime={track.totalTime}
               rank={index + 1}
               type="track"
-              ratingScore={getTrackRating(track.track.id)}
+              albumPosition={getTrackPosition(track.track.id)}
               onClick={() => handleTrackClick(track)}
             />
           ))}

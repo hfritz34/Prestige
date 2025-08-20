@@ -10,6 +10,7 @@ type PrestigeGridCardProps = {
   onClick: () => void;
   type?: 'track' | 'album' | 'artist';
   ratingScore?: number;
+  albumPosition?: number; // For tracks: position within album (1st, 2nd, 3rd best)
 };
 
 const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
@@ -20,7 +21,8 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   rank,
   onClick,
   type = 'track',
-  ratingScore
+  ratingScore,
+  albumPosition
 }) => {
   const { getTrackPrestigeTier, getAlbumPrestigeTier, getArtistPrestigeTier } = usePrestige();
   
@@ -73,14 +75,22 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
               <div className="w-5 h-5 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">{rank}</span>
               </div>
-              {ratingScore !== undefined && (
+              {/* For tracks, show album position instead of rating score */}
+              {type === 'track' && albumPosition !== undefined ? (
+                <div className="bg-black bg-opacity-70 rounded-md px-1.5 py-0.5 flex items-center space-x-1">
+                  <span className="text-xs">🏆</span>
+                  <span className="text-xs font-bold text-yellow-400">
+                    #{albumPosition}
+                  </span>
+                </div>
+              ) : ratingScore !== undefined && type !== 'track' ? (
                 <div className="bg-black bg-opacity-70 rounded-md px-1.5 py-0.5 flex items-center space-x-1">
                   <span className="text-xs">{getRatingIcon(ratingScore)}</span>
                   <span className={`text-xs font-bold ${getRatingColor(ratingScore)}`}>
                     {ratingScore.toFixed(1)}
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Album artwork */}
