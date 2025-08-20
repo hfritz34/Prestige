@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prestige.Api.Data;
 
@@ -11,9 +12,11 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    partial class PrestigeContextModelSnapshot : ModelSnapshot
+    [Migration("20250820161649_DropAlbumTrackRankingsTable")]
+    partial class DropAlbumTrackRankingsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -211,9 +214,6 @@ namespace Prestige.Api.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("Position")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RankWithinAlbum")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")

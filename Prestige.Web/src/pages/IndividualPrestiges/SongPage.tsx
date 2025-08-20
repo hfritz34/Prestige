@@ -41,6 +41,7 @@ const SongPage: React.FC = () => {
   // Find this track within the album tracks
   const trackInAlbum = albumTracks?.tracks?.find(t => t.trackId === track?.trackId);
   const albumRanking = trackInAlbum?.albumRanking;
+  const totalTracks = albumTracks?.totalTracks;
 
   const pinMutation = useMutation({
     mutationFn: async () => {
@@ -136,7 +137,11 @@ const SongPage: React.FC = () => {
           <div className="text-center">
             <p className="text-gray-400">Album Rank</p>
             <p className="text-2xl font-bold">
-              {albumLoading ? '...' : albumRanking ? `#${albumRanking}` : '—'}
+              {albumLoading
+                ? '...'
+                : albumRanking && totalTracks
+                  ? `🏆 #${albumRanking} of ${totalTracks}`
+                  : '—'}
             </p>
           </div>
         </div>

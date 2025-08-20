@@ -468,8 +468,14 @@ namespace Prestige.Api.Endpoints.Prestige
                 .Where(ut => ut.User.Id == userId && ut.Track.Album.Id == albumId)
                 .ToListAsync();
 
+            // Get user ratings from Rating table for album-context ranking
+            var userRatings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "track" && r.AlbumId == albumId)
+                .ToListAsync();
+
             // Create lookup for user data
             var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);
+            var userRatingLookup = userRatings.ToDictionary(ur => ur.ItemId, ur => ur);
 
             // Sort by track number to maintain album order
             var sortedTrackData = allTrackData.OrderBy(trackData =>
@@ -483,6 +489,7 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 dynamic track = trackData;
                 var userTrack = userTrackLookup.ContainsKey((string)track.Id) ? userTrackLookup[(string)track.Id] : null;
+                var userRating = userRatingLookup.ContainsKey((string)track.Id) ? userRatingLookup[(string)track.Id] : null;
                 return new
                 {
                     TrackId = (string)track.Id,
@@ -491,8 +498,8 @@ namespace Prestige.Api.Endpoints.Prestige
                     DurationMs = (int)track.DurationMs,
                     TrackNumber = (int)track.TrackNumber,
                     UserListeningTime = userTrack?.TotalTime ?? 0,
-                    UserRating = userTrack?.PersonalRatingScore,
-                    HasUserRating = userTrack?.RatingPosition != null,
+                    UserRating = userRating?.PersonalScore ?? userTrack?.PersonalRatingScore,
+                    HasUserRating = userRating != null,
                     IsPinned = userTrack?.IsPinned ?? false,
                     IsFavorite = userTrack?.IsFavorite ?? false,
                     IsFromDatabase = (bool)track.IsFromDatabase
@@ -503,7 +510,7 @@ namespace Prestige.Api.Endpoints.Prestige
             var finalTracks = tracksWithRankings
                 .Select(track =>
                 {
-                    var userTrackData = userTrackLookup.ContainsKey(track.TrackId) ? userTrackLookup[track.TrackId] : null;
+                    var userRatingData = userRatingLookup.ContainsKey(track.TrackId) ? userRatingLookup[track.TrackId] : null;
                     return new
                     {
                         track.TrackId,
@@ -517,7 +524,7 @@ namespace Prestige.Api.Endpoints.Prestige
                         track.IsPinned,
                         track.IsFavorite,
                         track.IsFromDatabase,
-                        AlbumRanking = track.HasUserRating ? userTrackData?.RatingPosition : (int?)null
+                        AlbumRanking = track.HasUserRating ? userRatingData?.RankWithinAlbum : (int?)null
                     };
                 })
                 .OrderBy(t => t.TrackNumber) // Order by actual album track number
@@ -538,46 +545,49 @@ namespace Prestige.Api.Endpoints.Prestige
 
         public async Task<object> GetArtistAlbumsWithUserActivity(string userId, string artistId)
         {
-            // Get all albums by this artist that the user has rated tracks for
-            var userAlbumsWithActivity = await PrestigeDb.UserTracks
-                .Include(ut => ut.Track)
-                    .ThenInclude(t => t.Album)
-                        .ThenInclude(a => a.Images)
-                .Include(ut => ut.Track.Album.Artists)
-                .Where(ut => ut.User.Id == userId && 
-                           ut.Track.Artists.Any(a => a.Id == artistId) &&
-                           ut.RatingPosition != null) // Only albums where user has rated tracks
-                .GroupBy(ut => ut.Track.Album.Id)
-                .Select(g => new
-                {
-                    Album = g.First().Track.Album,
-                    RatedTracksCount = g.Count(),
-                    TotalListeningTime = g.Sum(ut => ut.TotalTime),
-                    HighestRankedTrack = g.OrderBy(ut => ut.RatingPosition).First()
-                })
+            // Show ONLY albums that the user has rated (album ratings), for this artist
+            var userAlbumRatings = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "album")
                 .ToListAsync();
 
-            // Transform to response format
-            var albumsWithActivity = userAlbumsWithActivity.Select(album => new
+            if (userAlbumRatings.Count == 0)
             {
-                AlbumId = album.Album.Id,
-                AlbumName = album.Album.Name,
-                AlbumImage = album.Album.Images?.FirstOrDefault()?.Url,
-                ArtistName = album.Album.Artists?.FirstOrDefault()?.Name,
-                RatedTracksCount = album.RatedTracksCount,
-                TotalListeningTime = album.TotalListeningTime,
-                BestTrackName = album.HighestRankedTrack.Track.Name,
-                BestTrackRanking = album.HighestRankedTrack.RatingPosition
-            }).OrderByDescending(a => a.RatedTracksCount)
-              .ThenByDescending(a => a.TotalListeningTime)
-              .ToList();
+                return new { ArtistId = artistId, Albums = new List<object>(), TotalAlbums = 0 };
+            }
+
+            var ratedAlbumIds = userAlbumRatings.Select(r => r.ItemId).Distinct().ToList();
+
+            var albums = await PrestigeDb.Albums
+                .Include(a => a.Images)
+                .Include(a => a.Artists)
+                .Where(a => ratedAlbumIds.Contains(a.Id) && a.Artists.Any(ar => ar.Id == artistId))
+                .ToListAsync();
+
+            var ratingByAlbumId = userAlbumRatings.ToDictionary(r => r.ItemId, r => r);
+
+            var albumsRated = albums
+                .Select(a => new
+                {
+                    AlbumId = a.Id,
+                    AlbumName = a.Name,
+                    AlbumImage = a.Images?.FirstOrDefault()?.Url,
+                    ArtistName = a.Artists?.FirstOrDefault()?.Name,
+                    AlbumRatingPosition = ratingByAlbumId[a.Id].Position,
+                    AlbumRatingScore = ratingByAlbumId[a.Id].PersonalScore,
+                    AlbumRatingCategory = ratingByAlbumId[a.Id].Category.Name
+                })
+                .OrderBy(x => x.AlbumRatingPosition)
+                .ThenByDescending(x => x.AlbumRatingScore)
+                .ToList();
 
             return new
             {
                 ArtistId = artistId,
-                AlbumsWithUserActivity = albumsWithActivity,
-                TotalAlbumsWithActivity = albumsWithActivity.Count
+                Albums = albumsRated,
+                TotalAlbums = albumsRated.Count
             };
         }
+
     }
 }

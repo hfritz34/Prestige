@@ -208,11 +208,10 @@ const RatingModal: React.FC<RatingModalProps> = ({ isOpen, onClose, item, onComp
         rating.personalScore <= range.max
       );
       
-      // If no items in this partition, assign first item the upper bound score for that partition
+      // If no items in this partition, assign first item position 0 (first in partition)
       if (partitionItems.length === 0) {
-        // Get the upper bound score for this partition
-        const upperBoundScore = range.max;
-        onComplete(item?.id || '', partition, upperBoundScore);
+        // First item in this partition gets position 0
+        onComplete(item?.id || '', partition, 0);
         handleClose();
         return;
       }

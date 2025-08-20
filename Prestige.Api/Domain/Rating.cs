@@ -9,6 +9,7 @@ namespace Prestige.Api.Domain
         public string? AlbumId { get; private set; } // For tracks, stores the album ID for comparison filtering
         public RatingCategory Category { get; private set; }
         public int Position { get; private set; }
+        public int? RankWithinAlbum { get; private set; } // For tracks only - positional rank within album (1st, 2nd, 3rd)
         public decimal PersonalScore { get; private set; }
         public DateTime CreatedAt { get; private set; }
         public DateTime UpdatedAt { get; private set; }
@@ -44,6 +45,12 @@ namespace Prestige.Api.Domain
         public void UpdatePosition(int position)
         {
             Position = position;
+            UpdatedAt = DateTime.UtcNow;
+        }
+
+        public void UpdateRankWithinAlbum(int? rank)
+        {
+            RankWithinAlbum = rank;
             UpdatedAt = DateTime.UtcNow;
         }
 

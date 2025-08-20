@@ -23,7 +23,7 @@ const ArtistPage: React.FC = () => {
 
   const userId = user?.sub?.split('|').pop();
 
-  // Fetch albums that the user has rated tracks for
+  // Fetch albums that the user has rated (albums only, simplified)
   const { data: artistAlbums, isLoading: albumsLoading } = useQuery({
     queryKey: ['artistAlbums', userId, artist?.artistId],
     queryFn: () => userId ? getArtistAlbumsWithUserActivity(userId, artist.artistId) : null,
@@ -168,13 +168,13 @@ const ArtistPage: React.FC = () => {
           {artistAlbums && (
             <div className="bg-gray-800 rounded-lg p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Albums with Rated Tracks</h3>
+                <h3 className="text-xl font-bold">Rated Albums</h3>
                 <div className="text-sm text-gray-400">
-                  {artistAlbums.totalAlbumsWithActivity} albums
+                  {artistAlbums?.totalAlbums || 0} albums
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {artistAlbums.albumsWithUserActivity?.map((album: any) => (
+                {artistAlbums?.albums?.map((album: any) => (
                   <div
                     key={album.albumId}
                     onClick={() => handleAlbumClick(album)}
@@ -191,23 +191,18 @@ const ArtistPage: React.FC = () => {
                       <h4 className="font-semibold text-white">{album.albumName}</h4>
                       <p className="text-sm text-gray-300">{album.artistName}</p>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                        <span>{album.ratedTracksCount} tracks rated</span>
-                        <span>{Math.floor(album.totalListeningTime / 60)} min</span>
-                      </div>
-                    </div>
-                    <div className="text-right text-sm">
-                      <div className="text-gray-300">Best track:</div>
-                      <div className="font-medium text-yellow-400">
-                        #{album.bestTrackRanking} {album.bestTrackName}
+                        <span>Album position: #{album.albumRatingPosition}</span>
+                        <span>Score: {album.albumRatingScore?.toFixed?.(1) ?? album.albumRatingScore}</span>
+                        <span>Category: {album.albumRatingCategory}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              {(!artistAlbums.albumsWithUserActivity || artistAlbums.albumsWithUserActivity.length === 0) && (
+              {(!artistAlbums?.albums || artistAlbums.albums.length === 0) && (
                 <div className="text-center py-8 text-gray-400">
-                  <p>No albums with rated tracks yet.</p>
-                  <p>Start rating tracks to see albums here!</p>
+                  <p>No rated albums yet.</p>
+                  <p>Rate some albums to see them here!</p>
                 </div>
               )}
             </div>

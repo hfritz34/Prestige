@@ -173,7 +173,7 @@ const AlbumPage: React.FC = () => {
                       } hover:bg-gray-600 transition-colors`}
                     >
                       <div className="w-8 text-center font-bold text-lg">
-                        {track.albumRanking || '—'}
+                        {track.albumRanking !== undefined && track.albumRanking !== null ? track.albumRanking : '—'}
                       </div>
                       <div className="w-8 text-center text-sm text-gray-500">
                         {track.trackNumber}

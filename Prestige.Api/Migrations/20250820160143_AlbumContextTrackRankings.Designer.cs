@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prestige.Api.Data;
 
@@ -11,9 +12,11 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    partial class PrestigeContextModelSnapshot : ModelSnapshot
+    [Migration("20250820160143_AlbumContextTrackRankings")]
+    partial class AlbumContextTrackRankings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,6 +68,46 @@ namespace Prestige.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Album", (string)null);
+                });
+
+            modelBuilder.Entity("Prestige.Api.Domain.AlbumTrackRanking", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AlbumId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TrackId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AlbumTrackRankings");
                 });
 
             modelBuilder.Entity("Prestige.Api.Domain.Artist", b =>
@@ -211,9 +254,6 @@ namespace Prestige.Api.Migrations
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("Position")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("RankWithinAlbum")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -555,6 +595,33 @@ namespace Prestige.Api.Migrations
                         .HasForeignKey("TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Prestige.Api.Domain.AlbumTrackRanking", b =>
+                {
+                    b.HasOne("Prestige.Api.Domain.Album", "Album")
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Prestige.Api.Domain.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("Prestige.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Album");
+
+                    b.Navigation("Track");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Prestige.Api.Domain.Friendship", b =>

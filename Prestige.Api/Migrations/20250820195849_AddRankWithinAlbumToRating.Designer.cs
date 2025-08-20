@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Prestige.Api.Data;
 
@@ -11,9 +12,11 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    partial class PrestigeContextModelSnapshot : ModelSnapshot
+    [Migration("20250820195849_AddRankWithinAlbumToRating")]
+    partial class AddRankWithinAlbumToRating
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

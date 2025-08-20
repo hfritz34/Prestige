@@ -23,7 +23,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
 
   // Helper to get album position for a track
   const getTrackPosition = (trackId: string) => {
-    return Array.isArray(trackRatings) ? trackRatings.find(rating => rating.itemId === trackId)?.position : undefined;
+    return Array.isArray(trackRatings) ? trackRatings.find(rating => rating.itemId === trackId)?.rankWithinAlbum : undefined;
   };
 
   const handleTrackClick = (track: UserTrackResponse) => {
