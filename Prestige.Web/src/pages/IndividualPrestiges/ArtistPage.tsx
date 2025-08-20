@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
-import usePrestige from '@/hooks/usePrestige';
+import usePrestige, { ArtistAlbumsWithRankingsResponse } from '@/hooks/usePrestige';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -24,9 +24,11 @@ const ArtistPage: React.FC = () => {
   const userId = user?.sub?.split('|').pop();
 
   // Fetch albums that the user has rated (albums only, simplified)
-  const { data: artistAlbums, isLoading: albumsLoading } = useQuery({
+  const { data: artistAlbums, isLoading: albumsLoading } = useQuery<ArtistAlbumsWithRankingsResponse | null>({
     queryKey: ['artistAlbums', userId, artist?.artistId],
-    queryFn: () => userId ? getArtistAlbumsWithUserActivity(userId, artist.artistId) : null,
+    queryFn: async (): Promise<ArtistAlbumsWithRankingsResponse | null> => {
+      return userId ? await getArtistAlbumsWithUserActivity(userId, artist.artistId) : null;
+    },
     enabled: showAlbums && !!userId && !!artist?.artistId
   });
 
@@ -174,7 +176,7 @@ const ArtistPage: React.FC = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {artistAlbums?.albums?.map((album: any) => (
+                {artistAlbums?.albums?.map((album) => (
                   <div
                     key={album.albumId}
                     onClick={() => handleAlbumClick(album)}
@@ -192,7 +194,6 @@ const ArtistPage: React.FC = () => {
                       <p className="text-sm text-gray-300">{album.artistName}</p>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
                         <span>Score: {album.albumRatingScore?.toFixed?.(1) ?? album.albumRatingScore}</span>
-                        <span>Category: {album.albumRatingCategory}</span>
                       </div>
                     </div>
                   </div>

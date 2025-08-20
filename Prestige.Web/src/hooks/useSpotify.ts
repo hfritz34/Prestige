@@ -33,7 +33,7 @@ export type TrackResponse = {
     duration_ms: number
 }
 
-export type SearchType = "track"|"album"|"artist";
+export type SearchType = "track"|"album"|"artist"|"all";
 
 const pure = (response : TrackResponse[] | AlbumResponse[] | ArtistResponse[], type : SearchType) => {
     const searchResponse : SearchResponse  = {

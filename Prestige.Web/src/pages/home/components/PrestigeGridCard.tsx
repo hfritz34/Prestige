@@ -2,19 +2,24 @@ import React from "react";
 import usePrestige from "@/hooks/usePrestige";
 
 type PrestigeGridCardProps = {
-  imageUrl: string;
+  imageUrl?: string;
+  images?: Array<{url: string}>;
   name: string;
-  subtitle: string;
+  subtitle?: string;
   totalTime: number;
-  rank: number;
+  rank?: number;
   onClick: () => void;
   type?: 'track' | 'album' | 'artist';
   ratingScore?: number;
   albumPosition?: number; // For tracks: position within album (1st, 2nd, 3rd best)
+  id?: string;
+  artists?: Array<{name: string}>;
+  isPinned?: boolean;
 };
 
 const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   imageUrl,
+  images,
   name,
   subtitle,
   totalTime,
@@ -22,7 +27,10 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   onClick,
   type = 'track',
   ratingScore,
-  albumPosition
+  albumPosition,
+  id: _id,
+  artists,
+  isPinned: _isPinned
 }) => {
   const { getTrackPrestigeTier, getAlbumPrestigeTier, getArtistPrestigeTier } = usePrestige();
   
@@ -97,7 +105,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
             <div className="flex-1 flex items-center justify-center px-1">
               <div className="w-full max-w-[85%] aspect-square rounded-lg overflow-hidden shadow-lg">
                 <img
-                  src={imageUrl}
+                  src={imageUrl || (images && images.length > 0 ? images[0].url : "/placeholder-album.png")}
                   alt={name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -128,7 +136,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
           {name}
         </h3>
         <p className="text-xs text-gray-400 line-clamp-1">
-          {subtitle}
+          {subtitle || (artists && artists.length > 0 ? artists.map(a => a.name).join(', ') : '')}
         </p>
         <p className="text-xs font-medium line-clamp-1 text-gray-300">
           {Math.floor(totalTime / 60)} min

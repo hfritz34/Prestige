@@ -23,6 +23,23 @@ export type AlbumTracksWithRankingsResponse = {
   tracks: AlbumTrackResponse[]
 }
 
+export type ArtistAlbumResponse = {
+  albumId: string
+  albumName: string
+  artistName: string
+  albumImage: string
+  albumRatingScore?: number
+  totalTime: number
+  isPinned: boolean
+  isFavorite: boolean
+}
+
+export type ArtistAlbumsWithRankingsResponse = {
+  artistId: string
+  totalAlbums: number
+  albums: ArtistAlbumResponse[]
+}
+
 const usePrestige = () => {
     const http = useHttp();
 
@@ -48,8 +65,8 @@ const usePrestige = () => {
       return await http.post({}, `prestige/${userId}/artists/${artistId}/pin`);
     };
 
-    const getPinnedItems = async (userId: string) => {
-      const result = await http.getOne(`prestige/${userId}/pinned`);
+    const getPinnedItems = async (userId: string): Promise<{tracks: any[], albums: any[], artists: any[]}> => {
+      const result = await http.getOne<{tracks: any[], albums: any[], artists: any[]}>(`prestige/${userId}/pinned`);
       console.log("Pinned items from API:", result);
       return result;
     };
@@ -58,8 +75,8 @@ const usePrestige = () => {
       return await http.getOne<AlbumTracksWithRankingsResponse>(`prestige/${userId}/albums/${albumId}/tracks`);
     };
 
-    const getArtistAlbumsWithUserActivity = async (userId: string, artistId: string) => {
-      return await http.getOne(`prestige/${userId}/artists/${artistId}/albums`);
+    const getArtistAlbumsWithUserActivity = async (userId: string, artistId: string): Promise<ArtistAlbumsWithRankingsResponse> => {
+      return await http.getOne<ArtistAlbumsWithRankingsResponse>(`prestige/${userId}/artists/${artistId}/albums`);
     };
 
     const getTrackPrestigeTier = (totalTime: number): string => {

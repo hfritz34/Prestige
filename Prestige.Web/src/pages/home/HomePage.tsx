@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import NavBar from "@/components/navigation/NavBar";
 import useProfile, { UserTrackResponse, UserAlbumResponse, UserArtistResponse } from "@/hooks/useProfile";
+
+type RecentlyUpdatedResponse = {
+  tracks: UserTrackResponse[];
+  albums: UserAlbumResponse[];
+  artists: UserArtistResponse[];
+};
 import { useAuth0 } from "@auth0/auth0-react";
 import TopTracks from "./components/TopTracks";
 import TopAlbums from "./components/TopAlbums";
@@ -67,15 +73,15 @@ const HomePage: React.FC = () => {
     enabled: !!user?.sub && contentType === "Artists" && timeFilter === "AllTime",
   });
 
-  const { data: recentItems, isLoading: recentLoading } = useQuery({
+  const { data: recentItems, isLoading: recentLoading } = useQuery<RecentlyUpdatedResponse>({
     queryKey: ["recentlyPlayed", user?.sub],
-    queryFn: async () => {
+    queryFn: async (): Promise<RecentlyUpdatedResponse> => {
       const userId = user?.sub?.split("|").pop();
       if (userId) {
         // Get items updated in the last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         try {
-          const response = await http.getOne(`library/${userId}/recently-updated?since=${oneHourAgo}`);
+          const response = await http.getOne<RecentlyUpdatedResponse>(`library/${userId}/recently-updated?since=${oneHourAgo}`);
           return response;
         } catch (error) {
           // If endpoint doesn't exist yet, return empty
@@ -87,9 +93,9 @@ const HomePage: React.FC = () => {
     enabled: !!user?.sub && timeFilter === "Recent",
   });
 
-  const { data: pinnedItems, isLoading: pinnedLoading, error: pinnedError } = useQuery({
+  const { data: pinnedItems, isLoading: pinnedLoading, error: pinnedError } = useQuery<RecentlyUpdatedResponse>({
     queryKey: ["pinnedItems", user?.sub],
-    queryFn: async () => {
+    queryFn: async (): Promise<RecentlyUpdatedResponse> => {
       const userId = user?.sub?.split("|").pop();
       if (userId) {
         try {
