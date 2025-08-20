@@ -1,5 +1,28 @@
 import useHttp from "./useHttp";
 
+export type AlbumTrackResponse = {
+  trackId: string
+  trackName: string
+  artists: Array<{id: string, name: string}>
+  durationMs: number
+  trackNumber: number
+  userListeningTime: number
+  userRating?: number
+  hasUserRating: boolean
+  albumRanking?: number
+  isPinned: boolean
+  isFavorite: boolean
+  isFromDatabase: boolean
+}
+
+export type AlbumTracksWithRankingsResponse = {
+  albumId: string
+  totalTracks: number
+  ratedTracks: number
+  allTracksRated: boolean
+  tracks: AlbumTrackResponse[]
+}
+
 const usePrestige = () => {
     const http = useHttp();
 
@@ -29,6 +52,10 @@ const usePrestige = () => {
       const result = await http.getOne(`prestige/${userId}/pinned`);
       console.log("Pinned items from API:", result);
       return result;
+    };
+
+    const getAlbumTracksWithRankings = async (userId: string, albumId: string): Promise<AlbumTracksWithRankingsResponse> => {
+      return await http.getOne<AlbumTracksWithRankingsResponse>(`prestige/${userId}/albums/${albumId}/tracks`);
     };
 
     const getTrackPrestigeTier = (totalTime: number): string => {
@@ -84,7 +111,8 @@ const usePrestige = () => {
       togglePinTrack,
       togglePinAlbum,
       togglePinArtist,
-      getPinnedItems
+      getPinnedItems,
+      getAlbumTracksWithRankings
     };
   };
   

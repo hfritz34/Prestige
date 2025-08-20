@@ -2,21 +2,30 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
-import usePrestige from '@/hooks/usePrestige';
+import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened, friends, loading } = useFriends();
-  const { getAlbumPrestigeTier, togglePinAlbum } = usePrestige();
+  const { getAlbumPrestigeTier, togglePinAlbum, getAlbumTracksWithRankings, getTrackPrestigeTier } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
   const location = useLocation();
   const album = location.state;
   
   const [showFriends, setShowFriends] = useState(false);
+  const [showTracks, setShowTracks] = useState(false);
   const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
   const [isPinned, setIsPinned] = useState(album?.isPinned || false);
+
+  const userId = user?.sub?.split('|').pop();
+
+  const { data: albumTracks, isLoading: tracksLoading, isError: tracksError } = useQuery<AlbumTracksWithRankingsResponse | null>({
+    queryKey: ['albumTracks', userId, album?.albumId],
+    queryFn: () => userId ? getAlbumTracksWithRankings(userId, album.albumId) : null,
+    enabled: showTracks && !!userId && !!album?.albumId
+  });
 
   const pinMutation = useMutation({
     mutationFn: async () => {
@@ -96,6 +105,12 @@ const AlbumPage: React.FC = () => {
         >
           {showFriends ? 'Hide Friends' : 'Compare With Friends'}
         </button>
+        <button
+          onClick={() => setShowTracks(!showTracks)}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showTracks ? 'Hide Tracks' : 'Show All Tracks'}
+        </button>
       </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">
@@ -131,6 +146,68 @@ const AlbumPage: React.FC = () => {
               );
             })}
           </ul>
+        </div>
+      )}
+      {showTracks && (
+        <div className="mt-4 w-full max-w-4xl relative z-10 p-4 rounded-lg">
+          {tracksLoading && <p className="text-center">Loading tracks...</p>}
+          {tracksError && <p className="text-center text-red-500">Failed to load tracks</p>}
+          {albumTracks && (
+            <div className="bg-gray-800 rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">Album Tracks</h3>
+                <div className="text-sm text-gray-400">
+                  {albumTracks.ratedTracks} of {albumTracks.totalTracks} tracks rated
+                  {albumTracks.allTracksRated && <span className="ml-2 text-yellow-500">⭐ Complete!</span>}
+                </div>
+              </div>
+              <div className="space-y-2">
+                {albumTracks.tracks?.map((track) => {
+                  const trackPrestige = track.hasUserRating ? getTrackPrestigeTier(track.userListeningTime) : null;
+                  const minutes = Math.floor(track.userListeningTime / 60);
+                  const seconds = track.userListeningTime % 60;
+                  
+                  return (
+                    <div
+                      key={track.trackId}
+                      className={`flex items-center p-3 rounded-lg ${
+                        track.hasUserRating 
+                          ? 'bg-gray-700 text-white font-semibold' 
+                          : 'bg-gray-900 text-gray-400'
+                      } hover:bg-gray-600 transition-colors`}
+                    >
+                      <div className="w-8 text-center font-bold text-lg">
+                        {track.albumRanking || '—'}
+                      </div>
+                      <div className="w-8 text-center text-sm text-gray-500">
+                        {track.trackNumber}
+                      </div>
+                      <div className="flex-1 ml-4">
+                        <div className="font-medium">{track.trackName}</div>
+                        <div className="text-sm text-gray-400">
+                          {track.artists?.map((artist) => artist.name).join(', ')}
+                        </div>
+                      </div>
+                      {track.hasUserRating && (
+                        <div className="text-right text-sm">
+                          <div className="text-gray-300">
+                            {minutes}:{seconds.toString().padStart(2, '0')}
+                          </div>
+                          {trackPrestige && (
+                            <div className="text-xs text-yellow-400">{trackPrestige}</div>
+                          )}
+                        </div>
+                      )}
+                      <div className="ml-4 text-right">
+                        {track.isPinned && <span className="text-yellow-500">📌</span>}
+                        {track.isFavorite && <span className="text-red-500">❤️</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
       <NavBar />
