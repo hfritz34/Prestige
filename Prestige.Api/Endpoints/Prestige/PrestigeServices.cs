@@ -470,8 +470,16 @@ namespace Prestige.Api.Endpoints.Prestige
 
             // Get user ratings from Rating table for album-context ranking
             var userRatings = await PrestigeDb.Ratings
+                .Include(r => r.Category)
                 .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "track" && r.AlbumId == albumId)
                 .ToListAsync();
+
+            // Debug logging
+            Console.WriteLine($"DEBUG: Found {userRatings.Count} track ratings for album {albumId}");
+            foreach (var rating in userRatings)
+            {
+                Console.WriteLine($"DEBUG: Track {rating.ItemId}, Score: {rating.PersonalScore}, Position: {rating.Position}, RankWithinAlbum: {rating.RankWithinAlbum}, Category: {rating.Category.Name}");
+            }
 
             // Create lookup for user data
             var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);

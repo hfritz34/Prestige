@@ -119,59 +119,104 @@ namespace Prestige.Api.Endpoints.Rating
             var category = await PrestigeDb.RatingCategories.FindAsync(categoryId)
                 ?? throw new NotFoundException(404, $"Category {categoryId} not found");
 
-            // Get album ID if this is a track
-            string? albumId = null;
             if (normalizedType == "track")
             {
-                var track = await PrestigeDb.Tracks
-                    .Include(t => t.Album)
-                    .FirstOrDefaultAsync(t => t.Id == itemId);
-                albumId = track?.Album?.Id;
+                return await SaveTrackRatingAsync(userId, user, itemId, desiredPosition, category);
+            }
+            else
+            {
+                return await SaveAlbumArtistRatingAsync(userId, user, itemId, normalizedType, desiredPosition, category);
+            }
+        }
+
+        private async Task<RatingResponse> SaveTrackRatingAsync(string userId, User user, string itemId, int desiredPosition, RatingCategory category)
+        {
+            // Get album ID for track
+            var track = await PrestigeDb.Tracks
+                .Include(t => t.Album)
+                .FirstOrDefaultAsync(t => t.Id == itemId);
+            var albumId = track?.Album?.Id;
+
+            if (string.IsNullOrEmpty(albumId))
+            {
+                throw new NotFoundException(404, $"Album not found for track {itemId}");
             }
 
             // Check if rating already exists
             var existingRating = await PrestigeDb.Ratings
-                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == "track");
 
             bool isNewRating = existingRating == null;
 
-            // Get existing ratings in same category/album for score calculation
-            IQueryable<Domain.Rating> existingQuery = PrestigeDb.Ratings
-                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == normalizedType && r.Category.Id == categoryId);
+            // For tracks, we use simple position-based logic (no scores)
+            // The PersonalScore will be set to the category's max score as a placeholder
+            decimal placeholderScore = category.MaxScore;
 
-            if (normalizedType == "track" && !string.IsNullOrEmpty(albumId))
+            if (existingRating != null)
             {
-                // Filter by album using track join to handle legacy/null AlbumId values on Rating
-                existingQuery = existingQuery
-                    .Join(PrestigeDb.Tracks.Include(t => t.Album),
-                          r => r.ItemId,
-                          t => t.Id,
-                          (r, t) => new { r, t })
-                    .Where(x => x.t.Album.Id == albumId)
-                    .Select(x => x.r);
+                // Update existing rating - just change category
+                existingRating.EnsureAlbumId(albumId);
+                existingRating.UpdateRating(placeholderScore, category, 1); // Temporary position
+            }
+            else
+            {
+                // Create new rating
+                var newRating = new Domain.Rating(user, itemId, "track", category, 1, placeholderScore, albumId);
+                PrestigeDb.Ratings.Add(newRating);
             }
 
-            var existingRatings = await existingQuery
+            await PrestigeDb.SaveChangesAsync();
+
+            // Recalculate positions within the category for this album, considering desired position
+            await RecalculateTrackPositionsInCategory(userId, albumId, category.Id, itemId, desiredPosition);
+
+            // Update album-wide rankings across all categories
+            await UpdateAlbumRanksForTracks(userId, albumId);
+            await PrestigeDb.SaveChangesAsync();
+
+            // Get the final position and rank
+            var finalRating = await PrestigeDb.Ratings
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == "track");
+
+            return new RatingResponse
+            {
+                ItemId = itemId,
+                ItemType = "track",
+                CategoryId = category.Id,
+                PersonalScore = placeholderScore,
+                Position = finalRating?.Position ?? 1,
+                RankWithinAlbum = finalRating?.RankWithinAlbum,
+                IsNewRating = isNewRating
+            };
+        }
+
+        private async Task<RatingResponse> SaveAlbumArtistRatingAsync(string userId, User user, string itemId, string itemType, int desiredPosition, RatingCategory category)
+        {
+            // Keep existing logic for albums and artists (score-based)
+            var existingRating = await PrestigeDb.Ratings
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == itemType);
+
+            bool isNewRating = existingRating == null;
+
+            // Get existing ratings in same category for score calculation
+            var existingRatings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == itemType && r.Category.Id == category.Id)
                 .OrderByDescending(r => r.PersonalScore)
                 .ToListAsync();
 
-            // Calculate score based on position within category bounds (binary search result)
+            // Calculate score based on position within category bounds
             decimal calculatedScore;
             if (existingRatings.Count == 0)
             {
-                // First item gets max score
                 calculatedScore = category.MaxScore;
             }
             else if (desiredPosition == 0)
             {
-                // New top item - give it max score, push others down
                 calculatedScore = category.MaxScore;
-                // Redistribute existing items' scores downward
                 await RedistributeScoresAfterNewTop(existingRatings, category);
             }
             else if (desiredPosition >= existingRatings.Count)
             {
-                // New bottom item
                 var lowestScore = existingRatings.Last().PersonalScore;
                 var availableRange = lowestScore - category.MinScore;
                 calculatedScore = Math.Max(
@@ -181,53 +226,88 @@ namespace Prestige.Api.Endpoints.Rating
             }
             else
             {
-                // Insert between existing items
                 var higherItem = existingRatings[desiredPosition - 1];
                 var lowerItem = existingRatings[desiredPosition];
                 calculatedScore = (higherItem.PersonalScore + lowerItem.PersonalScore) / 2m;
             }
 
-            // Calculate final position based on the new score (convert to 1-based)
-            var finalPosition = await CalculatePositionFromScore(userId, normalizedType, categoryId, calculatedScore, albumId) + 1;
+            var finalPosition = await CalculatePositionFromScore(userId, itemType, category.Id, calculatedScore, null) + 1;
 
             if (existingRating != null)
             {
-                // Update existing rating
-                existingRating.EnsureAlbumId(albumId);
                 existingRating.UpdateRating(calculatedScore, category, finalPosition);
-                // Update positions of other items in the same category
-                await UpdatePositionsAfterScoreChange(userId, normalizedType, categoryId, itemId, calculatedScore, albumId);
+                await UpdatePositionsAfterScoreChange(userId, itemType, category.Id, itemId, calculatedScore, null);
             }
             else
             {
-                // Create new rating
-                var newRating = new Domain.Rating(user, itemId, normalizedType, category, finalPosition, calculatedScore, albumId);
+                var newRating = new Domain.Rating(user, itemId, itemType, category, finalPosition, calculatedScore);
                 PrestigeDb.Ratings.Add(newRating);
-                // Update positions of other items that are now ranked lower
-                await UpdatePositionsAfterInsert(userId, normalizedType, categoryId, calculatedScore, albumId);
+                await UpdatePositionsAfterInsert(userId, itemType, category.Id, calculatedScore, null);
             }
 
             await PrestigeDb.SaveChangesAsync();
 
-            // Get the updated RankWithinAlbum if this is a track
-            int? rankWithinAlbum = null;
-            if (normalizedType == "track" && !string.IsNullOrEmpty(albumId))
-            {
-                var updatedRating = await PrestigeDb.Ratings
-                    .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == normalizedType);
-                rankWithinAlbum = updatedRating?.RankWithinAlbum;
-            }
-
             return new RatingResponse
             {
                 ItemId = itemId,
-                ItemType = normalizedType,
-                CategoryId = categoryId,
+                ItemType = itemType,
+                CategoryId = category.Id,
                 PersonalScore = calculatedScore,
                 Position = finalPosition,
-                RankWithinAlbum = rankWithinAlbum,
+                RankWithinAlbum = null,
                 IsNewRating = isNewRating
             };
+        }
+
+        private async Task RecalculateTrackPositionsInCategory(string userId, string albumId, int categoryId, string targetTrackId, int desiredPosition)
+        {
+            // Get all tracks in this category for this album
+            var tracksInCategory = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "track" && r.Category.Id == categoryId)
+                .Join(PrestigeDb.Tracks.Include(t => t.Album),
+                      r => r.ItemId,
+                      t => t.Id,
+                      (r, t) => new { r, t })
+                .Where(x => x.t.Album.Id == albumId)
+                .Select(x => x.r)
+                .OrderBy(x => x.Position)
+                .ToListAsync();
+
+            if (tracksInCategory.Count == 0) return;
+
+            // Find the target track
+            var targetTrack = tracksInCategory.FirstOrDefault(t => t.ItemId == targetTrackId);
+            if (targetTrack == null) return;
+
+            // Remove target track from list to reorder others
+            var otherTracks = tracksInCategory.Where(t => t.ItemId != targetTrackId).ToList();
+
+            // Handle desired position (convert 0-based to 1-based if needed)
+            var effectiveDesiredPosition = desiredPosition <= 0 ? 1 : Math.Min(desiredPosition, tracksInCategory.Count);
+
+            // Create new ordered list
+            var reorderedTracks = new List<Domain.Rating>();
+            
+            // Add tracks before the desired position
+            for (int i = 0; i < effectiveDesiredPosition - 1 && i < otherTracks.Count; i++)
+            {
+                reorderedTracks.Add(otherTracks[i]);
+            }
+
+            // Add the target track at desired position
+            reorderedTracks.Add(targetTrack);
+
+            // Add remaining tracks after the desired position
+            for (int i = effectiveDesiredPosition - 1; i < otherTracks.Count; i++)
+            {
+                reorderedTracks.Add(otherTracks[i]);
+            }
+
+            // Update positions (1-based)
+            for (int i = 0; i < reorderedTracks.Count; i++)
+            {
+                reorderedTracks[i].UpdatePosition(i + 1);
+            }
         }
 
         public async Task<RatingResponse> DeleteRatingAsync(string itemType, string itemId)
@@ -403,12 +483,6 @@ namespace Prestige.Api.Endpoints.Rating
             {
                 sortedRatings[i].UpdatePosition(i + 1);
             }
-
-            // For tracks, also update RankWithinAlbum across all categories
-            if (itemType == "track" && !string.IsNullOrEmpty(albumId))
-            {
-                await UpdateAlbumRanksForTracks(userId, albumId);
-            }
         }
 
         private async Task UpdatePositionsAfterInsert(string userId, string itemType, int categoryId, decimal newScore, string? albumId)
@@ -438,12 +512,6 @@ namespace Prestige.Api.Endpoints.Rating
             {
                 sortedRatings[i].UpdatePosition(i + 1);
             }
-
-            // For tracks, also update RankWithinAlbum across all categories
-            if (itemType == "track" && !string.IsNullOrEmpty(albumId))
-            {
-                await UpdateAlbumRanksForTracks(userId, albumId);
-            }
         }
 
 
@@ -463,19 +531,30 @@ namespace Prestige.Api.Endpoints.Rating
 
             if (albumTracks.Count == 0) return;
 
+            Console.WriteLine($"DEBUG UpdateAlbumRanks: Found {albumTracks.Count} rated tracks for album {albumId}");
+            foreach (var track in albumTracks)
+            {
+                Console.WriteLine($"DEBUG: Before sort - Track {track.ItemId}, Score: {track.PersonalScore}, Category: {track.Category.Name} (DisplayOrder: {track.Category.DisplayOrder})");
+            }
+
             // Sort by category priority (loved > liked > disliked), then by score within category
             var sortedTracks = albumTracks
                 .OrderBy(r => r.Category.DisplayOrder) // Category 1 (Loved) comes first
                 .ThenByDescending(r => r.PersonalScore) // Higher scores within category come first
                 .ToList();
 
+            Console.WriteLine($"DEBUG: After sort:");
+            for (int i = 0; i < sortedTracks.Count; i++)
+            {
+                Console.WriteLine($"DEBUG: Position {i + 1} - Track {sortedTracks[i].ItemId}, Score: {sortedTracks[i].PersonalScore}, Category: {sortedTracks[i].Category.Name}");
+            }
+
             // Assign RankWithinAlbum based on sorted order (1-based for UI display)
             for (int i = 0; i < sortedTracks.Count; i++)
             {
                 sortedTracks[i].UpdateRankWithinAlbum(i + 1);
+                Console.WriteLine($"DEBUG: Assigned rank {i + 1} to track {sortedTracks[i].ItemId}");
             }
-
-            await PrestigeDb.SaveChangesAsync();
         }
 
         private string GetUserId()
