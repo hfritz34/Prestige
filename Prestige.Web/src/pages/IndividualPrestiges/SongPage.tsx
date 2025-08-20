@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
-import usePrestige from '@/hooks/usePrestige';
+import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
 import useCurrentlyPlaying from '@/hooks/useCurrentlyPlaying';
 import { motion } from 'framer-motion';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 const SongPage: React.FC = () => {
   const { getFriendsWhoListenedToTrack, getFriendTrackTimeListened, friends, loading } = useFriends();
-  const { getTrackPrestigeTier, togglePinTrack } = usePrestige();
+  const { getTrackPrestigeTier, togglePinTrack, getAlbumTracksWithRankings } = usePrestige();
   const { currentlyPlaying } = useCurrentlyPlaying();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const location = useLocation();
   const track = location.state;
   
@@ -23,7 +25,22 @@ const SongPage: React.FC = () => {
   const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
   const [isPinned, setIsPinned] = useState(track?.isPinned || false);
   
+  const userId = user?.sub?.split('|').pop();
   const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
+
+  // Extract album ID from track data - we'll need this to fetch album context
+  const albumId = track?.albumId || track?.track?.album?.id;
+
+  // Fetch album context to show track ranking within album
+  const { data: albumTracks, isLoading: albumLoading } = useQuery<AlbumTracksWithRankingsResponse | null>({
+    queryKey: ['albumTracks', userId, albumId],
+    queryFn: () => userId && albumId ? getAlbumTracksWithRankings(userId, albumId) : null,
+    enabled: !!userId && !!albumId
+  });
+
+  // Find this track within the album tracks
+  const trackInAlbum = albumTracks?.tracks?.find(t => t.trackId === track?.trackId);
+  const albumRanking = trackInAlbum?.albumRanking;
 
   const pinMutation = useMutation({
     mutationFn: async () => {
@@ -56,6 +73,20 @@ const SongPage: React.FC = () => {
   };
 
   const prestigeLevel = getTrackPrestigeTier(track.totalTime) || "None";
+
+  const handleViewAlbum = () => {
+    if (albumId && track?.albumName) {
+      navigate('/prestige/album', { 
+        state: { 
+          albumId: albumId,
+          albumName: track.albumName,
+          artistName: track.artistName,
+          imageUrl: track.imageUrl,
+          totalTime: 0 // Will be populated by album page
+        }
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center pb-20">
@@ -93,7 +124,7 @@ const SongPage: React.FC = () => {
           <p className="text-lg">{track.artistName}</p>
           <p className="text-lg mb-4">{track.albumName}</p>
         </div>
-        <div className="flex justify-between w-full max-w-xs mb-6 z-10">
+        <div className="flex justify-between w-full max-w-sm mb-6 z-10">
           <div className="text-center">
             <p className="text-gray-400">Minutes</p>
             <p className="text-2xl font-bold">{(track.totalTime / 60).toFixed(1)}</p>
@@ -101,6 +132,12 @@ const SongPage: React.FC = () => {
           <div className="text-center">
             <p className="text-gray-400">Prestige Level</p>
             <p className="text-2xl font-bold">{prestigeLevel}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-gray-400">Album Rank</p>
+            <p className="text-2xl font-bold">
+              {albumLoading ? '...' : albumRanking ? `#${albumRanking}` : '—'}
+            </p>
           </div>
         </div>
       </div>
@@ -117,6 +154,14 @@ const SongPage: React.FC = () => {
         >
           {showFriends ? 'Hide Friends' : 'Compare With Friends'}
         </button>
+        {albumId && (
+          <button
+            onClick={handleViewAlbum}
+            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+          >
+            View Album
+          </button>
+        )}
       </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">

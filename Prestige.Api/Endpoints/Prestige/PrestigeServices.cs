@@ -535,5 +535,49 @@ namespace Prestige.Api.Endpoints.Prestige
                 Tracks = finalTracks
             };
         }
+
+        public async Task<object> GetArtistAlbumsWithUserActivity(string userId, string artistId)
+        {
+            // Get all albums by this artist that the user has rated tracks for
+            var userAlbumsWithActivity = await PrestigeDb.UserTracks
+                .Include(ut => ut.Track)
+                    .ThenInclude(t => t.Album)
+                        .ThenInclude(a => a.Images)
+                .Include(ut => ut.Track.Album.Artists)
+                .Where(ut => ut.User.Id == userId && 
+                           ut.Track.Artists.Any(a => a.Id == artistId) &&
+                           ut.RatingPosition != null) // Only albums where user has rated tracks
+                .GroupBy(ut => ut.Track.Album.Id)
+                .Select(g => new
+                {
+                    Album = g.First().Track.Album,
+                    RatedTracksCount = g.Count(),
+                    TotalListeningTime = g.Sum(ut => ut.TotalTime),
+                    HighestRankedTrack = g.OrderBy(ut => ut.RatingPosition).First()
+                })
+                .ToListAsync();
+
+            // Transform to response format
+            var albumsWithActivity = userAlbumsWithActivity.Select(album => new
+            {
+                AlbumId = album.Album.Id,
+                AlbumName = album.Album.Name,
+                AlbumImage = album.Album.Images?.FirstOrDefault()?.Url,
+                ArtistName = album.Album.Artists?.FirstOrDefault()?.Name,
+                RatedTracksCount = album.RatedTracksCount,
+                TotalListeningTime = album.TotalListeningTime,
+                BestTrackName = album.HighestRankedTrack.Track.Name,
+                BestTrackRanking = album.HighestRankedTrack.RatingPosition
+            }).OrderByDescending(a => a.RatedTracksCount)
+              .ThenByDescending(a => a.TotalListeningTime)
+              .ToList();
+
+            return new
+            {
+                ArtistId = artistId,
+                AlbumsWithUserActivity = albumsWithActivity,
+                TotalAlbumsWithActivity = albumsWithActivity.Count
+            };
+        }
     }
 }

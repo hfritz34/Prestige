@@ -128,6 +128,20 @@ namespace Prestige.Api.Endpoints.Prestige
             }
         }
 
+        [HttpGet("{userId}/artists/{artistId}/albums")]
+        public async Task<IActionResult> GetArtistAlbumsWithUserActivity(string userId, string artistId)
+        {
+            try
+            {
+                var albums = await _service.GetArtistAlbumsWithUserActivity(userId, artistId);
+                return Ok(albums);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
         [HttpGet("{userId}/pinned")]
         public IActionResult GetPinnedItems(string userId)
         {
