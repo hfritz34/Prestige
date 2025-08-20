@@ -474,13 +474,6 @@ namespace Prestige.Api.Endpoints.Prestige
                 .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "track" && r.AlbumId == albumId)
                 .ToListAsync();
 
-            // Debug logging
-            Console.WriteLine($"DEBUG: Found {userRatings.Count} track ratings for album {albumId}");
-            foreach (var rating in userRatings)
-            {
-                Console.WriteLine($"DEBUG: Track {rating.ItemId}, Score: {rating.PersonalScore}, Position: {rating.Position}, RankWithinAlbum: {rating.RankWithinAlbum}, Category: {rating.Category.Name}");
-            }
-
             // Create lookup for user data
             var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);
             var userRatingLookup = userRatings.ToDictionary(ur => ur.ItemId, ur => ur);
@@ -532,7 +525,7 @@ namespace Prestige.Api.Endpoints.Prestige
                         track.IsPinned,
                         track.IsFavorite,
                         track.IsFromDatabase,
-                        AlbumRanking = track.HasUserRating ? userRatingData?.RankWithinAlbum : (int?)null
+                        albumRanking = track.HasUserRating ? userRatingData?.RankWithinAlbum : (int?)null
                     };
                 })
                 .OrderBy(t => t.TrackNumber) // Order by actual album track number
