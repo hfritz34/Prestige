@@ -5,18 +5,36 @@ import useFriends from '@/hooks/useFriends';
 import usePrestige from '@/hooks/usePrestige';
 import useCurrentlyPlaying from '@/hooks/useCurrentlyPlaying';
 import { motion } from 'framer-motion';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const SongPage: React.FC = () => {
   const { getFriendsWhoListenedToTrack, getFriendTrackTimeListened, friends, loading } = useFriends();
-  const { getTrackPrestigeTier } = usePrestige();
+  const { getTrackPrestigeTier, togglePinTrack } = usePrestige();
   const { currentlyPlaying } = useCurrentlyPlaying();
+  const { user } = useAuth0();
+  const queryClient = useQueryClient();
   const [showFriends, setShowFriends] = useState(false);
   const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
+  const [isPinned, setIsPinned] = useState(false);
 
   const location = useLocation();
   const track = location.state;
   
   const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
+
+  const pinMutation = useMutation({
+    mutationFn: async () => {
+      const userId = user?.sub?.split('|').pop();
+      if (userId) {
+        await togglePinTrack(userId, track.trackId);
+      }
+    },
+    onSuccess: () => {
+      setIsPinned(!isPinned);
+      queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
+    }
+  });
 
   const handleShowFriends = async () => {
     if (!showFriends) {
@@ -81,12 +99,20 @@ const SongPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <button
-        onClick={handleShowFriends}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-      >
-        {showFriends ? 'Hide Friends' : 'Compare With Friends'}
-      </button>
+      <div className="flex gap-4 mb-4">
+        <button
+          onClick={() => pinMutation.mutate()}
+          className={`${isPinned ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-600 hover:bg-gray-700'} text-white font-bold py-2 px-4 rounded`}
+        >
+          {isPinned ? '📌 Pinned' : '📌 Pin'}
+        </button>
+        <button
+          onClick={handleShowFriends}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showFriends ? 'Hide Friends' : 'Compare With Friends'}
+        </button>
+      </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">
           {loading && <p>Loading friends...</p>}

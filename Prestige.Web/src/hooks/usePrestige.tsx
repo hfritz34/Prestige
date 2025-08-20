@@ -1,4 +1,31 @@
+import useHttp from "./useHttp";
+
 const usePrestige = () => {
+    const http = useHttp();
+
+    const postUserTrack = async (userId: string, trackId: string, totalTime: number) => {
+      return await http.post(
+        { trackId, totalTime },
+        `prestige/${userId}/tracks`
+      );
+    };
+
+    const togglePinTrack = async (userId: string, trackId: string) => {
+      return await http.post({}, `prestige/${userId}/tracks/${trackId}/pin`);
+    };
+
+    const togglePinAlbum = async (userId: string, albumId: string) => {
+      return await http.post({}, `prestige/${userId}/albums/${albumId}/pin`);
+    };
+
+    const togglePinArtist = async (userId: string, artistId: string) => {
+      return await http.post({}, `prestige/${userId}/artists/${artistId}/pin`);
+    };
+
+    const getPinnedItems = async (userId: string) => {
+      return await http.getOne(`prestige/${userId}/pinned`);
+    };
+
     const getTrackPrestigeTier = (totalTime: number): string => {
       if (totalTime >= 15000 * 60) return "DarkMatter";
       else if (totalTime >= 6000 * 60) return "Opal";
@@ -44,7 +71,16 @@ const usePrestige = () => {
       return "";
     };
   
-    return { getTrackPrestigeTier, getArtistPrestigeTier, getAlbumPrestigeTier };
+    return { 
+      getTrackPrestigeTier, 
+      getArtistPrestigeTier, 
+      getAlbumPrestigeTier,
+      postUserTrack,
+      togglePinTrack,
+      togglePinAlbum,
+      togglePinArtist,
+      getPinnedItems
+    };
   };
   
   export default usePrestige;

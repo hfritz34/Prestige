@@ -12,8 +12,8 @@ using Prestige.Api.Data;
 namespace Prestige.Api.Migrations
 {
     [DbContext(typeof(PrestigeContext))]
-    [Migration("20250813033805_AddPerformanceIndexes")]
-    partial class AddPerformanceIndexes
+    [Migration("20250820134258_AddIsPinnedField")]
+    partial class AddIsPinnedField
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -427,6 +427,9 @@ namespace Prestige.Api.Migrations
                     b.Property<bool>("IsFavorite")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("PersonalRatingScore")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
@@ -461,6 +464,9 @@ namespace Prestige.Api.Migrations
                     b.Property<bool>("IsFavorite")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("bit");
+
                     b.Property<decimal?>("PersonalRatingScore")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
@@ -493,6 +499,9 @@ namespace Prestige.Api.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("IsFavorite")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPinned")
                         .HasColumnType("bit");
 
                     b.Property<decimal?>("PersonalRatingScore")

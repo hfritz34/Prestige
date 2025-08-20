@@ -54,7 +54,9 @@ namespace Prestige.Api.Endpoints.Profile
             {
                 Track = new TrackResponse(ut.Track),
                 TotalTime = ut.TotalTime,
-                UserId = ut.User.Id
+                UserId = ut.User.Id,
+                IsFavorite = ut.IsFavorite,
+                IsPinned = ut.IsPinned
             }).ToList();
 
             return topTracks;
@@ -83,7 +85,9 @@ namespace Prestige.Api.Endpoints.Profile
             {
                 UserId = ua.User.Id,
                 Album = new AlbumResponse(ua.Album),
-                TotalTime = ua.TotalTime
+                TotalTime = ua.TotalTime,
+                IsFavorite = ua.IsFavorite,
+                IsPinned = ua.IsPinned
             })
                 .ToList();
 
@@ -110,7 +114,9 @@ namespace Prestige.Api.Endpoints.Profile
             {
                 Artist = new ArtistResponse(ua.Artist),
                 UserId = ua.User.Id,
-                TotalTime = ua.TotalTime
+                TotalTime = ua.TotalTime,
+                IsFavorite = ua.IsFavorite,
+                IsPinned = ua.IsPinned
             }).ToList();
 
             return topArtists;
@@ -491,7 +497,9 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ua.User.Id,
                     Album = new AlbumResponse(ua.Album),
-                    TotalTime = ua.TotalTime
+                    TotalTime = ua.TotalTime,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
                 })
                 .ToList();
         }
@@ -547,7 +555,9 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ua.User.Id,
                     Album = new AlbumResponse(ua.Album),
-                    TotalTime = ua.TotalTime
+                    TotalTime = ua.TotalTime,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
                 })
                 .ToList();
         }
@@ -562,7 +572,9 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ua.User.Id,
                     Artist = new ArtistResponse(ua.Artist),
-                    TotalTime = ua.TotalTime
+                    TotalTime = ua.TotalTime,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
                 })
                 .ToList();
         }
@@ -614,7 +626,9 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ua.User.Id,
                     Artist = new ArtistResponse(ua.Artist),
-                    TotalTime = ua.TotalTime
+                    TotalTime = ua.TotalTime,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
                 })
                 .ToList();
         }

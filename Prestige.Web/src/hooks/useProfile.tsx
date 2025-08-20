@@ -49,19 +49,25 @@ export type RecentlyPlayedArtistResponse = {
 export type UserTrackResponse = {
     track: TrackResponse,
     userId: string,
-    totalTime: number
+    totalTime: number,
+    isFavorite?: boolean,
+    isPinned?: boolean
 }
   
 export type UserAlbumResponse = {
     album: AlbumResponse,
     userId: string,
-    totalTime: number
+    totalTime: number,
+    isFavorite?: boolean,
+    isPinned?: boolean
 }
   
 export type UserArtistResponse = {
     artist: ArtistResponse,
     userId: string,
-    totalTime: number
+    totalTime: number,
+    isFavorite?: boolean,
+    isPinned?: boolean
 }
   
 export type FavoritesResponse = {
