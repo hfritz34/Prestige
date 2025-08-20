@@ -71,5 +71,61 @@ namespace Prestige.Api.Endpoints.Prestige
                 return HandleException(ex);
             }
         }
+
+        [HttpPost("{userId}/tracks/{trackId}/pin")]
+        public async Task<IActionResult> PinUserTrack(string userId, string trackId)
+        {
+            try
+            {
+                await _service.TogglePinUserTrack(userId, trackId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpPost("{userId}/albums/{albumId}/pin")]
+        public async Task<IActionResult> PinUserAlbum(string userId, string albumId)
+        {
+            try
+            {
+                await _service.TogglePinUserAlbum(userId, albumId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpPost("{userId}/artists/{artistId}/pin")]
+        public async Task<IActionResult> PinUserArtist(string userId, string artistId)
+        {
+            try
+            {
+                await _service.TogglePinUserArtist(userId, artistId);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpGet("{userId}/pinned")]
+        public IActionResult GetPinnedItems(string userId)
+        {
+            try
+            {
+                var items = _service.GetPinnedItems(userId);
+                return Ok(items);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
     }
 }

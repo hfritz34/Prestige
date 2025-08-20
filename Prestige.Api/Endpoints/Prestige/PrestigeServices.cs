@@ -291,5 +291,98 @@ namespace Prestige.Api.Endpoints.Prestige
                 UserId = userArtist.User.Id
             };
         }
+
+        public async Task TogglePinUserTrack(string userId, string trackId)
+        {
+            var userTrack = PrestigeDb.UserTracks
+                .Include(ut => ut.User)
+                .Include(ut => ut.Track)
+                .FirstOrDefault(ut => ut.User.Id == userId && ut.Track.Id == trackId)
+                ?? throw Logger.TrackNotFound(trackId);
+
+            userTrack.ToggleIsPinned();
+            await PrestigeDb.SaveChangesAsync();
+        }
+
+        public async Task TogglePinUserAlbum(string userId, string albumId)
+        {
+            var userAlbum = PrestigeDb.UserAlbums
+                .Include(ua => ua.User)
+                .Include(ua => ua.Album)
+                .FirstOrDefault(ua => ua.User.Id == userId && ua.Album.Id == albumId)
+                ?? throw Logger.AlbumNotFound(albumId);
+
+            userAlbum.ToggleIsPinned();
+            await PrestigeDb.SaveChangesAsync();
+        }
+
+        public async Task TogglePinUserArtist(string userId, string artistId)
+        {
+            var userArtist = PrestigeDb.UserArtists
+                .Include(ua => ua.User)
+                .Include(ua => ua.Artist)
+                .FirstOrDefault(ua => ua.User.Id == userId && ua.Artist.Id == artistId)
+                ?? throw Logger.ArtistNotFound(artistId);
+
+            userArtist.ToggleIsPinned();
+            await PrestigeDb.SaveChangesAsync();
+        }
+
+        public object GetPinnedItems(string userId)
+        {
+            var pinnedTracks = PrestigeDb.UserTracks
+                .Include(ut => ut.Track)
+                    .ThenInclude(t => t.Album)
+                        .ThenInclude(a => a.Images)
+                .Include(ut => ut.Track.Artists)
+                    .ThenInclude(a => a.Images)
+                .Where(ut => ut.User.Id == userId && ut.IsPinned)
+                .Select(ut => new UserTrackResponse
+                {
+                    TotalTime = ut.TotalTime,
+                    Track = new TrackResponse(ut.Track),
+                    UserId = ut.User.Id,
+                    IsFavorite = ut.IsFavorite,
+                    IsPinned = ut.IsPinned
+                })
+                .ToList();
+
+            var pinnedAlbums = PrestigeDb.UserAlbums
+                .Include(ua => ua.Album)
+                    .ThenInclude(a => a.Images)
+                .Include(ua => ua.Album.Artists)
+                    .ThenInclude(a => a.Images)
+                .Where(ua => ua.User.Id == userId && ua.IsPinned)
+                .Select(ua => new UserAlbumResponse
+                {
+                    TotalTime = ua.TotalTime,
+                    Album = new AlbumResponse(ua.Album),
+                    UserId = ua.User.Id,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
+                })
+                .ToList();
+
+            var pinnedArtists = PrestigeDb.UserArtists
+                .Include(ua => ua.Artist)
+                    .ThenInclude(a => a.Images)
+                .Where(ua => ua.User.Id == userId && ua.IsPinned)
+                .Select(ua => new UserArtistResponse
+                {
+                    TotalTime = ua.TotalTime,
+                    Artist = new ArtistResponse(ua.Artist),
+                    UserId = ua.User.Id,
+                    IsFavorite = ua.IsFavorite,
+                    IsPinned = ua.IsPinned
+                })
+                .ToList();
+
+            return new
+            {
+                tracks = pinnedTracks,
+                albums = pinnedAlbums,
+                artists = pinnedArtists
+            };
+        }
     }
 }

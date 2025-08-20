@@ -7,6 +7,7 @@ namespace Prestige.Api.Domain
         public Album Album { get; private set; }
         public User User { get; private set; }
         public bool IsFavorite { get; private set; }
+        public bool IsPinned { get; private set; }
         public decimal? PersonalRatingScore { get; private set; }
         public int? RatingPosition { get; private set; }
 
@@ -17,6 +18,8 @@ namespace Prestige.Api.Domain
             User = user;
             TotalTime = totalTime;
             Album = album;
+            IsFavorite = false;
+            IsPinned = false;
         }
 
         public void IncrementTotalTime(int time)
@@ -27,6 +30,11 @@ namespace Prestige.Api.Domain
         public void ToggleIsFavorite()
         {
             IsFavorite = !IsFavorite;
+        }
+
+        public void ToggleIsPinned()
+        {
+            IsPinned = !IsPinned;
         }
 
         public void UpdateRating(decimal score, int position)

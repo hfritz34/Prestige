@@ -8,6 +8,8 @@ namespace Prestige.Api.Endpoints.Prestige.RequestResponse
         public int TotalTime { get; set; }
         public required ArtistResponse Artist { get; set; }
         public required string UserId { get;  set; }
+        public bool IsFavorite { get; set; }
+        public bool IsPinned { get; set; }
 
     }
 }
