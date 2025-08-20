@@ -4,19 +4,31 @@ import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige from '@/hooks/usePrestige';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 
 const ArtistPage: React.FC = () => {
   const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened, friends, loading } = useFriends();
-  const { getArtistPrestigeTier, togglePinArtist } = usePrestige();
+  const { getArtistPrestigeTier, togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const location = useLocation();
   const artist = location.state;
   
   const [showFriends, setShowFriends] = useState(false);
+  const [showAlbums, setShowAlbums] = useState(false);
   const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
   const [isPinned, setIsPinned] = useState(artist?.isPinned || false);
+
+  const userId = user?.sub?.split('|').pop();
+
+  // Fetch albums that the user has rated tracks for
+  const { data: artistAlbums, isLoading: albumsLoading } = useQuery({
+    queryKey: ['artistAlbums', userId, artist?.artistId],
+    queryFn: () => userId ? getArtistAlbumsWithUserActivity(userId, artist.artistId) : null,
+    enabled: showAlbums && !!userId && !!artist?.artistId
+  });
 
   const pinMutation = useMutation({
     mutationFn: async () => {
@@ -49,6 +61,18 @@ const ArtistPage: React.FC = () => {
   };
 
   const prestigeLevel = getArtistPrestigeTier(artist.totalTime) || "None";
+
+  const handleAlbumClick = (album: any) => {
+    navigate('/prestige/album', { 
+      state: { 
+        albumId: album.albumId,
+        albumName: album.albumName,
+        artistName: album.artistName,
+        imageUrl: album.albumImage,
+        totalTime: album.totalListeningTime
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center pb-20">
@@ -95,6 +119,12 @@ const ArtistPage: React.FC = () => {
         >
           {showFriends ? 'Hide Friends' : 'Compare With Friends'}
         </button>
+        <button
+          onClick={() => setShowAlbums(!showAlbums)}
+          className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showAlbums ? 'Hide Albums' : 'Show Rated Albums'}
+        </button>
       </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">
@@ -130,6 +160,58 @@ const ArtistPage: React.FC = () => {
               );
             })}
           </ul>
+        </div>
+      )}
+      {showAlbums && (
+        <div className="mt-4 w-full max-w-4xl relative z-10 p-4 rounded-lg">
+          {albumsLoading && <p className="text-center">Loading albums...</p>}
+          {artistAlbums && (
+            <div className="bg-gray-800 rounded-lg p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold">Albums with Rated Tracks</h3>
+                <div className="text-sm text-gray-400">
+                  {artistAlbums.totalAlbumsWithActivity} albums
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {artistAlbums.albumsWithUserActivity?.map((album: any) => (
+                  <div
+                    key={album.albumId}
+                    onClick={() => handleAlbumClick(album)}
+                    className="flex items-center p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
+                  >
+                    <div className="w-16 h-16 flex-shrink-0">
+                      <img
+                        src={album.albumImage || '/placeholder-album.png'}
+                        alt={album.albumName}
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                    </div>
+                    <div className="ml-4 flex-1">
+                      <h4 className="font-semibold text-white">{album.albumName}</h4>
+                      <p className="text-sm text-gray-300">{album.artistName}</p>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                        <span>{album.ratedTracksCount} tracks rated</span>
+                        <span>{Math.floor(album.totalListeningTime / 60)} min</span>
+                      </div>
+                    </div>
+                    <div className="text-right text-sm">
+                      <div className="text-gray-300">Best track:</div>
+                      <div className="font-medium text-yellow-400">
+                        #{album.bestTrackRanking} {album.bestTrackName}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(!artistAlbums.albumsWithUserActivity || artistAlbums.albumsWithUserActivity.length === 0) && (
+                <div className="text-center py-8 text-gray-400">
+                  <p>No albums with rated tracks yet.</p>
+                  <p>Start rating tracks to see albums here!</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
       <NavBar />

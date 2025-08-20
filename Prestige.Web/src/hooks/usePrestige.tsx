@@ -58,6 +58,10 @@ const usePrestige = () => {
       return await http.getOne<AlbumTracksWithRankingsResponse>(`prestige/${userId}/albums/${albumId}/tracks`);
     };
 
+    const getArtistAlbumsWithUserActivity = async (userId: string, artistId: string) => {
+      return await http.getOne(`prestige/${userId}/artists/${artistId}/albums`);
+    };
+
     const getTrackPrestigeTier = (totalTime: number): string => {
       if (totalTime >= 15000 * 60) return "DarkMatter";
       else if (totalTime >= 6000 * 60) return "Opal";
@@ -112,7 +116,8 @@ const usePrestige = () => {
       togglePinAlbum,
       togglePinArtist,
       getPinnedItems,
-      getAlbumTracksWithRankings
+      getAlbumTracksWithRankings,
+      getArtistAlbumsWithUserActivity
     };
   };
   
