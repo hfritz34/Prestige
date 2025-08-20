@@ -552,5 +552,43 @@ namespace Prestige.Api.Endpoints.Spotify
             PrestigeDb.SaveChanges();
             return tracks;
         }
+
+        public async Task<IEnumerable<TrackResponse>> GetAlbumTracksAsync(string albumId)
+        {
+            var client = await getSpotifyAuthorizedClient();
+            
+            var response = await client.GetAsync($"albums/{albumId}/tracks?limit=50");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                throw Logger.AlbumNotFound(albumId);
+            }
+            
+            var json = await response.Content.ReadAsStringAsync();
+            var tracksResponse = JsonSerializer.Deserialize<SpotifyAlbumTracksResponse>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            
+            if (tracksResponse?.Items == null)
+            {
+                return new List<TrackResponse>();
+            }
+
+            // Convert simplified track objects to full track responses
+            // We need to add album info since Spotify's album tracks endpoint returns simplified tracks
+            var albumResponse = await GetAlbumByIdAsync(albumId);
+            
+            var tracks = tracksResponse.Items.Select(track => new TrackResponse
+            {
+                Id = track.Id,
+                Name = track.Name,
+                Artists = track.Artists,
+                DurationMs = track.DurationMs,
+                Album = albumResponse // Add the full album info
+            }).ToList();
+
+            return tracks;
+        }
     }
 }

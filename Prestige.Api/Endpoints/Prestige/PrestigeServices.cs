@@ -397,6 +397,52 @@ namespace Prestige.Api.Endpoints.Prestige
                 .OrderBy(t => t.Name) // Default order by name, can be enhanced with track_number later
                 .ToListAsync();
 
+            // If we have very few tracks in our database, fetch from Spotify to get complete listing
+            var allTrackData = new List<object>();
+            
+            // Add database tracks
+            foreach (var track in albumTracks)
+            {
+                allTrackData.Add(new
+                {
+                    Id = track.Id,
+                    Name = track.Name,
+                    Artists = track.Artists,
+                    DurationMs = track.DurationMs,
+                    IsFromDatabase = true
+                });
+            }
+            
+            if (albumTracks.Count < 5) // Threshold to determine if we should fetch from Spotify
+            {
+                try
+                {
+                    var spotifyTracks = await _spotifyServices.GetAlbumTracksAsync(albumId);
+                    foreach (var spotifyTrack in spotifyTracks)
+                    {
+                        // Check if track already exists in our database
+                        var existingTrack = albumTracks.FirstOrDefault(t => t.Id == spotifyTrack.Id);
+                        if (existingTrack == null)
+                        {
+                            // Add the Spotify track to our temporary list
+                            allTrackData.Add(new
+                            {
+                                Id = spotifyTrack.Id,
+                                Name = spotifyTrack.Name,
+                                Artists = spotifyTrack.Artists?.Select(a => new { Id = a.Id, Name = a.Name }).ToList() ?? new List<object>(),
+                                DurationMs = spotifyTrack.DurationMs,
+                                IsFromDatabase = false
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Log error but continue with database tracks only
+                    Logger.LogWarning($"Failed to fetch tracks from Spotify for album {albumId}: {ex.Message}");
+                }
+            }
+
             // Get user ratings for tracks in this album
             var userTracks = await PrestigeDb.UserTracks
                 .Include(ut => ut.Track)
@@ -407,20 +453,22 @@ namespace Prestige.Api.Endpoints.Prestige
             var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);
 
             // Create response with ranking within album context
-            var tracksWithRankings = albumTracks.Select(track =>
+            var tracksWithRankings = allTrackData.Select(trackData =>
             {
-                var userTrack = userTrackLookup.ContainsKey(track.Id) ? userTrackLookup[track.Id] : null;
+                dynamic track = trackData;
+                var userTrack = userTrackLookup.ContainsKey((string)track.Id) ? userTrackLookup[(string)track.Id] : null;
                 return new
                 {
-                    TrackId = track.Id,
-                    TrackName = track.Name,
-                    Artists = track.Artists.Select(a => new { Id = a.Id, Name = a.Name }),
-                    DurationMs = track.DurationMs,
+                    TrackId = (string)track.Id,
+                    TrackName = (string)track.Name,
+                    Artists = track.Artists,
+                    DurationMs = (int)track.DurationMs,
                     UserListeningTime = userTrack?.TotalTime ?? 0,
                     UserRating = userTrack?.PersonalRatingScore,
                     HasUserRating = userTrack != null,
                     IsPinned = userTrack?.IsPinned ?? false,
-                    IsFavorite = userTrack?.IsFavorite ?? false
+                    IsFavorite = userTrack?.IsFavorite ?? false,
+                    IsFromDatabase = (bool)track.IsFromDatabase
                 };
             }).ToList();
 
@@ -439,6 +487,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     track.HasUserRating,
                     track.IsPinned,
                     track.IsFavorite,
+                    track.IsFromDatabase,
                     AlbumRanking = index + 1
                 })
                 .ToList();
@@ -457,6 +506,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     track.HasUserRating,
                     track.IsPinned,
                     track.IsFavorite,
+                    track.IsFromDatabase,
                     AlbumRanking = (int?)null
                 })
                 .ToList();
@@ -466,9 +516,9 @@ namespace Prestige.Api.Endpoints.Prestige
             return new
             {
                 AlbumId = albumId,
-                TotalTracks = albumTracks.Count,
+                TotalTracks = allTrackData.Count,
                 RatedTracks = rankedTracks.Count,
-                AllTracksRated = rankedTracks.Count == albumTracks.Count,
+                AllTracksRated = rankedTracks.Count == allTrackData.Count,
                 Tracks = allTracks
             };
         }
