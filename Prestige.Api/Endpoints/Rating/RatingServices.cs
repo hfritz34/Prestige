@@ -193,6 +193,7 @@ namespace Prestige.Api.Endpoints.Rating
             if (existingRating != null)
             {
                 // Update existing rating
+                existingRating.EnsureAlbumId(albumId);
                 existingRating.UpdateRating(calculatedScore, category, finalPosition);
                 // Update positions of other items in the same category
                 await UpdatePositionsAfterScoreChange(userId, normalizedType, categoryId, itemId, calculatedScore, albumId);

@@ -54,6 +54,15 @@ namespace Prestige.Api.Domain
             UpdatedAt = DateTime.UtcNow;
         }
 
+        public void EnsureAlbumId(string? albumId)
+        {
+            if (!string.IsNullOrEmpty(albumId) && string.IsNullOrEmpty(AlbumId))
+            {
+                AlbumId = albumId;
+                UpdatedAt = DateTime.UtcNow;
+            }
+        }
+
         public void UpdateScore(decimal score)
         {
             PersonalScore = score;

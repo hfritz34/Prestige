@@ -191,7 +191,6 @@ const ArtistPage: React.FC = () => {
                       <h4 className="font-semibold text-white">{album.albumName}</h4>
                       <p className="text-sm text-gray-300">{album.artistName}</p>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-400">
-                        <span>Album position: #{album.albumRatingPosition}</span>
                         <span>Score: {album.albumRatingScore?.toFixed?.(1) ?? album.albumRatingScore}</span>
                         <span>Category: {album.albumRatingCategory}</span>
                       </div>
