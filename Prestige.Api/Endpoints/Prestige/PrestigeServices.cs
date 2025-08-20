@@ -414,7 +414,7 @@ namespace Prestige.Api.Endpoints.Prestige
                 });
             }
             
-            if (albumTracks.Count < 5) // Threshold to determine if we should fetch from Spotify
+            // Always fetch from Spotify to get complete track listing, regardless of database track count
             {
                 try
                 {
@@ -475,32 +475,36 @@ namespace Prestige.Api.Endpoints.Prestige
                     TrackNumber = (int)track.TrackNumber,
                     UserListeningTime = userTrack?.TotalTime ?? 0,
                     UserRating = userTrack?.PersonalRatingScore,
-                    HasUserRating = userTrack != null,
+                    HasUserRating = userTrack?.RatingPosition != null,
                     IsPinned = userTrack?.IsPinned ?? false,
                     IsFavorite = userTrack?.IsFavorite ?? false,
                     IsFromDatabase = (bool)track.IsFromDatabase
                 };
             }).ToList();
 
-            // Calculate rankings based on user listening time within this album
+            // Get rankings from user's actual rating positions within this album
             var rankedTracks = tracksWithRankings
                 .Where(t => t.HasUserRating)
-                .OrderByDescending(t => t.UserListeningTime)
-                .Select((track, index) => new
+                .Select(track =>
                 {
-                    track.TrackId,
-                    track.TrackName,
-                    track.Artists,
-                    track.DurationMs,
-                    track.TrackNumber,
-                    track.UserListeningTime,
-                    track.UserRating,
-                    track.HasUserRating,
-                    track.IsPinned,
-                    track.IsFavorite,
-                    track.IsFromDatabase,
-                    AlbumRanking = index + 1
+                    var userTrackData = userTrackLookup.ContainsKey(track.TrackId) ? userTrackLookup[track.TrackId] : null;
+                    return new
+                    {
+                        track.TrackId,
+                        track.TrackName,
+                        track.Artists,
+                        track.DurationMs,
+                        track.TrackNumber,
+                        track.UserListeningTime,
+                        track.UserRating,
+                        track.HasUserRating,
+                        track.IsPinned,
+                        track.IsFavorite,
+                        track.IsFromDatabase,
+                        AlbumRanking = userTrackData?.RatingPosition ?? 1
+                    };
                 })
+                .OrderBy(t => t.AlbumRanking)
                 .ToList();
 
             // Add unrated tracks with null ranking
