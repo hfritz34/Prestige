@@ -72,6 +72,20 @@ namespace Prestige.Api.Endpoints.Prestige
             }
         }
 
+        [HttpGet("{userId}/albums/{albumId}/tracks")]
+        public async Task<IActionResult> GetAlbumTracksWithRankings(string userId, string albumId)
+        {
+            try
+            {
+                var tracks = await _service.GetAlbumTracksWithRankings(userId, albumId);
+                return Ok(tracks);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
         [HttpPost("{userId}/tracks/{trackId}/pin")]
         public async Task<IActionResult> PinUserTrack(string userId, string trackId)
         {

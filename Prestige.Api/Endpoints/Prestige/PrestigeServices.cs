@@ -385,5 +385,92 @@ namespace Prestige.Api.Endpoints.Prestige
                 artists = pinnedArtists
             };
         }
+
+        public async Task<object> GetAlbumTracksWithRankings(string userId, string albumId)
+        {
+            // Get all tracks in the album from our database
+            var albumTracks = await PrestigeDb.Tracks
+                .Include(t => t.Album)
+                .Include(t => t.Artists)
+                    .ThenInclude(a => a.Images)
+                .Where(t => t.Album.Id == albumId)
+                .OrderBy(t => t.Name) // Default order by name, can be enhanced with track_number later
+                .ToListAsync();
+
+            // Get user ratings for tracks in this album
+            var userTracks = await PrestigeDb.UserTracks
+                .Include(ut => ut.Track)
+                .Where(ut => ut.User.Id == userId && ut.Track.Album.Id == albumId)
+                .ToListAsync();
+
+            // Create lookup for user data
+            var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);
+
+            // Create response with ranking within album context
+            var tracksWithRankings = albumTracks.Select(track =>
+            {
+                var userTrack = userTrackLookup.ContainsKey(track.Id) ? userTrackLookup[track.Id] : null;
+                return new
+                {
+                    TrackId = track.Id,
+                    TrackName = track.Name,
+                    Artists = track.Artists.Select(a => new { Id = a.Id, Name = a.Name }),
+                    DurationMs = track.DurationMs,
+                    UserListeningTime = userTrack?.TotalTime ?? 0,
+                    UserRating = userTrack?.PersonalRatingScore,
+                    HasUserRating = userTrack != null,
+                    IsPinned = userTrack?.IsPinned ?? false,
+                    IsFavorite = userTrack?.IsFavorite ?? false
+                };
+            }).ToList();
+
+            // Calculate rankings based on user listening time within this album
+            var rankedTracks = tracksWithRankings
+                .Where(t => t.HasUserRating)
+                .OrderByDescending(t => t.UserListeningTime)
+                .Select((track, index) => new
+                {
+                    track.TrackId,
+                    track.TrackName,
+                    track.Artists,
+                    track.DurationMs,
+                    track.UserListeningTime,
+                    track.UserRating,
+                    track.HasUserRating,
+                    track.IsPinned,
+                    track.IsFavorite,
+                    AlbumRanking = index + 1
+                })
+                .ToList();
+
+            // Add unrated tracks with null ranking
+            var unratedTracks = tracksWithRankings
+                .Where(t => !t.HasUserRating)
+                .Select(track => new
+                {
+                    track.TrackId,
+                    track.TrackName,
+                    track.Artists,
+                    track.DurationMs,
+                    track.UserListeningTime,
+                    track.UserRating,
+                    track.HasUserRating,
+                    track.IsPinned,
+                    track.IsFavorite,
+                    AlbumRanking = (int?)null
+                })
+                .ToList();
+
+            var allTracks = rankedTracks.Cast<object>().Concat(unratedTracks.Cast<object>()).ToList();
+
+            return new
+            {
+                AlbumId = albumId,
+                TotalTracks = albumTracks.Count,
+                RatedTracks = rankedTracks.Count,
+                AllTracksRated = rankedTracks.Count == albumTracks.Count,
+                Tracks = allTracks
+            };
+        }
     }
 }
