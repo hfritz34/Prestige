@@ -429,14 +429,14 @@ namespace Prestige.Api.Endpoints.Prestige
                             {
                                 Id = spotifyTrack.Id,
                                 Name = spotifyTrack.Name,
-                                Artists = spotifyTrack.Artists?.Select(a => new { Id = a.Id, Name = a.Name }).ToList() ?? new List<object>(),
+                                Artists = spotifyTrack.Artists?.Select(a => new { Id = a.Id, Name = a.Name }) ?? Enumerable.Empty<object>(),
                                 DurationMs = spotifyTrack.DurationMs,
                                 IsFromDatabase = false
                             });
                         }
                     }
                 }
-                catch (Exception ex)
+                catch (System.Exception ex)
                 {
                     // Log error but continue with database tracks only
                     Logger.LogWarning($"Failed to fetch tracks from Spotify for album {albumId}: {ex.Message}");
