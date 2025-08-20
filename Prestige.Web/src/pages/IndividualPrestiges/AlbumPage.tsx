@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened, friends, loading } = useFriends();
-  const { getAlbumPrestigeTier, togglePinAlbum, getAlbumTracksWithRankings, getTrackPrestigeTier } = usePrestige();
+  const { getAlbumPrestigeTier, togglePinAlbum, getAlbumTracksWithRankings } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -163,10 +163,6 @@ const AlbumPage: React.FC = () => {
               </div>
               <div className="space-y-2">
                 {albumTracks.tracks?.map((track) => {
-                  const trackPrestige = track.hasUserRating ? getTrackPrestigeTier(track.userListeningTime) : null;
-                  const minutes = Math.floor(track.userListeningTime / 60);
-                  const seconds = track.userListeningTime % 60;
-                  
                   return (
                     <div
                       key={track.trackId}
@@ -188,16 +184,6 @@ const AlbumPage: React.FC = () => {
                           {track.artists?.map((artist) => artist.name).join(', ')}
                         </div>
                       </div>
-                      {track.hasUserRating && (
-                        <div className="text-right text-sm">
-                          <div className="text-gray-300">
-                            {minutes}:{seconds.toString().padStart(2, '0')}
-                          </div>
-                          {trackPrestige && (
-                            <div className="text-xs text-yellow-400">{trackPrestige}</div>
-                          )}
-                        </div>
-                      )}
                       <div className="ml-4 text-right">
                         {track.isPinned && <span className="text-yellow-500">📌</span>}
                         {track.isFavorite && <span className="text-red-500">❤️</span>}

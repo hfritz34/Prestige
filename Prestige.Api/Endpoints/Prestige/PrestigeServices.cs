@@ -436,6 +436,23 @@ namespace Prestige.Api.Endpoints.Prestige
                                 IsFromDatabase = false
                             });
                         }
+                        else
+                        {
+                            // Update the existing database track with correct track number
+                            var dbTrackIndex = allTrackData.FindIndex(t => ((dynamic)t).Id == existingTrack.Id);
+                            if (dbTrackIndex >= 0)
+                            {
+                                allTrackData[dbTrackIndex] = new
+                                {
+                                    Id = existingTrack.Id,
+                                    Name = existingTrack.Name,
+                                    Artists = existingTrack.Artists,
+                                    DurationMs = existingTrack.DurationMs,
+                                    TrackNumber = spotifyTrack.TrackNumber, // Use Spotify track number
+                                    IsFromDatabase = true
+                                };
+                            }
+                        }
                     }
                 }
                 catch (System.Exception ex)
@@ -482,9 +499,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 };
             }).ToList();
 
-            // Get rankings from user's actual rating positions within this album
-            var rankedTracks = tracksWithRankings
-                .Where(t => t.HasUserRating)
+            // Create final tracks list with proper album ranking for rated tracks, ordered by track number
+            var finalTracks = tracksWithRankings
                 .Select(track =>
                 {
                     var userTrackData = userTrackLookup.ContainsKey(track.TrackId) ? userTrackLookup[track.TrackId] : null;
@@ -501,41 +517,22 @@ namespace Prestige.Api.Endpoints.Prestige
                         track.IsPinned,
                         track.IsFavorite,
                         track.IsFromDatabase,
-                        AlbumRanking = userTrackData?.RatingPosition ?? 1
+                        AlbumRanking = track.HasUserRating ? userTrackData?.RatingPosition : (int?)null
                     };
                 })
-                .OrderBy(t => t.AlbumRanking)
+                .OrderBy(t => t.TrackNumber) // Order by actual album track number
+                .Cast<object>()
                 .ToList();
 
-            // Add unrated tracks with null ranking
-            var unratedTracks = tracksWithRankings
-                .Where(t => !t.HasUserRating)
-                .Select(track => new
-                {
-                    track.TrackId,
-                    track.TrackName,
-                    track.Artists,
-                    track.DurationMs,
-                    track.TrackNumber,
-                    track.UserListeningTime,
-                    track.UserRating,
-                    track.HasUserRating,
-                    track.IsPinned,
-                    track.IsFavorite,
-                    track.IsFromDatabase,
-                    AlbumRanking = (int?)null
-                })
-                .ToList();
-
-            var allTracks = rankedTracks.Cast<object>().Concat(unratedTracks.Cast<object>()).ToList();
+            var ratedTracksCount = tracksWithRankings.Count(t => t.HasUserRating);
 
             return new
             {
                 AlbumId = albumId,
                 TotalTracks = allTrackData.Count,
-                RatedTracks = rankedTracks.Count,
-                AllTracksRated = rankedTracks.Count == allTrackData.Count,
-                Tracks = allTracks
+                RatedTracks = ratedTracksCount,
+                AllTracksRated = ratedTracksCount == allTrackData.Count,
+                Tracks = finalTracks
             };
         }
     }
