@@ -3,15 +3,36 @@ import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige from '@/hooks/usePrestige';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened, friends, loading } = useFriends();
-  const { getAlbumPrestigeTier } = usePrestige();
-  const [showFriends, setShowFriends] = useState(false);
-  const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
-
+  const { getAlbumPrestigeTier, togglePinAlbum } = usePrestige();
+  const { user } = useAuth0();
+  const queryClient = useQueryClient();
   const location = useLocation();
   const album = location.state;
+  
+  const [showFriends, setShowFriends] = useState(false);
+  const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
+  const [isPinned, setIsPinned] = useState(album?.isPinned || false);
+
+  const pinMutation = useMutation({
+    mutationFn: async () => {
+      const userId = user?.sub?.split('|').pop();
+      if (userId) {
+        await togglePinAlbum(userId, album.albumId);
+      }
+    },
+    onSuccess: () => {
+      setIsPinned(!isPinned);
+      queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
+      queryClient.invalidateQueries({ queryKey: ['topTracks'] });
+      queryClient.invalidateQueries({ queryKey: ['topAlbums'] });
+      queryClient.invalidateQueries({ queryKey: ['topArtists'] });
+    }
+  });
 
   const handleShowFriends = async () => {
     if (!showFriends) {
@@ -62,12 +83,20 @@ const AlbumPage: React.FC = () => {
           </div>
         </div>
       </div>
-      <button
-        onClick={handleShowFriends}
-        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
-      >
-        {showFriends ? 'Hide Friends' : 'Compare With Friends'}
-      </button>
+      <div className="flex gap-4 mb-4">
+        <button
+          onClick={() => pinMutation.mutate()}
+          className={`${isPinned ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-600 hover:bg-gray-700'} text-white font-bold py-2 px-4 rounded`}
+        >
+          {isPinned ? '📌 Pinned' : '📌 Pin'}
+        </button>
+        <button
+          onClick={handleShowFriends}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showFriends ? 'Hide Friends' : 'Compare With Friends'}
+        </button>
+      </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">
           {loading && <p>Loading friends...</p>}

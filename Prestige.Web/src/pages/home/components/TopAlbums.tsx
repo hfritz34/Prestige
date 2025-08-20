@@ -27,13 +27,14 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
   };
 
   const handleAlbumClick = (album: UserAlbumResponse) => {
-    console.log(`TopAlbums - Album Total Time (minutes): ${Math.floor(album.totalTime / 60)}`);
+    console.log("Navigating to album with data:", album);
     redirectToAlbumPage({
       albumId: album.album.id,
       albumName: album.album.name,
       artistName: album.album.artists.map(artist => artist.name).join(", "),
       totalTime: album.totalTime,
       imageUrl: album.album.images[0].url,
+      isPinned: album.isPinned,
     });
   };
 

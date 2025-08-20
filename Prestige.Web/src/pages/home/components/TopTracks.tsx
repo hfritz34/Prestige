@@ -27,6 +27,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
   };
 
   const handleTrackClick = (track: UserTrackResponse) => {
+    console.log("Navigating to track with data:", track);
     redirectToSongPage({
       trackId: track.track.id,
       trackName: track.track.name,
@@ -34,6 +35,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
       artistName: track.track.artists.map((artist) => artist.name).join(", "),
       totalTime: track.totalTime,
       imageUrl: track.track.album.images[0]?.url,
+      isPinned: track.isPinned,
     });
   };
 

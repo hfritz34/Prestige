@@ -334,6 +334,7 @@ namespace Prestige.Api.Endpoints.Prestige
                 .Include(ut => ut.Track)
                     .ThenInclude(t => t.Album)
                         .ThenInclude(a => a.Images)
+                .Include(ut => ut.Track.Album.Artists)
                 .Include(ut => ut.Track.Artists)
                     .ThenInclude(a => a.Images)
                 .Where(ut => ut.User.Id == userId && ut.IsPinned)

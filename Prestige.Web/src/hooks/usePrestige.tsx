@@ -11,7 +11,10 @@ const usePrestige = () => {
     };
 
     const togglePinTrack = async (userId: string, trackId: string) => {
-      return await http.post({}, `prestige/${userId}/tracks/${trackId}/pin`);
+      console.log(`Toggling pin for track ${trackId} for user ${userId}`);
+      const result = await http.post({}, `prestige/${userId}/tracks/${trackId}/pin`);
+      console.log("Pin track result:", result);
+      return result;
     };
 
     const togglePinAlbum = async (userId: string, albumId: string) => {
@@ -23,7 +26,9 @@ const usePrestige = () => {
     };
 
     const getPinnedItems = async (userId: string) => {
-      return await http.getOne(`prestige/${userId}/pinned`);
+      const result = await http.getOne(`prestige/${userId}/pinned`);
+      console.log("Pinned items from API:", result);
+      return result;
     };
 
     const getTrackPrestigeTier = (totalTime: number): string => {

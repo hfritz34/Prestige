@@ -87,17 +87,24 @@ const HomePage: React.FC = () => {
     enabled: !!user?.sub && timeFilter === "Recent",
   });
 
-  const { data: pinnedItems, isLoading: pinnedLoading } = useQuery({
+  const { data: pinnedItems, isLoading: pinnedLoading, error: pinnedError } = useQuery({
     queryKey: ["pinnedItems", user?.sub],
     queryFn: async () => {
       const userId = user?.sub?.split("|").pop();
       if (userId) {
-        const items = await getPinnedItems(userId);
-        return items;
+        try {
+          const items = await getPinnedItems(userId);
+          return items;
+        } catch (error) {
+          console.error("Error fetching pinned items:", error);
+          return { tracks: [], albums: [], artists: [] };
+        }
       }
       return { tracks: [], albums: [], artists: [] };
     },
     enabled: !!user?.sub && timeFilter === "Pinned",
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   if (tracksLoading || albumsLoading || artistsLoading || recentLoading || pinnedLoading) {
@@ -116,6 +123,10 @@ const HomePage: React.FC = () => {
     return <div>Error fetching top artists: {artistsError.toString()}</div>;
   }
 
+  if (pinnedError) {
+    console.error("Pinned items error:", pinnedError);
+  }
+
   return (
     <div className="bg-gray-800 text-white min-h-screen overflow-visible">
       {currentlyPlaying && (
@@ -129,7 +140,7 @@ const HomePage: React.FC = () => {
       <h1 className="text-3xl font-bold text-center mt-4">Prestige</h1>
       
       <div className="mt-4">
-        <HomeSearchBar />
+        <HomeSearchBar contentType={contentType} />
       </div>
 
       {/* Content Type Buttons */}
@@ -174,13 +185,22 @@ const HomePage: React.FC = () => {
              timeFilter === "Recent" ? "Recently Updated" : "Pinned Items"}
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-gray-800 text-white">
-            <DropdownMenuItem onSelect={() => setTimeFilter("AllTime")}>
+            <DropdownMenuItem onSelect={() => {
+              console.log("Switching to AllTime");
+              setTimeFilter("AllTime");
+            }}>
               All Time
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setTimeFilter("Recent")}>
+            <DropdownMenuItem onSelect={() => {
+              console.log("Switching to Recent");
+              setTimeFilter("Recent");
+            }}>
               Recently Updated
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setTimeFilter("Pinned")}>
+            <DropdownMenuItem onSelect={() => {
+              console.log("Switching to Pinned");
+              setTimeFilter("Pinned");
+            }}>
               Pinned Items
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -212,14 +232,22 @@ const HomePage: React.FC = () => {
       
       {timeFilter === "Pinned" && (
         <>
-          {contentType === "Tracks" && (
-            <TopTracks topTracks={pinnedItems?.tracks || []} />
-          )}
-          {contentType === "Albums" && (
-            <TopAlbums topAlbums={pinnedItems?.albums || []} />
-          )}
-          {contentType === "Artists" && (
-            <TopArtists topArtists={pinnedItems?.artists || []} />
+          {pinnedError ? (
+            <div className="text-center text-red-400 p-8">
+              <p>Error loading pinned items. Please try again.</p>
+            </div>
+          ) : (
+            <>
+              {contentType === "Tracks" && (
+                <TopTracks topTracks={pinnedItems?.tracks || []} />
+              )}
+              {contentType === "Albums" && (
+                <TopAlbums topAlbums={pinnedItems?.albums || []} />
+              )}
+              {contentType === "Artists" && (
+                <TopArtists topArtists={pinnedItems?.artists || []} />
+              )}
+            </>
           )}
         </>
       )}

@@ -14,12 +14,14 @@ const SongPage: React.FC = () => {
   const { currentlyPlaying } = useCurrentlyPlaying();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
-  const [showFriends, setShowFriends] = useState(false);
-  const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
-  const [isPinned, setIsPinned] = useState(false);
-
   const location = useLocation();
   const track = location.state;
+  
+  console.log("SongPage - Received track data:", track);
+  
+  const [showFriends, setShowFriends] = useState(false);
+  const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
+  const [isPinned, setIsPinned] = useState(track?.isPinned || false);
   
   const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
 
@@ -33,6 +35,9 @@ const SongPage: React.FC = () => {
     onSuccess: () => {
       setIsPinned(!isPinned);
       queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
+      queryClient.invalidateQueries({ queryKey: ['topTracks'] });
+      queryClient.invalidateQueries({ queryKey: ['topAlbums'] });
+      queryClient.invalidateQueries({ queryKey: ['topArtists'] });
     }
   });
 

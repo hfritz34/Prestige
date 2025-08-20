@@ -27,12 +27,13 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
   };
 
   const handleArtistClick = (artist: UserArtistResponse) => {
-    console.log(`TopArtists - Artist Total Time (minutes): ${Math.floor(artist.totalTime / 60)}`);
+    console.log("Navigating to artist with data:", artist);
     redirectToArtistPage({
       artistId: artist.artist.id,
       artistName: artist.artist.name,
       totalTime: artist.totalTime,
       imageUrl: artist.artist.images[0]?.url,
+      isPinned: artist.isPinned,
     });
   };
 

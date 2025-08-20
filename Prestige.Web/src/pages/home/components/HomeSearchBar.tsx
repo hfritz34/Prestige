@@ -11,7 +11,11 @@ import { useNavigate } from "react-router-dom";
 import usePrestige from "@/hooks/usePrestige";
 import { useAuth0 } from "@auth0/auth0-react";
 
-const HomeSearchBar: React.FC = () => {
+type HomeSearchBarProps = {
+  contentType: "Tracks" | "Albums" | "Artists";
+};
+
+const HomeSearchBar: React.FC<HomeSearchBarProps> = ({ contentType }) => {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [debouncedSearch] = useDebounce(searchTerm.trim(), 500);
   const spotify = useSpotify();
@@ -60,26 +64,26 @@ const HomeSearchBar: React.FC = () => {
         type="text"
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        placeholder="Search for any song, album, or artist..."
+        placeholder={`Search for ${contentType.toLowerCase()}...`}
         className="mb-2 w-3/4 max-w-xl"
       />
       {debouncedSearch && data && (
         <ScrollArea className="w-3/4 max-w-xl max-h-96 p-2 bg-gray-900 rounded-md">
-          {data?.tracks?.slice(0, 5).map((track) => (
+          {contentType === "Tracks" && data?.tracks?.slice(0, 10).map((track) => (
             <TrackSearchCard 
               key={track.id} 
               track={track} 
               onClick={() => handleTrackClick(track.id)}
             />
           ))}
-          {data?.albums?.slice(0, 5).map((album) => (
+          {contentType === "Albums" && data?.albums?.slice(0, 10).map((album) => (
             <AlbumSearchCard 
               key={album.id} 
               album={album} 
               onClick={() => handleAlbumClick(album.id)}
             />
           ))}
-          {data?.artists?.slice(0, 5).map((artist) => (
+          {contentType === "Artists" && data?.artists?.slice(0, 10).map((artist) => (
             <ArtistSearchCard 
               key={artist.id} 
               artist={artist} 
