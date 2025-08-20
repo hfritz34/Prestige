@@ -585,6 +585,7 @@ namespace Prestige.Api.Endpoints.Spotify
                 Name = track.Name,
                 Artists = track.Artists,
                 DurationMs = track.DurationMs,
+                TrackNumber = track.TrackNumber,
                 Album = albumResponse // Add the full album info
             }).ToList();
 
