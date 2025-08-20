@@ -5,8 +5,6 @@ import { useAuth0 } from "@auth0/auth0-react";
 import TopTracks from "./components/TopTracks";
 import TopAlbums from "./components/TopAlbums";
 import TopArtists from "./components/TopArtists";
-import RecentlyPlayed from "./components/RecentlyPlayed";
-import Pinned from "./components/Pinned";
 import { HomeSearchBar } from "./components/HomeSearchBar";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -21,7 +19,8 @@ import usePrestige from "@/hooks/usePrestige";
 import useHttp from "@/hooks/useHttp";
 
 const HomePage: React.FC = () => {
-  const [viewType, setViewType] = useState<"TopTracks" | "TopAlbums" | "TopArtists" | "RecentlyPlayed" | "Pinned">("TopTracks");
+  const [contentType, setContentType] = useState<"Tracks" | "Albums" | "Artists">("Tracks");
+  const [timeFilter, setTimeFilter] = useState<"AllTime" | "Recent" | "Pinned">("AllTime");
   const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
   const { user } = useAuth0();
   const { currentlyPlaying, totalTime } = useCurrentlyPlaying();
@@ -39,7 +38,7 @@ const HomePage: React.FC = () => {
       }
       return [];
     },
-    enabled: !!user?.sub && viewType === "TopTracks",
+    enabled: !!user?.sub && contentType === "Tracks" && timeFilter === "AllTime",
   });
 
   const { data: topAlbums, error: albumsError, isLoading: albumsLoading } = useQuery<UserAlbumResponse[]>({
@@ -52,7 +51,7 @@ const HomePage: React.FC = () => {
       }
       return [];
     },
-    enabled: !!user?.sub && viewType === "TopAlbums",
+    enabled: !!user?.sub && contentType === "Albums" && timeFilter === "AllTime",
   });
 
   const { data: topArtists, error: artistsError, isLoading: artistsLoading } = useQuery<UserArtistResponse[]>({
@@ -65,7 +64,7 @@ const HomePage: React.FC = () => {
       }
       return [];
     },
-    enabled: !!user?.sub && viewType === "TopArtists",
+    enabled: !!user?.sub && contentType === "Artists" && timeFilter === "AllTime",
   });
 
   const { data: recentItems, isLoading: recentLoading } = useQuery({
@@ -85,7 +84,7 @@ const HomePage: React.FC = () => {
       }
       return { tracks: [], albums: [], artists: [] };
     },
-    enabled: !!user?.sub && viewType === "RecentlyPlayed",
+    enabled: !!user?.sub && timeFilter === "Recent",
   });
 
   const { data: pinnedItems, isLoading: pinnedLoading } = useQuery({
@@ -98,7 +97,7 @@ const HomePage: React.FC = () => {
       }
       return { tracks: [], albums: [], artists: [] };
     },
-    enabled: !!user?.sub && viewType === "Pinned",
+    enabled: !!user?.sub && timeFilter === "Pinned",
   });
 
   if (tracksLoading || albumsLoading || artistsLoading || recentLoading || pinnedLoading) {
@@ -133,44 +132,96 @@ const HomePage: React.FC = () => {
         <HomeSearchBar />
       </div>
 
+      {/* Content Type Buttons */}
+      <div className="flex justify-center mt-4 gap-2">
+        <button
+          onClick={() => setContentType("Tracks")}
+          className={`px-4 py-2 rounded-md font-medium ${
+            contentType === "Tracks"
+              ? "bg-purple-600 text-white"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Tracks
+        </button>
+        <button
+          onClick={() => setContentType("Albums")}
+          className={`px-4 py-2 rounded-md font-medium ${
+            contentType === "Albums"
+              ? "bg-purple-600 text-white"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Albums
+        </button>
+        <button
+          onClick={() => setContentType("Artists")}
+          className={`px-4 py-2 rounded-md font-medium ${
+            contentType === "Artists"
+              ? "bg-purple-600 text-white"
+              : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+          }`}
+        >
+          Artists
+        </button>
+      </div>
+
+      {/* Time Filter Dropdown */}
       <div className="flex justify-center mt-4">
         <DropdownMenu>
-          <DropdownMenuTrigger className="text-white bg-gray-800 p-2 rounded-md">
-            {viewType === "TopTracks" ? "Tracks" : 
-             viewType === "TopAlbums" ? "Albums" : 
-             viewType === "TopArtists" ? "Artists" :
-             viewType === "RecentlyPlayed" ? "Recently Played" : "Pinned"}
+          <DropdownMenuTrigger className="text-white bg-gray-800 p-2 rounded-md border border-gray-600">
+            {timeFilter === "AllTime" ? "All Time" : 
+             timeFilter === "Recent" ? "Recently Updated" : "Pinned Items"}
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-gray-800 text-white">
-            <DropdownMenuItem onSelect={() => setViewType("TopTracks")}>
-              Tracks
+            <DropdownMenuItem onSelect={() => setTimeFilter("AllTime")}>
+              All Time
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setViewType("TopAlbums")}>
-              Albums
+            <DropdownMenuItem onSelect={() => setTimeFilter("Recent")}>
+              Recently Updated
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setViewType("TopArtists")}>
-              Artists
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setViewType("RecentlyPlayed")}>
-              Recently Played
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setViewType("Pinned")}>
-              Pinned
+            <DropdownMenuItem onSelect={() => setTimeFilter("Pinned")}>
+              Pinned Items
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
       
-      {viewType === "TopTracks" ? (
-        <TopTracks topTracks={topTracks || []} />
-      ) : viewType === "TopAlbums" ? (
-        <TopAlbums topAlbums={topAlbums || []} />
-      ) : viewType === "TopArtists" ? (
-        <TopArtists topArtists={topArtists || []} />
-      ) : viewType === "RecentlyPlayed" ? (
-        <RecentlyPlayed recentItems={recentItems || { tracks: [], albums: [], artists: [] }} />
-      ) : (
-        <Pinned pinnedItems={pinnedItems || { tracks: [], albums: [], artists: [] }} />
+      {/* Render based on content type and time filter */}
+      {timeFilter === "AllTime" && (
+        <>
+          {contentType === "Tracks" && <TopTracks topTracks={topTracks || []} />}
+          {contentType === "Albums" && <TopAlbums topAlbums={topAlbums || []} />}
+          {contentType === "Artists" && <TopArtists topArtists={topArtists || []} />}
+        </>
+      )}
+      
+      {timeFilter === "Recent" && (
+        <>
+          {contentType === "Tracks" && (
+            <TopTracks topTracks={recentItems?.tracks || []} />
+          )}
+          {contentType === "Albums" && (
+            <TopAlbums topAlbums={recentItems?.albums || []} />
+          )}
+          {contentType === "Artists" && (
+            <TopArtists topArtists={recentItems?.artists || []} />
+          )}
+        </>
+      )}
+      
+      {timeFilter === "Pinned" && (
+        <>
+          {contentType === "Tracks" && (
+            <TopTracks topTracks={pinnedItems?.tracks || []} />
+          )}
+          {contentType === "Albums" && (
+            <TopAlbums topAlbums={pinnedItems?.albums || []} />
+          )}
+          {contentType === "Artists" && (
+            <TopArtists topArtists={pinnedItems?.artists || []} />
+          )}
+        </>
       )}
       
       <div className="mt-10">
