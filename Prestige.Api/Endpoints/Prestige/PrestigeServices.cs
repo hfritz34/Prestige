@@ -409,6 +409,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     Name = track.Name,
                     Artists = track.Artists,
                     DurationMs = track.DurationMs,
+                    TrackNumber = 0, // Database tracks don't have track numbers yet, will use 0 as fallback
                     IsFromDatabase = true
                 });
             }
@@ -431,6 +432,7 @@ namespace Prestige.Api.Endpoints.Prestige
                                 Name = spotifyTrack.Name,
                                 Artists = spotifyTrack.Artists?.Select(a => new { Id = a.Id, Name = a.Name }) ?? Enumerable.Empty<object>(),
                                 DurationMs = spotifyTrack.DurationMs,
+                                TrackNumber = spotifyTrack.TrackNumber,
                                 IsFromDatabase = false
                             });
                         }
@@ -452,8 +454,15 @@ namespace Prestige.Api.Endpoints.Prestige
             // Create lookup for user data
             var userTrackLookup = userTracks.ToDictionary(ut => ut.Track.Id, ut => ut);
 
+            // Sort by track number to maintain album order
+            var sortedTrackData = allTrackData.OrderBy(trackData =>
+            {
+                dynamic track = trackData;
+                return (int)track.TrackNumber;
+            }).ToList();
+
             // Create response with ranking within album context
-            var tracksWithRankings = allTrackData.Select(trackData =>
+            var tracksWithRankings = sortedTrackData.Select(trackData =>
             {
                 dynamic track = trackData;
                 var userTrack = userTrackLookup.ContainsKey((string)track.Id) ? userTrackLookup[(string)track.Id] : null;
@@ -463,6 +472,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     TrackName = (string)track.Name,
                     Artists = track.Artists,
                     DurationMs = (int)track.DurationMs,
+                    TrackNumber = (int)track.TrackNumber,
                     UserListeningTime = userTrack?.TotalTime ?? 0,
                     UserRating = userTrack?.PersonalRatingScore,
                     HasUserRating = userTrack != null,
@@ -482,6 +492,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     track.TrackName,
                     track.Artists,
                     track.DurationMs,
+                    track.TrackNumber,
                     track.UserListeningTime,
                     track.UserRating,
                     track.HasUserRating,
@@ -501,6 +512,7 @@ namespace Prestige.Api.Endpoints.Prestige
                     track.TrackName,
                     track.Artists,
                     track.DurationMs,
+                    track.TrackNumber,
                     track.UserListeningTime,
                     track.UserRating,
                     track.HasUserRating,

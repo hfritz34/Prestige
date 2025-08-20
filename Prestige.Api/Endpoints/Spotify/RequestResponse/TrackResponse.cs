@@ -10,6 +10,10 @@ namespace Prestige.Api.Endpoints.Spotify.RequestResponse
 
         [JsonPropertyName("duration_ms")]
         public int DurationMs { get; set; }
+        
+        [JsonPropertyName("track_number")]
+        public int TrackNumber { get; set; }
+        
         public AlbumResponse Album { get; set; }
         public IEnumerable<ArtistResponse> Artists { get; set; }
 
