@@ -7,11 +7,31 @@
                 "excludedTypes": "Request"
             },
             "enableLiveMetricsFilters": true
+        },
+        "logLevel": {
+            "default": "Information",
+            "Host.Results": "Information",
+            "Function": "Information",
+            "Host.Aggregator": "Trace"
         }
     },
     "extensions": {
         "http": {
-            "routePrefix": "api"
+            "routePrefix": "api",
+            "cors": {
+                "allowedOrigins": [
+                    "http://localhost:5173",
+                    "http://localhost:3000",
+                    "https://localhost:5173",
+                    "https://portal.azure.com",
+                    "https://prestigefunctions.azurewebsites.net",
+                    "https://prestige.azurewebsites.net",
+                    "https://prestige-web.azurewebsites.net",
+                    "https://prestige.app",
+                    "https://*.prestige.app"
+                ],
+                "supportCredentials": true
+            }
         },
         "cosmosDB": {
             "connectionMode": "Direct",
@@ -19,22 +39,6 @@
             "leaseOptions": {
                 "leasePrefix": "prestige"
             }
-        }
-    },
-    "host": {
-        "cors": {
-            "allowedOrigins": [
-                "http://localhost:5173",
-                "http://localhost:3000",
-                "https://localhost:5173",
-                "https://portal.azure.com",
-                "https://prestigefunctions.azurewebsites.net",
-                "https://prestige.azurewebsites.net",
-                "https://prestige-web.azurewebsites.net",
-                "https://*.prestige.app",
-                "https://prestige.app"
-            ],
-            "supportCredentials": false
         }
     },
     "functionTimeout": "00:30:00"

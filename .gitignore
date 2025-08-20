@@ -7,6 +7,8 @@
 ImportDataExample.txt
 CosmosDbExample.txt
 local.settings.json
+azure.settings.json
+*.settings.json
 PRESTIGE_APPLICATION_OVERVIEW.txt
 BeliExplanation.md
 
