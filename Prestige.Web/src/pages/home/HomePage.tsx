@@ -81,10 +81,10 @@ const HomePage: React.FC = () => {
         // Get items updated in the last hour
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
         try {
-          const response = await http.getOne<RecentlyUpdatedResponse>(`library/${userId}/recently-updated?since=${oneHourAgo}`);
+          const response = await http.getOne<RecentlyUpdatedResponse>(`api/library/${userId}/recently-updated?since=${oneHourAgo}`);
           return response;
         } catch (error) {
-          // If endpoint doesn't exist yet, return empty
+          console.error("Error fetching recently updated items:", error);
           return { tracks: [], albums: [], artists: [] };
         }
       }

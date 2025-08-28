@@ -3,15 +3,26 @@ using Microsoft.EntityFrameworkCore;
 using Prestige.Api.Data;
 using Prestige.Api.Endpoints;
 using Prestige.Api.Endpoints.Library.RequestResponse;
+using Prestige.Api.Endpoints.Prestige.RequestResponse;
+using Prestige.Api.Endpoints.Spotify.RequestResponse;
 using Prestige.Api.Exceptions;
+using Prestige.Api.Services;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace Prestige.Api.Endpoints.Library
 {
     public class LibraryServices : BaseService
     {
-        public LibraryServices(PrestigeContext db, ILogger<LibraryServices> logger, ClaimsPrincipal principal, IConfiguration config) 
+        private readonly RecentlyPlayedCosmosService _cosmosService;
+        private readonly IDistributedCache _cache;
+        private static readonly Dictionary<string, (DateTime expiry, RecentlyUpdatedResponse data)> _memoryCache = new();
+
+        public LibraryServices(PrestigeContext db, ILogger<LibraryServices> logger, ClaimsPrincipal principal, IConfiguration config, RecentlyPlayedCosmosService cosmosService, IDistributedCache cache) 
             : base(db, logger, principal, config)
         {
+            _cosmosService = cosmosService;
+            _cache = cache;
         }
 
         public async Task<ItemDetailsResponse> GetItemDetailsAsync(string itemType, string itemId)
@@ -368,6 +379,180 @@ namespace Prestige.Api.Endpoints.Library
             }
 
             return results;
+        }
+
+        public async Task<RecentlyUpdatedResponse> GetRecentlyUpdatedAsync(string userId, DateTime since)
+        {
+            var currentUserId = GetUserId();
+            if (userId != currentUserId)
+            {
+                _logger.LogWarning($"Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
+                throw new UnauthorizedAccessException($"User {userId} is not authorized to access this resource");
+            }
+
+            try
+            {
+                // Try memory cache first
+                var cacheKey = $"recently_updated:{userId}";
+                if (_memoryCache.TryGetValue(cacheKey, out var cached) && cached.expiry > DateTime.UtcNow)
+                {
+                    _logger.LogInformation($"Returning memory cached recently updated data for user {userId}");
+                    return cached.data;
+                }
+
+                // Try distributed cache as fallback
+                string? cachedData = null;
+                try
+                {
+                    cachedData = await _cache.GetStringAsync(cacheKey);
+                }
+                catch (System.Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, $"Failed to get distributed cached data for user {userId}");
+                }
+                
+                if (!string.IsNullOrEmpty(cachedData))
+                {
+                    _logger.LogInformation($"Returning distributed cached recently updated data for user {userId}");
+                    return JsonSerializer.Deserialize<RecentlyUpdatedResponse>(cachedData) ?? new RecentlyUpdatedResponse();
+                }
+
+                _logger.LogInformation($"No cached data found for user {userId}, returning empty response");
+                return new RecentlyUpdatedResponse();
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting recently updated items for user {userId}");
+                return new RecentlyUpdatedResponse();
+            }
+        }
+
+        public async Task ProcessRecentlyPlayedBatchUnauthenticatedAsync(BatchUpdateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation($"Processing batch {request.BatchId} with {request.Items.Count} items");
+
+                if (request?.Items == null || !request.Items.Any())
+                {
+                    _logger.LogWarning($"Batch {request?.BatchId} has no items to process");
+                    return;
+                }
+
+                // Group items by user
+                var userGroups = request.Items.GroupBy(i => i.UserId).ToList();
+                
+                foreach (var userGroup in userGroups)
+                {
+                    var userId = userGroup.Key;
+                    var userItems = userGroup.ToList();
+                    
+                    _logger.LogInformation($"Processing {userItems.Count} items for user {userId}");
+
+                    // Get unique track IDs for this user
+                    var trackIds = userItems.Select(i => i.TrackId).Distinct().ToList();
+                    _logger.LogInformation($"Found {trackIds.Count} unique track IDs for user {userId}: {string.Join(", ", trackIds)}");
+
+                    // Query SQL database for these tracks and related data
+                    _logger.LogDebug($"Querying UserTracks for user {userId}");
+                    var userTracks = await PrestigeDb.UserTracks
+                        .Where(ut => ut.User.Id == userId && trackIds.Contains(ut.Track.Id))
+                        .Include(ut => ut.Track)
+                            .ThenInclude(t => t.Album)
+                                .ThenInclude(a => a.Images)
+                        .Include(ut => ut.Track)
+                            .ThenInclude(t => t.Artists)
+                                .ThenInclude(ar => ar.Images)
+                        .Include(ut => ut.Track.Album.Artists)
+                            .ThenInclude(ar => ar.Images)
+                        .Include(ut => ut.User)
+                        .Take(60) // Limit as requested
+                        .ToListAsync();
+
+                    // Get unique album IDs from the tracks
+                    var albumIds = userTracks.Select(ut => ut.Track.Album?.Id).Where(id => id != null).Distinct().ToList();
+                    var userAlbums = await PrestigeDb.UserAlbums
+                        .Where(ua => ua.User.Id == userId && albumIds.Contains(ua.Album.Id))
+                        .Include(ua => ua.Album)
+                            .ThenInclude(a => a.Images)
+                        .Include(ua => ua.Album)
+                            .ThenInclude(a => a.Artists)
+                                .ThenInclude(ar => ar.Images)
+                        .Include(ua => ua.User)
+                        .Take(60)
+                        .ToListAsync();
+
+                    // Get unique artist IDs from the tracks
+                    var artistIds = userTracks.SelectMany(ut => ut.Track.Artists?.Select(a => a.Id) ?? new List<string>()).Distinct().ToList();
+                    var userArtists = await PrestigeDb.UserArtists
+                        .Where(ua => ua.User.Id == userId && artistIds.Contains(ua.Artist.Id))
+                        .Include(ua => ua.Artist)
+                            .ThenInclude(a => a.Images)
+                        .Include(ua => ua.User)
+                        .Take(60)
+                        .ToListAsync();
+
+                    // Convert to response DTOs
+                    var recentlyUpdatedResponse = new RecentlyUpdatedResponse
+                    {
+                        Tracks = userTracks.Select(ut => new UserTrackResponse
+                        {
+                            Track = new TrackResponse(ut.Track),
+                            TotalTime = ut.TotalTime,
+                            UserId = ut.User.Id,
+                            IsFavorite = ut.IsFavorite,
+                            IsPinned = ut.IsPinned
+                        }).ToList(),
+
+                        Albums = userAlbums.Select(ua => new UserAlbumResponse
+                        {
+                            Album = new AlbumResponse(ua.Album),
+                            TotalTime = ua.TotalTime,
+                            UserId = ua.User.Id,
+                            IsFavorite = ua.IsFavorite,
+                            IsPinned = ua.IsPinned
+                        }).ToList(),
+
+                        Artists = userArtists.Select(ua => new UserArtistResponse
+                        {
+                            Artist = new ArtistResponse(ua.Artist),
+                            TotalTime = ua.TotalTime,
+                            UserId = ua.User.Id,
+                            IsFavorite = ua.IsFavorite,
+                            IsPinned = ua.IsPinned
+                        }).ToList()
+                    };
+
+                    // Cache the result for 2 hours (until next potential batch)
+                    var cacheKey = $"recently_updated:{userId}";
+                    
+                    // Store in memory cache first (always works)
+                    _memoryCache[cacheKey] = (DateTime.UtcNow.AddHours(2), recentlyUpdatedResponse);
+                    _logger.LogInformation($"Memory cached recently updated data for user {userId}: {recentlyUpdatedResponse.Tracks.Count} tracks, {recentlyUpdatedResponse.Albums.Count} albums, {recentlyUpdatedResponse.Artists.Count} artists");
+                    
+                    // Try distributed cache as well
+                    try
+                    {
+                        var serializedData = JsonSerializer.Serialize(recentlyUpdatedResponse);
+                        var cacheOptions = new DistributedCacheEntryOptions
+                        {
+                            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(2)
+                        };
+
+                        await _cache.SetStringAsync(cacheKey, serializedData, cacheOptions);
+                        _logger.LogInformation($"Distributed cached recently updated data for user {userId}");
+                    }
+                    catch (System.Exception cacheEx)
+                    {
+                        _logger.LogWarning(cacheEx, $"Failed to distributed cache data for user {userId}, using memory cache only");
+                    }
+                }
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing recently played batch {request.BatchId}");
+                throw;
+            }
         }
     }
 }

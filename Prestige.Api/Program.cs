@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.Azure.Cosmos;
+using System.Text.Json;
 using Prestige.Api.Auth;
 using Prestige.Api.Data;
 using Prestige.Api.Domain;
@@ -40,6 +42,7 @@ namespace Prestige.Api
             AddRateLimiting(builder);
             AddHangfire(builder);
             AddDbContext(builder);
+            AddCosmosDB(builder);
             AddServices(builder);
             AddControllers(builder);
             AddCorsPolicy(builder);
@@ -304,6 +307,26 @@ namespace Prestige.Api
             }
         }
 
+        private static void AddCosmosDB(WebApplicationBuilder builder)
+        {
+            var cosmosConnectionString = builder.Configuration.GetConnectionString("CosmosDB");
+            if (string.IsNullOrWhiteSpace(cosmosConnectionString))
+            {
+                // Skip CosmosDB if not configured - recently updated will be empty
+                builder.Services.AddSingleton<CosmosClient>(_ => null!);
+                return;
+            }
+
+            var cosmosClientOptions = new CosmosClientOptions
+            {
+                ConnectionMode = ConnectionMode.Gateway,
+                LimitToEndpoint = false
+            };
+
+            builder.Services.AddSingleton<CosmosClient>(sp =>
+                new CosmosClient(cosmosConnectionString, cosmosClientOptions));
+        }
+
         private static void AddServices(WebApplicationBuilder builder)
         {
             builder.Services.AddScoped<UserServices>();
@@ -315,6 +338,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<Endpoints.Search.SearchServices>();
             builder.Services.AddScoped<LibraryServices>();
             builder.Services.AddScoped<RatingBackgroundJobs>();
+            builder.Services.AddScoped<RecentlyPlayedCosmosService>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)

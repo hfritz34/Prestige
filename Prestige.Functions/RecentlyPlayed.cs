@@ -64,6 +64,8 @@ namespace RecentlyPlayedTrigger
                 var batchId = Guid.NewGuid().ToString();
                 var users = await GetAllUsersAsync();
 
+                var allBatchItems = new List<BatchItem>();
+
                 foreach (var user in users)
                 {
                     var (spotifyAccessToken, spotifyRefreshToken) = await GetSpotifyTokensAsync(user.Id);
@@ -74,12 +76,19 @@ namespace RecentlyPlayedTrigger
                     if (recentlyPlayedTracksJson.GetProperty("items").GetArrayLength() > 0)
                     {
                         _logger.LogInformation($"Fetched recently played tracks for user: {user.Id}");
-                        await StoreTracksInCosmosDB(user.Id, batchId, recentlyPlayedTracksJson);
+                        var userBatchItems = await StoreTracksInCosmosDB(user.Id, batchId, recentlyPlayedTracksJson);
+                        allBatchItems.AddRange(userBatchItems);
                     }
                     else
                     {
                         _logger.LogInformation($"No recently played tracks found for user: {user.Id}");
                     }
+                }
+
+                // Send batch data to API endpoint
+                if (allBatchItems.Any())
+                {
+                    await SendBatchToApiAsync(batchId, allBatchItems);
                 }
             }
             catch (Exception ex)
@@ -115,10 +124,11 @@ namespace RecentlyPlayedTrigger
             return JsonDocument.Parse(responseContent).RootElement;
         }
 
-        private async Task StoreTracksInCosmosDB(string userId, string batchId, JsonElement recentlyPlayedTracks)
+        private async Task<List<BatchItem>> StoreTracksInCosmosDB(string userId, string batchId, JsonElement recentlyPlayedTracks)
         {
             var mostRecentPlayedAt = await GetMostRecentPlayedAt(userId);
             var items = recentlyPlayedTracks.GetProperty("items").EnumerateArray();
+            var batchItems = new List<BatchItem>();
 
             foreach (var item in items)
             {
@@ -148,6 +158,15 @@ namespace RecentlyPlayedTrigger
                             _logger.LogInformation($"Inserting track data for user {userId}: {JsonSerializer.Serialize(trackData)}");
                             await container.CreateItemAsync(trackData, new PartitionKey(userId));
                             _logger.LogInformation($"Track inserted for user {userId} with unique id: {uniqueId}, playedAt: {playedAt}");
+
+                            // Add to batch items for API call
+                            batchItems.Add(new BatchItem
+                            {
+                                UserId = userId,
+                                TrackId = trackId,
+                                Duration_ms = durationMs,
+                                Played_at = playedAtString
+                            });
                         }
                     }
                     else
@@ -160,6 +179,8 @@ namespace RecentlyPlayedTrigger
                     _logger.LogWarning("played_at or track property not found in item.");
                 }
             }
+
+            return batchItems;
         }
 
         private async Task<DateTime?> GetMostRecentPlayedAt(string userId)
@@ -394,9 +415,58 @@ namespace RecentlyPlayedTrigger
             return accessToken;
         }
 
+        private async Task SendBatchToApiAsync(string batchId, List<BatchItem> batchItems)
+        {
+            try
+            {
+                var apiBaseUrl = Environment.GetEnvironmentVariable("ApiBaseUrl") ?? throw new Exception("ApiBaseUrl setting not found");
+                
+                using var client = new HttpClient();
+                client.BaseAddress = new Uri(apiBaseUrl);
+
+                var batchRequest = new
+                {
+                    BatchId = batchId,
+                    Items = batchItems.Select(item => new
+                    {
+                        UserId = item.UserId,
+                        TrackId = item.TrackId,
+                        Duration_ms = item.Duration_ms,
+                        Played_at = item.Played_at
+                    }).ToList()
+                };
+
+                _logger.LogInformation($"Sending batch {batchId} with {batchItems.Count} items to API endpoint");
+
+                var response = await client.PostAsJsonAsync("api/library/batch-update", batchRequest);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation($"Successfully sent batch {batchId} to API endpoint");
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError($"Failed to send batch {batchId} to API endpoint. Status: {response.StatusCode}, Error: {errorContent}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error sending batch {batchId} to API endpoint");
+            }
+        }
+
         public class User
         {
             public string Id { get; set; }
+        }
+
+        public class BatchItem
+        {
+            public string UserId { get; set; } = string.Empty;
+            public string TrackId { get; set; } = string.Empty;
+            public int Duration_ms { get; set; }
+            public string Played_at { get; set; } = string.Empty;
         }
     }
 }

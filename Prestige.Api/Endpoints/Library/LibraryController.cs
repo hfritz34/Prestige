@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Prestige.Api.Endpoints.Library.RequestResponse;
 
 namespace Prestige.Api.Endpoints.Library
@@ -44,6 +45,58 @@ namespace Prestige.Api.Endpoints.Library
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting batch item details");
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("{userId}/recently-updated")]
+        [Authorize]
+        public async Task<IActionResult> GetRecentlyUpdated(string userId, [FromQuery] string? since = null)
+        {
+            try
+            {
+                DateTime sinceDateTime;
+                if (!string.IsNullOrEmpty(since))
+                {
+                    if (!DateTime.TryParse(since, out sinceDateTime))
+                    {
+                        _logger.LogWarning("Invalid 'since' parameter provided: {Since}", since);
+                        return BadRequest("Invalid 'since' parameter format");
+                    }
+                }
+                else
+                {
+                    // Default to last hour
+                    sinceDateTime = DateTime.UtcNow.AddHours(-1);
+                }
+
+                _logger.LogInformation("Getting recently updated items for user {UserId} since {Since}", userId, sinceDateTime);
+                var result = await _libraryServices.GetRecentlyUpdatedAsync(userId, sinceDateTime);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting recently updated items for user {UserId}", userId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPost("batch-update")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ProcessRecentlyPlayedBatch([FromBody] BatchUpdateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Processing recently played batch {BatchId} with {Count} items", 
+                    request.BatchId, request.Items.Count);
+
+                await _libraryServices.ProcessRecentlyPlayedBatchUnauthenticatedAsync(request);
+                
+                return Ok(new { message = "Batch processed successfully", batchId = request.BatchId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing recently played batch {BatchId}", request.BatchId);
                 return StatusCode(500, "Internal server error");
             }
         }
