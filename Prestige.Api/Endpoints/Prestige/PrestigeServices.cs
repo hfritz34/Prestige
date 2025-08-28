@@ -567,6 +567,42 @@ namespace Prestige.Api.Endpoints.Prestige
 
             var ratingByAlbumId = userAlbumRatings.ToDictionary(r => r.ItemId, r => r);
 
+            // Get track counts for each album
+            var trackCounts = new Dictionary<string, int>();
+            var ratedTrackCounts = new Dictionary<string, int>();
+
+            foreach (var albumId in ratedAlbumIds)
+            {
+                // Get total tracks in the album
+                var totalTracks = await PrestigeDb.Tracks
+                    .CountAsync(t => t.Album.Id == albumId);
+
+                // If no tracks in database, try to get from Spotify
+                if (totalTracks == 0)
+                {
+                    try
+                    {
+                        var spotifyTracks = await _spotifyServices.GetAlbumTracksAsync(albumId);
+                        totalTracks = spotifyTracks.Count();
+                    }
+                    catch (System.Exception ex)
+                    {
+                        Logger.LogWarning($"Failed to fetch tracks from Spotify for album {albumId}: {ex.Message}");
+                        totalTracks = 0;
+                    }
+                }
+
+                trackCounts[albumId] = totalTracks;
+
+                // Get user's rated tracks in this album
+                var ratedTracks = await PrestigeDb.Ratings
+                    .CountAsync(r => r.User.Id == userId && 
+                               r.ItemType.ToLower() == "track" && 
+                               r.AlbumId == albumId);
+
+                ratedTrackCounts[albumId] = ratedTracks;
+            }
+
             var albumsRated = albums
                 .Select(a => new
                 {
@@ -576,10 +612,12 @@ namespace Prestige.Api.Endpoints.Prestige
                     ArtistName = a.Artists?.FirstOrDefault()?.Name,
                     AlbumRatingPosition = ratingByAlbumId[a.Id].Position,
                     AlbumRatingScore = ratingByAlbumId[a.Id].PersonalScore,
-                    AlbumRatingCategory = ratingByAlbumId[a.Id].Category.Name
+                    AlbumRatingCategory = ratingByAlbumId[a.Id].Category.Name,
+                    TotalTracks = trackCounts.GetValueOrDefault(a.Id, 0),
+                    RatedTracks = ratedTrackCounts.GetValueOrDefault(a.Id, 0)
                 })
-                .OrderBy(x => x.AlbumRatingPosition)
-                .ThenByDescending(x => x.AlbumRatingScore)
+                .OrderByDescending(x => x.AlbumRatingScore)
+                .ThenBy(x => x.AlbumRatingPosition)
                 .ToList();
 
             return new
