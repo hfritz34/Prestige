@@ -290,4 +290,127 @@
   }
 }
 
+/* Prestige Glow Animation - Claude Code Style */
+.prestige-glow {
+  position: relative;
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    #7C4DFF 0%,
+    #7C4DFF 30%,
+    rgba(255, 255, 255, 0.8) 50%,
+    #7C4DFF 70%,
+    #7C4DFF 100%
+  );
+  background-size: 300% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: prestigeFlow 4s ease-in-out infinite, prestigePulse 3s ease-in-out infinite;
+}
+
+@keyframes prestigePulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(124, 77, 255, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(124, 77, 255, 0.4));
+  }
+}
+
+@keyframes prestigeFlow {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Enhanced scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(10, 11, 13, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 77, 255, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 77, 255, 0.8);
+}
+
+/* Performance optimizations */
+* {
+  transform-style: preserve-3d;
+}
+
+/* Enhanced animations */
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.slide-up {
+  animation: slideUp 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Improved responsive design helpers */
+@media (max-width: 768px) {
+  .prestige-glow {
+    animation-duration: 4s;
+  }
+  
+  .prestige-glow::before {
+    animation-duration: 5s;
+  }
+}
+
+/* Focus improvements for accessibility */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid rgba(124, 77, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* Line clamp utility for text truncation */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
   
