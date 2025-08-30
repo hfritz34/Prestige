@@ -32,10 +32,10 @@ const InteractiveRankingDemo: React.FC = () => {
       imageUrl: "https://i.scdn.co/image/ab67616d0000b273e9b4b33ac93a78e8e504c641"
     },
     {
-      id: "4m2880jivSbbyEGAKfITCa",
-      name: "Random Access Memories",
+      id: "5uRdvUR7xCnHmUW8n64n9y",
+      name: "Homework",
       artist: "Daft Punk",
-      imageUrl: "https://i.scdn.co/image/ab67616d0000b2739b9b36b0e22870b9f542d937"
+      imageUrl: "https://i.scdn.co/image/ab67616d0000b2738ac778cc7d88779f74d33311"
     },
     {
       id: "3mH6qwIy9crq0I9YQbOuDf",
@@ -330,21 +330,21 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
   return (
     <Button
       variant="ghost"
-      className={`w-full h-full p-0 transition-all duration-300 transform hover:scale-[1.02] ${
+      className={`group w-full h-full p-0 transition-all duration-300 transform hover:scale-[1.02] ${
         isSelected ? 'scale-[1.02]' : ''
       }`}
       onClick={onSelect}
     >
-      <Card className={`w-full h-full transition-all duration-300 backdrop-blur-lg border relative overflow-hidden min-h-[240px] sm:min-h-0 ${
+      <Card className={`w-full h-full transition-all duration-300 backdrop-blur-lg border relative overflow-hidden min-h-[250px] sm:min-h-0 ${
         isSelected 
           ? 'ring-2 ring-[#7C4DFF] shadow-lg shadow-[#7C4DFF]/20 bg-white/10 border-[#7C4DFF]/50' 
-          : 'bg-white/5 border-white/20 hover:bg-white/8 hover:border-white/30 hover:shadow-lg'
+          : 'bg-white/5 border-white/20 hover:bg-white/[0.015] hover:border-white/[0.22] hover:shadow-sm hover:shadow-[#7C4DFF]/3'
       }`}>
-        <div className={`absolute inset-0 bg-gradient-to-br from-white/10 to-transparent transition-opacity duration-300 ${
-          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        <div className={`absolute inset-0 bg-gradient-to-br from-white/3 to-transparent transition-opacity duration-300 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-25'
         }`}></div>
-        <div className={`absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent transition-opacity duration-300 ${
-          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        <div className={`absolute inset-0 bg-gradient-to-t from-[#7C4DFF]/2 to-transparent transition-opacity duration-300 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-30'
         }`}></div>
         <CardContent className="relative z-10 p-2 sm:p-3 md:p-4 lg:p-6">
           <div className="space-y-2 sm:space-y-3">
@@ -376,10 +376,10 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
             
             {/* Text Content */}
             <div className="space-y-0.5 sm:space-y-1 min-w-0 h-10 sm:h-auto flex flex-col justify-center sm:block">
-              <h4 className="font-black text-xs sm:text-sm md:text-base lg:text-lg text-white text-center leading-tight truncate px-0.5 sm:px-1 drop-shadow-sm overflow-hidden whitespace-nowrap">
+              <h4 className="font-black text-xs sm:text-sm md:text-base lg:text-lg text-white text-center leading-tight line-clamp-1 px-0.5 sm:px-1 drop-shadow-sm">
                 {album.name}
               </h4>
-              <p className="text-[10px] sm:text-xs md:text-sm text-zinc-200 text-center truncate px-0.5 sm:px-1 drop-shadow-sm overflow-hidden whitespace-nowrap">
+              <p className="text-[10px] sm:text-xs md:text-sm text-zinc-200 text-center line-clamp-1 px-0.5 sm:px-1 drop-shadow-sm">
                 {album.artist}
               </p>
             </div>
