@@ -46,7 +46,7 @@ const LandingPage: React.FC = () => {
 					<div className="pointer-events-none absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-[#00E5C3]/10 blur-3xl" />
 				</div>
 				<div className="w-full px-4 text-center">
-					<h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">
+					<h1 className="text-6xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">
 						<span className="block sm:inline">Turn your</span>
 						<span className="block sm:inline"> music into</span><br className="hidden sm:block" />
 						<span className="text-[#7C4DFF] prestige-glow">Prestige</span>
