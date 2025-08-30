@@ -5,6 +5,7 @@ import TierShowcase from "./components/tiers/TierShowcase";
 import InteractiveRankingDemo from "./components/InteractiveRankingDemo";
 
 const LandingPage: React.FC = () => {
+	// Landing page deployment test
 	return (
 		<div className="min-h-screen w-full bg-[#0A0B0D] text-white">
 			{/* Top Navigation */}
