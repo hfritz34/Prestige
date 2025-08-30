@@ -59,7 +59,7 @@ jobs:
       run: dotnet publish Prestige.Api/*.csproj --configuration Release --no-build --output ./api-publish
       
     - name: Azure Login (API) with OIDC if IDs provided
-      if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      if: ${{ secrets.AZURE_CLIENT_ID && secrets.AZURE_TENANT_ID && secrets.AZURE_SUBSCRIPTION_ID }}
       uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -67,13 +67,13 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Azure Login (API) if credentials provided
-      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      if: ${{ secrets.AZURE_CREDENTIALS }}
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy API via publish profile
-      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API != '' }}
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_API }}
@@ -81,7 +81,7 @@ jobs:
         package: ./api-publish
 
     - name: Deploy API using az login
-      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API == '' && (secrets.AZURE_CREDENTIALS != '' || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '')) }}
+      if: ${{ !secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API && (secrets.AZURE_CREDENTIALS || (secrets.AZURE_CLIENT_ID && secrets.AZURE_TENANT_ID && secrets.AZURE_SUBSCRIPTION_ID)) }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_API }}
@@ -117,7 +117,7 @@ jobs:
       working-directory: ./Prestige.Web
       
     - name: Azure Login (Web) with OIDC if IDs provided
-      if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      if: ${{ secrets.AZURE_CLIENT_ID && secrets.AZURE_TENANT_ID && secrets.AZURE_SUBSCRIPTION_ID }}
       uses: azure/login@v2
       with:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -125,13 +125,13 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Azure Login (Web) if credentials provided
-      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      if: ${{ secrets.AZURE_CREDENTIALS }}
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Deploy Web via publish profile
-      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB != '' }}
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_WEB }}
@@ -139,7 +139,7 @@ jobs:
         package: ./Prestige.Web/dist
 
     - name: Deploy Web using az login
-      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB == '' && (secrets.AZURE_CREDENTIALS != '' || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '')) }}
+      if: ${{ !secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB && (secrets.AZURE_CREDENTIALS || (secrets.AZURE_CLIENT_ID && secrets.AZURE_TENANT_ID && secrets.AZURE_SUBSCRIPTION_ID)) }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_WEB }}
