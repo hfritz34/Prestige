@@ -47,7 +47,9 @@ const LandingPage: React.FC = () => {
 				</div>
 				<div className="w-full px-4 text-center">
 					<h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">
-						Turn your music into<br /><span className="text-[#7C4DFF] prestige-glow">Prestige</span>
+						<span className="block sm:inline">Turn your</span>
+						<span className="block sm:inline"> music into</span><br className="hidden sm:block" />
+						<span className="text-[#7C4DFF] prestige-glow">Prestige</span>
 					</h1>
 					<p className="mt-6 md:mt-8 text-lg sm:text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed px-2">
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
