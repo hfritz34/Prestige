@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import usePrestige from "@/hooks/usePrestige";
 import useFriends, { ItemComparisonResponse, Friend } from "@/hooks/useFriends";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,

@@ -1,7 +1,6 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import useHttp from './useHttp';
 import { UserAlbumResponse, UserArtistResponse, UserTrackResponse } from './useProfile';
-import { useEffect, useState } from 'react';
 
 export type Friend = {
   id: string;

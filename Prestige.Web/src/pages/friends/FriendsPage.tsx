@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
-import useFriends, { Friend } from '@/hooks/useFriends';
+import useFriends from '@/hooks/useFriends';
 import { UserSearch } from './components/UserSearch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
