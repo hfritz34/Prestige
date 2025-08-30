@@ -26,6 +26,9 @@ jobs:
             - 'Prestige.Web/src/pages/landing/**'
             - 'Prestige.Web/package.json'
             - 'Prestige.Web/vite.config.ts'
+            - 'Prestige.Web/web.config'
+            - 'Prestige.Web/landing.html'
+            - 'Prestige.Web/src/landing.tsx'
             - '.github/workflows/deploy.yml'
           api:
             - 'Prestige.Api/**'
