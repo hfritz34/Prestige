@@ -23,7 +23,9 @@ jobs:
       with:
         filters: |
           web:
-            - 'Prestige.Web/**'
+            - 'Prestige.Web/src/pages/landing/**'
+            - 'Prestige.Web/package.json'
+            - 'Prestige.Web/vite.config.ts'
             - '.github/workflows/deploy.yml'
           api:
             - 'Prestige.Api/**'
@@ -32,6 +34,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
     - uses: actions/checkout@v4
@@ -50,17 +55,42 @@ jobs:
     - name: Publish API
       run: dotnet publish Prestige.Api/*.csproj --configuration Release --no-build --output ./api-publish
       
-    - name: Deploy to Azure App Service
+    - name: Azure Login (API) with OIDC if IDs provided
+      if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Azure Login (API) if credentials provided
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy API via publish profile
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API != '' }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_API }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API }}
         package: ./api-publish
 
+    - name: Deploy API using az login
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_API == '' && (secrets.AZURE_CREDENTIALS != '' || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '')) }}
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME_API }}
+        package: ./api-publish
+
   build-and-deploy-web:
     needs: changes
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     
     steps:
     - uses: actions/checkout@v4
@@ -79,13 +109,35 @@ jobs:
       run: yarn install --frozen-lockfile
       working-directory: ./Prestige.Web
       
-    - name: Build application
-      run: yarn build
+    - name: Build landing page only
+      run: yarn build:landing
       working-directory: ./Prestige.Web
       
-    - name: Deploy to Azure Web App
+    - name: Azure Login (Web) with OIDC if IDs provided
+      if: ${{ secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Azure Login (Web) if credentials provided
+      if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Deploy Web via publish profile
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB != '' }}
       uses: azure/webapps-deploy@v3
       with:
         app-name: ${{ env.AZURE_WEBAPP_NAME_WEB }}
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB }}
+        package: ./Prestige.Web/dist
+
+    - name: Deploy Web using az login
+      if: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB == '' && (secrets.AZURE_CREDENTIALS != '' || (secrets.AZURE_CLIENT_ID != '' && secrets.AZURE_TENANT_ID != '' && secrets.AZURE_SUBSCRIPTION_ID != '')) }}
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME_WEB }}
         package: ./Prestige.Web/dist
