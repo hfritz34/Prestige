@@ -43,7 +43,7 @@ const LandingPage: React.FC = () => {
 			<section className="relative overflow-hidden min-h-screen flex items-center justify-center">
 				<div className="absolute inset-0 -z-10" aria-hidden>
 					<div className="pointer-events-none absolute -top-40 right-1/4 h-96 w-96 rounded-full bg-[#7C4DFF]/20 blur-3xl" />
-					<div className="pointer-events-none absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-[#00E5C3]/10 blur-3xl" />
+					<div className="pointer-events-none absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-[#9E7CFF]/10 blur-3xl" />
 				</div>
 				<div className="w-full px-4 text-center">
 					<h1 className="text-6xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">

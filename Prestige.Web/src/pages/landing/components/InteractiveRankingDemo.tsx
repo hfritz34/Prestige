@@ -62,10 +62,10 @@ const InteractiveRankingDemo: React.FC = () => {
       imageUrl: "https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9"
     },
     {
-      id: "0vVekV45lOaVKs6RZQQNob",
-      name: "In the Aeroplane Over the Sea",
-      artist: "Neutral Milk Hotel",
-      imageUrl: "https://i.scdn.co/image/ab67616d0000b273589ce9a911c6e65b1f80c558"
+      id: "2oJo7cB45gMVuRsaWNwDq2",
+      name: "Drukqs",
+      artist: "Aphex Twin",
+      imageUrl: "https://i.scdn.co/image/ab67616d0000b2732e261a0b1b19d0ff95e346b3"
     }
   ];
 
@@ -335,7 +335,7 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
       }`}
       onClick={onSelect}
     >
-      <Card className={`w-full h-full transition-all duration-300 backdrop-blur-lg border relative overflow-hidden ${
+      <Card className={`w-full h-full transition-all duration-300 backdrop-blur-lg border relative overflow-hidden min-h-[240px] sm:min-h-0 ${
         isSelected 
           ? 'ring-2 ring-[#7C4DFF] shadow-lg shadow-[#7C4DFF]/20 bg-white/10 border-[#7C4DFF]/50' 
           : 'bg-white/5 border-white/20 hover:bg-white/8 hover:border-white/30 hover:shadow-lg'
@@ -348,8 +348,8 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
         }`}></div>
         <CardContent className="relative z-10 p-2 sm:p-3 md:p-4 lg:p-6">
           <div className="space-y-2 sm:space-y-3">
-            {/* Badge area */}
-            <div className="flex justify-center h-4 sm:h-5 md:h-6 lg:h-7 items-center">
+            {/* Badge area - Fixed height on mobile to prevent layout shifts */}
+            <div className="flex justify-center h-6 sm:h-5 md:h-6 lg:h-7 items-center">
               {isBase && (
                 <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 text-white text-xs font-semibold shadow-md">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -375,11 +375,11 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
             </div>
             
             {/* Text Content */}
-            <div className="space-y-0.5 sm:space-y-1 min-w-0">
-              <h4 className="font-black text-xs sm:text-sm md:text-base lg:text-lg text-white text-center leading-tight truncate px-0.5 sm:px-1 drop-shadow-sm">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0 h-10 sm:h-auto flex flex-col justify-center sm:block">
+              <h4 className="font-black text-xs sm:text-sm md:text-base lg:text-lg text-white text-center leading-tight truncate px-0.5 sm:px-1 drop-shadow-sm overflow-hidden whitespace-nowrap">
                 {album.name}
               </h4>
-              <p className="text-[10px] sm:text-xs md:text-sm text-zinc-200 text-center truncate px-0.5 sm:px-1 drop-shadow-sm">
+              <p className="text-[10px] sm:text-xs md:text-sm text-zinc-200 text-center truncate px-0.5 sm:px-1 drop-shadow-sm overflow-hidden whitespace-nowrap">
                 {album.artist}
               </p>
             </div>
