@@ -24,18 +24,32 @@ const UserSearch: React.FC= () => {
     });
   }
 
-  const AddFriend = useMutation({
-      mutationKey: ['users', 'friends'],
+  const SendFriendRequest = useMutation({
+      mutationKey: ['users', 'friends', 'requests'],
       mutationFn: async (id : string) => {
-        return await friends.addFriend(id);
+        console.log('Sending friend request to:', id);
+        const result = await friends.sendFriendRequest(id);
+        console.log('Friend request result:', result);
+        return result;
       },
-      onSuccess: () => {
+      onSuccess: (data) => {
+        console.log('Friend request successful:', data);
         queryClient.invalidateQueries(
             {
                 queryKey: ['users', 'friends']
             }
         );
-        }
+        queryClient.invalidateQueries(
+            {
+                queryKey: ['users', 'friend-requests']
+            }
+        );
+      },
+      onError: (error) => {
+        console.error('Friend request failed:', error);
+      },
+      retry: 2, // Only retry twice on failure
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
     });
 
   const data = Search(debouncedSearch).data;
@@ -57,7 +71,15 @@ const UserSearch: React.FC= () => {
             <li
                 key={user.id}
                  className="flex items-center p-4 border-b border-gray-700 cursor-pointer"
-                onClick={() => AddFriend.mutate(user.id)}
+                onClick={() => {
+                    console.log('Clicked user:', user.id, user.nickName);
+                    if (!SendFriendRequest.isPending) {
+                        console.log('Mutation not pending, calling mutate');
+                        SendFriendRequest.mutate(user.id);
+                    } else {
+                        console.log('Mutation already pending');
+                    }
+                }}
             >
                 <img src={user.profilePicURL} alt={`${user.nickName}'s profile`} className="w-10 h-10 rounded-full mr-4" />
                 <span className="text-lg font-bold ml-4">{user.nickName}</span>

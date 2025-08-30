@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 const ArtistPage: React.FC = () => {
-  const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened, friends, loading } = useFriends();
+  const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened } = useFriends();
   const { getArtistPrestigeTier, togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
@@ -18,10 +18,39 @@ const ArtistPage: React.FC = () => {
   
   const [showFriends, setShowFriends] = useState(false);
   const [showAlbums, setShowAlbums] = useState(false);
-  const [friendTimes, setFriendTimes] = useState<{ [key: string]: number }>({});
+  // Individual React Query hooks for each friend's time - provides automatic caching
+  const useFriendArtistTime = (friendId: string, artistId: string, enabled: boolean) => {
+    return useQuery({
+      queryKey: ['friend-artist-time', friendId, artistId],
+      queryFn: async () => {
+        const time = await getFriendArtistTimeListened(friendId, artistId);
+        return time || 0;
+      },
+      enabled: enabled && !!friendId && !!artistId,
+      staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+      gcTime: 30 * 60 * 1000,
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
+    });
+  };
   const [isPinned, setIsPinned] = useState(artist?.isPinned || false);
 
   const userId = user?.sub?.split('|').pop();
+
+  // React Query for friends who listened to this artist
+  const friendsQuery = useQuery({
+    queryKey: ['friends-who-listened-artist', artist?.artistId],
+    queryFn: async () => {
+      if (!artist?.artistId) return [];
+      return await getFriendsWhoListenedToArtist(artist.artistId);
+    },
+    enabled: showFriends && !!artist?.artistId,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
+  });
 
   // Fetch albums that the user has rated (albums only, simplified)
   const { data: artistAlbums, isLoading: albumsLoading } = useQuery<ArtistAlbumsWithRankingsResponse | null>({
@@ -48,17 +77,8 @@ const ArtistPage: React.FC = () => {
     }
   });
 
-  const handleShowFriends = async () => {
-    if (!showFriends) {
-      await getFriendsWhoListenedToArtist(artist.artistId);
-      const times = await Promise.all(
-        friends.map(async (friend) => {
-          const time = await getFriendArtistTimeListened(friend.id, artist.artistId);
-          return { [friend.id]: time };
-        })
-      );
-      setFriendTimes(Object.assign({}, ...times));
-    }
+
+  const handleShowFriends = () => {
     setShowFriends(!showFriends);
   };
 
@@ -130,36 +150,49 @@ const ArtistPage: React.FC = () => {
       </div>
       {showFriends && (
         <div className="mt-4 w-full max-w-lg relative z-10 p-4 rounded-lg">
-          {loading && <p>Loading friends...</p>}
+          {friendsQuery.isLoading && <p>Loading friends...</p>}
+          {friendsQuery.isError && <p className="text-red-500">Failed to load friends who listened to this artist.</p>}
+          {friendsQuery.data && friendsQuery.data.length === 0 && (
+            <p className="text-gray-400 text-center py-4">None of your friends have listened to this artist yet.</p>
+          )}
           <ul>
-            {friends.map((friend) => {
-              const friendPrestige = getArtistPrestigeTier(friendTimes[friend.id]) || "None";
-              return (
-                <li
-                  key={friend.id}
-                  className="flex items-center bg-gray-700 rounded-lg p-4 mb-4 relative"
-                >
-                  {friendPrestige !== "None" && (
-                    <img
-                      src={`../../src/assets/tiers/${friendPrestige}.png`}
-                      alt={friendPrestige}
-                      className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                    />
-                  )}
-                  <div className="shrink-0 w-20 h-20 relative z-10">
-                    <img
-                      src={friend.profilePicUrl}
-                      alt={`${friend.nickname}'s profile`}
-                      className="w-full h-full object-cover rounded-full"
-                    />
-                  </div>
-                  <div className="ml-4 relative z-10 w-3/4">
-                    <h3 className="text-lg font-bold">{friend.name}</h3>
-                    <p className="text-zinc-50">Total Time: {(friendTimes[friend.id] / 60).toFixed(1)} minutes</p>
-                    <p className="text-zinc-50">Prestige Level: {friendPrestige}</p>
-                  </div>
-                </li>
-              );
+            {friendsQuery.data?.map((friend) => {
+              const FriendItem = () => {
+                const friendTimeQuery = useFriendArtistTime(friend.id, artist.artistId, showFriends);
+                const friendTime = friendTimeQuery.data || 0;
+                const friendPrestige = getArtistPrestigeTier(friendTime) || "None";
+                
+                return (
+                  <li
+                    key={friend.id}
+                    className="flex items-center bg-gray-700 rounded-lg p-4 mb-4 relative"
+                  >
+                    {friendPrestige !== "None" && (
+                      <img
+                        src={`../../src/assets/tiers/${friendPrestige}.png`}
+                        alt={friendPrestige}
+                        className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
+                      />
+                    )}
+                    <div className="shrink-0 w-20 h-20 relative z-10">
+                      <img
+                        src={friend.profilePicUrl}
+                        alt={`${friend.nickname}'s profile`}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    </div>
+                    <div className="ml-4 relative z-10 w-3/4">
+                      <h3 className="text-lg font-bold">{friend.name}</h3>
+                      <p className="text-zinc-50">
+                        Total Time: {friendTimeQuery.isLoading ? 'Loading...' : `${(friendTime / 60).toFixed(1)} minutes`}
+                      </p>
+                      <p className="text-zinc-50">Prestige Level: {friendPrestige}</p>
+                    </div>
+                  </li>
+                );
+              };
+              
+              return <FriendItem key={friend.id} />;
             })}
           </ul>
         </div>

@@ -20,8 +20,64 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
         {
             try
             {
-                var res = _service.AddFriend(userId, friendId);
+                var res = await _service.AddFriendAsync(userId, friendId);
                 return Ok(res);
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost("{userId}/friend-requests/{friendId}")]
+        public async Task<IActionResult> SendFriendRequest(string userId, string friendId)
+        {
+            try
+            {
+                var res = await _service.SendFriendRequestAsync(userId, friendId);
+                return Ok(res);
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost("{userId}/friend-requests/{friendId}/accept")]
+        public async Task<IActionResult> AcceptFriendRequest(string userId, string friendId)
+        {
+            try
+            {
+                var res = await _service.AcceptFriendRequestAsync(userId, friendId);
+                return Ok(res);
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        [HttpPost("{userId}/friend-requests/{friendId}/decline")]
+        public async Task<IActionResult> DeclineFriendRequest(string userId, string friendId)
+        {
+            try
+            {
+                var res = await _service.DeclineFriendRequestAsync(userId, friendId);
+                return Ok(res);
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        [HttpGet("{userId}/friend-requests")]
+        public async Task<IActionResult> GetFriendRequests(string userId)
+        {
+            try
+            {
+                var requests = await _service.GetFriendRequestsAsync(userId);
+                return Ok(requests);
             }
             catch
             {
@@ -155,6 +211,48 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             {
                 var friends = await _service.GetFriendsWhoListenedToAlbumAsync(userId, albumId);
                 return Ok(friends);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/compare/track/{trackId}/with/{friendId}")]
+        public async Task<IActionResult> CompareTrackWithFriend(string userId, string trackId, string friendId)
+        {
+            try
+            {
+                var comparison = await _service.CompareTrackWithFriendAsync(userId, trackId, friendId);
+                return Ok(comparison);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/compare/album/{albumId}/with/{friendId}")]
+        public async Task<IActionResult> CompareAlbumWithFriend(string userId, string albumId, string friendId)
+        {
+            try
+            {
+                var comparison = await _service.CompareAlbumWithFriendAsync(userId, albumId, friendId);
+                return Ok(comparison);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/compare/artist/{artistId}/with/{friendId}")]
+        public async Task<IActionResult> CompareArtistWithFriend(string userId, string artistId, string friendId)
+        {
+            try
+            {
+                var comparison = await _service.CompareArtistWithFriendAsync(userId, artistId, friendId);
+                return Ok(comparison);
             }
             catch (Exception ex)
             {
