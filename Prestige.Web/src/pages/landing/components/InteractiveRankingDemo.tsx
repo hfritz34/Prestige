@@ -186,7 +186,7 @@ const InteractiveRankingDemo: React.FC = () => {
     const baseScore = albumScores[baseAlbum.id];
     
     return (
-      <div className="space-y-8 p-6">
+      <div className="space-y-6 sm:space-y-8 p-4 sm:p-6">
         <div className="text-center space-y-4">
           <h3 className="text-2xl font-bold text-white">
             Ranking Complete!
@@ -201,37 +201,38 @@ const InteractiveRankingDemo: React.FC = () => {
           )}
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-4">
+        <div className="max-w-2xl mx-auto space-y-3 sm:space-y-4">
           {finalRanking.map((album, index) => {
             const score = albumScores[album.id];
             return (
               <div 
-                key={album.id}
-                className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
+                key={`ranking-${album.id}-${index}`}
+                className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-all duration-300 ${
                   album.id === baseAlbum.id 
                     ? 'bg-gradient-to-r from-[#7C4DFF]/20 to-purple-500/20 border-[#7C4DFF]/50' 
                     : 'bg-white/5 border-white/10'
                 }`}
               >
-                <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-full text-sm font-semibold text-black dark:text-white">
+                <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center bg-gray-200 dark:bg-gray-700 rounded-full text-xs sm:text-sm font-semibold text-black dark:text-white">
                   {index + 1}
                 </div>
                 <img 
                   src={album.imageUrl} 
                   alt={album.name}
-                  className="w-12 h-12 rounded-lg object-cover"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover"
                 />
-                <div className="flex-grow">
-                  <h4 className="font-semibold text-white">{album.name}</h4>
-                  <p className="text-sm text-zinc-400">{album.artist}</p>
+                <div className="flex-grow min-w-0">
+                  <h4 className="font-semibold text-white text-sm sm:text-base truncate">{album.name}</h4>
+                  <p className="text-xs sm:text-sm text-zinc-400 truncate">{album.artist}</p>
                   {score && (
                     <p className="text-xs text-green-400 font-medium">Score: {score.toFixed(1)}</p>
                   )}
                 </div>
                 {album.id === baseAlbum.id && (
                   <div className="flex-shrink-0">
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#7C4DFF] text-white text-xs font-semibold">
-                      YOUR PICK
+                    <span className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 rounded-full bg-[#7C4DFF] text-white text-xs font-semibold">
+                      <span className="hidden sm:inline">YOUR PICK</span>
+                      <span className="sm:hidden">PICK</span>
                     </span>
                   </div>
                 )}
@@ -243,9 +244,11 @@ const InteractiveRankingDemo: React.FC = () => {
         <div className="text-center">
           <Button
             onClick={resetDemo}
-            className="bg-[#7C4DFF] hover:bg-[#6b3bff] text-white px-8 py-3"
+            className="group bg-white/5 hover:bg-white/10 text-white px-8 py-3 rounded-xl transition-all duration-300 transform hover:scale-[1.02] backdrop-blur-lg border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden"
           >
-            Try Again
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-[#7C4DFF]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <span className="relative z-10">Try Again</span>
           </Button>
         </div>
       </div>
@@ -255,7 +258,7 @@ const InteractiveRankingDemo: React.FC = () => {
   const progress = ((currentStep + 1) / comparisonAlbums.length) * 100;
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6">
       {/* Progress Header */}
       <div className="text-center space-y-4">
         <h3 className="text-2xl font-bold text-white">
@@ -280,9 +283,9 @@ const InteractiveRankingDemo: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex items-center gap-6 w-full max-w-4xl mx-auto">
-        {/* Base Album (What The Feng) */}
-        <div className="flex-1">
+      <div className="flex items-center gap-2 sm:gap-4 w-full max-w-4xl mx-auto px-2">
+        {/* Base Album */}
+        <div className="flex-1 max-w-[calc(50%-24px)] sm:max-w-[calc(50%-32px)]">
           <ComparisonCard
             album={baseAlbum}
             isSelected={selectedItem === baseAlbum.id}
@@ -292,12 +295,12 @@ const InteractiveRankingDemo: React.FC = () => {
         </div>
 
         {/* VS Divider */}
-        <div className="flex items-center justify-center px-4">
+        <div className="flex items-center justify-center flex-shrink-0">
           <VersusIndicator />
         </div>
 
         {/* Current Comparison Album */}
-        <div className="flex-1">
+        <div className="flex-1 max-w-[calc(50%-24px)] sm:max-w-[calc(50%-32px)]">
           <ComparisonCard
             album={comparisonAlbums[currentStep]}
             isSelected={selectedItem === comparisonAlbums[currentStep].id}
@@ -327,26 +330,33 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
   return (
     <Button
       variant="ghost"
-      className={`w-full h-full p-0 transition-all duration-300 transform hover:scale-105 ${
-        isSelected ? 'scale-105' : ''
+      className={`w-full h-full p-0 transition-all duration-300 transform hover:scale-[1.02] ${
+        isSelected ? 'scale-[1.02]' : ''
       }`}
       onClick={onSelect}
     >
-      <Card className={`w-full transition-all duration-300 ${
+      <Card className={`w-full h-full transition-all duration-300 backdrop-blur-lg border relative overflow-hidden ${
         isSelected 
-          ? 'ring-2 ring-[#7C4DFF] shadow-lg shadow-[#7C4DFF]/20 bg-gradient-to-br from-[#7C4DFF]/10 to-purple-500/10' 
-          : 'hover:shadow-lg hover:border-[#7C4DFF]/30'
+          ? 'ring-2 ring-[#7C4DFF] shadow-lg shadow-[#7C4DFF]/20 bg-white/10 border-[#7C4DFF]/50' 
+          : 'bg-white/5 border-white/20 hover:bg-white/8 hover:border-white/30 hover:shadow-lg'
       }`}>
-        <CardContent className="p-6">
-          <div className="space-y-4">
+        <div className={`absolute inset-0 bg-gradient-to-br from-white/10 to-transparent transition-opacity duration-300 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}></div>
+        <div className={`absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent transition-opacity duration-300 ${
+          isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}></div>
+        <CardContent className="relative z-10 p-3 sm:p-4 md:p-6">
+          <div className="space-y-2 sm:space-y-3">
             {/* Badge area */}
-            <div className="flex justify-center h-7 items-center">
+            <div className="flex justify-center h-5 sm:h-6 md:h-7 items-center">
               {isBase && (
-                <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 text-white text-xs font-semibold shadow-md">
+                <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 text-white text-xs font-semibold shadow-md">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  YOUR PICK
+                  <span className="hidden sm:inline">YOUR PICK</span>
+                  <span className="sm:hidden">PICK</span>
                 </div>
               )}
             </div>
@@ -365,11 +375,11 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
             </div>
             
             {/* Text Content */}
-            <div className="space-y-2">
-              <h4 className="font-bold text-lg text-gray-900 dark:text-white text-center leading-tight">
+            <div className="space-y-1 min-w-0">
+              <h4 className="font-black text-sm sm:text-base md:text-lg text-white text-center leading-tight truncate px-1 drop-shadow-sm">
                 {album.name}
               </h4>
-              <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              <p className="text-xs sm:text-sm text-zinc-200 text-center truncate px-1 drop-shadow-sm">
                 {album.artist}
               </p>
             </div>
@@ -384,11 +394,11 @@ const VersusIndicator: React.FC = () => {
   return (
     <div className="relative">
       {/* Outer glow */}
-      <div className="absolute inset-0 w-12 h-12 rounded-full bg-gradient-to-r from-[#7C4DFF]/30 to-purple-600/30 blur-md animate-pulse" />
+      <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF]/30 to-purple-600/30 blur-md animate-pulse" />
       
       {/* Main circle */}
-      <div className="relative w-12 h-12 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 flex items-center justify-center shadow-lg">
-        <span className="text-white font-black text-sm">VS</span>
+      <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 flex items-center justify-center shadow-lg">
+        <span className="text-white font-black text-xs sm:text-sm">VS</span>
       </div>
     </div>
   );

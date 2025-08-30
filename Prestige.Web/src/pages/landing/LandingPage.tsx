@@ -34,7 +34,7 @@ const LandingPage: React.FC = () => {
 					</nav>
 					
 					<div className="flex items-center gap-3 ml-auto">
-						<a href="#waitlist" className="rounded-md px-4 py-2 text-sm font-medium bg-[#7C4DFF] hover:bg-[#6b3bff] transition-colors">Join Waitlist</a>
+						<a href="#waitlist" className="rounded-xl px-4 py-2 text-sm font-medium bg-[#7C4DFF] hover:bg-[#6b3bff] transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg">Join Waitlist</a>
 					</div>
 				</div>
 			</header>
@@ -46,17 +46,21 @@ const LandingPage: React.FC = () => {
 					<div className="pointer-events-none absolute -bottom-40 left-1/3 h-[28rem] w-[28rem] rounded-full bg-[#00E5C3]/10 blur-3xl" />
 				</div>
 				<div className="w-full px-4 text-center">
-					<h1 className="text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">
+					<h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-tight">
 						Turn your music into<br /><span className="text-[#7C4DFF] prestige-glow">Prestige</span>
 					</h1>
-					<p className="mt-8 text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed">
+					<p className="mt-6 md:mt-8 text-lg sm:text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed px-2">
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
 					</p>
-					<div className="mt-12 flex items-center justify-center gap-4">
-						<button className="rounded-md px-8 py-4 text-lg font-semibold bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-all duration-300 transform hover:scale-105">iOS App Coming Soon</button>
-						<button className="rounded-md px-8 py-4 text-lg font-semibold bg-white/10 hover:bg-white/20 text-white transition-all duration-300 backdrop-blur-sm border border-white/10">Web App Coming Soon</button>
+					<div className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
+						<button className="w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-all duration-500 transform hover:scale-[1.02] shadow-lg hover:shadow-xl">iOS App Coming Soon</button>
+						<button className="group w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-500 transform hover:scale-[1.02] backdrop-blur-xl border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
+							<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+							<div className="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+							<span className="relative z-10">Web App Coming Soon</span>
+						</button>
 					</div>
-					<p className="mt-6 text-sm text-zinc-400">Requires Spotify account. Private by default—share what you choose.</p>
+					<p className="mt-4 md:mt-6 text-sm text-zinc-400 px-4">Requires Spotify account. Private by default—share what you choose.</p>
 				</div>
 			</section>
 
@@ -131,7 +135,11 @@ const LandingPage: React.FC = () => {
 							<p className="mt-2 text-zinc-300">Compete with friends. Discover new music through dedication and taste.</p>
 						</div>
 						<div className="flex items-center gap-3">
-							<a href="#waitlist" className="rounded-md px-5 py-3 text-sm font-semibold bg-[#7C4DFF] hover:bg-[#6b3bff] transition-colors">Join Waitlist</a>
+							<a href="#waitlist" className="group rounded-xl px-5 py-3 text-sm font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-300 transform hover:scale-[1.02] backdrop-blur-lg border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
+								<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+								<div className="absolute inset-0 bg-gradient-to-t from-[#7C4DFF]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+								<span className="relative z-10">Join Waitlist</span>
+							</a>
 						</div>
 					</div>
 				</div>
