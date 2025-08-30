@@ -283,9 +283,9 @@ const InteractiveRankingDemo: React.FC = () => {
         </div>
       </div>
       
-      <div className="flex items-center gap-2 sm:gap-4 w-full max-w-4xl mx-auto px-2">
+      <div className="flex items-center gap-2 sm:gap-4 w-full max-w-full sm:max-w-4xl mx-auto px-2">
         {/* Base Album */}
-        <div className="flex-1 max-w-[calc(50%-24px)] sm:max-w-[calc(50%-32px)]">
+        <div className="flex-1 max-w-[calc(50%-12px)] sm:max-w-[calc(50%-32px)]">
           <ComparisonCard
             album={baseAlbum}
             isSelected={selectedItem === baseAlbum.id}
@@ -300,7 +300,7 @@ const InteractiveRankingDemo: React.FC = () => {
         </div>
 
         {/* Current Comparison Album */}
-        <div className="flex-1 max-w-[calc(50%-24px)] sm:max-w-[calc(50%-32px)]">
+        <div className="flex-1 max-w-[calc(50%-12px)] sm:max-w-[calc(50%-32px)]">
           <ComparisonCard
             album={comparisonAlbums[currentStep]}
             isSelected={selectedItem === comparisonAlbums[currentStep].id}
@@ -346,10 +346,10 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
         <div className={`absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent transition-opacity duration-300 ${
           isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
         }`}></div>
-        <CardContent className="relative z-10 p-3 sm:p-4 md:p-6">
+        <CardContent className="relative z-10 p-2 sm:p-3 md:p-4 lg:p-6">
           <div className="space-y-2 sm:space-y-3">
             {/* Badge area */}
-            <div className="flex justify-center h-5 sm:h-6 md:h-7 items-center">
+            <div className="flex justify-center h-4 sm:h-5 md:h-6 lg:h-7 items-center">
               {isBase && (
                 <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 text-white text-xs font-semibold shadow-md">
                   <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -362,7 +362,7 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
             </div>
             
             {/* Image */}
-            <div className="w-full aspect-square rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-md">
+            <div className="w-full aspect-square rounded-lg sm:rounded-xl overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-md">
               <img 
                 src={album.imageUrl} 
                 alt={album.name}
@@ -375,11 +375,11 @@ const ComparisonCard: React.FC<ComparisonCardProps> = ({ album, isSelected, isBa
             </div>
             
             {/* Text Content */}
-            <div className="space-y-1 min-w-0">
-              <h4 className="font-black text-sm sm:text-base md:text-lg text-white text-center leading-tight truncate px-1 drop-shadow-sm">
+            <div className="space-y-0.5 sm:space-y-1 min-w-0">
+              <h4 className="font-black text-xs sm:text-sm md:text-base lg:text-lg text-white text-center leading-tight truncate px-0.5 sm:px-1 drop-shadow-sm">
                 {album.name}
               </h4>
-              <p className="text-xs sm:text-sm text-zinc-200 text-center truncate px-1 drop-shadow-sm">
+              <p className="text-[10px] sm:text-xs md:text-sm text-zinc-200 text-center truncate px-0.5 sm:px-1 drop-shadow-sm">
                 {album.artist}
               </p>
             </div>
@@ -394,11 +394,11 @@ const VersusIndicator: React.FC = () => {
   return (
     <div className="relative">
       {/* Outer glow */}
-      <div className="absolute inset-0 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF]/30 to-purple-600/30 blur-md animate-pulse" />
+      <div className="absolute inset-0 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF]/30 to-purple-600/30 blur-md animate-pulse" />
       
       {/* Main circle */}
-      <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 flex items-center justify-center shadow-lg">
-        <span className="text-white font-black text-xs sm:text-sm">VS</span>
+      <div className="relative w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full bg-gradient-to-r from-[#7C4DFF] to-purple-600 flex items-center justify-center shadow-lg">
+        <span className="text-white font-black text-[10px] sm:text-xs md:text-sm">VS</span>
       </div>
     </div>
   );

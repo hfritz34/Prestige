@@ -7,7 +7,7 @@ import InteractiveRankingDemo from "./components/InteractiveRankingDemo";
 const LandingPage: React.FC = () => {
 	// Landing page deployment test
 	return (
-		<div className="min-h-screen w-full bg-[#0A0B0D] text-white">
+		<div className="min-h-screen w-full bg-[#0A0B0D] text-white overflow-x-hidden">
 			{/* Top Navigation */}
 			<header className="w-full sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-black/30 bg-black/40">
 				<div className="w-full px-4 py-2 relative flex items-center">
@@ -51,7 +51,7 @@ const LandingPage: React.FC = () => {
 						<span className="block sm:inline"> music into</span><br className="hidden sm:block" />
 						<span className="text-[#7C4DFF] prestige-glow">Prestige</span>
 					</h1>
-					<p className="mt-6 md:mt-8 text-lg sm:text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed px-2">
+					<p className="mt-12 sm:mt-6 md:mt-8 text-lg sm:text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed px-2">
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
 					</p>
 					<div className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">

@@ -116,22 +116,22 @@ const TierShowcase: React.FC = () => {
 				</div>
 
 				{/* 6 on Top, 5 on Bottom Layout */}
-				<div className="max-w-7xl mx-auto space-y-6">
+				<div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
 					{/* Top Row - 6 Tiers (Bronze to Sapphire) */}
-					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+					<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
 						{tiers.slice(0, 6).map((tier, index) => (
 							<div
 								key={tier.name}
-								className="group relative bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-all duration-500 hover:transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/10 flex flex-col h-56"
+								className="group relative bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/10 hover:border-white/20 transition-all duration-500 hover:transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/10 flex flex-col h-44 sm:h-48 md:h-56"
 								style={{
 									animationDelay: `${index * 100}ms`
 								}}
 							>
-								<div className="relative mb-4">
+								<div className="relative mb-2 sm:mb-3 md:mb-4">
 									<img 
 										src={tier.image} 
 										alt={`${tier.name} tier`}
-										className="w-16 h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
+										className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
 									/>
 									<div 
 										className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"
@@ -142,9 +142,9 @@ const TierShowcase: React.FC = () => {
 								</div>
 								
 								<div className="flex flex-col items-center text-center flex-grow justify-center">
-									<h3 className="text-lg font-semibold text-white mb-2">{tier.name}</h3>
-									<p className="text-sm font-mono text-[#7C4DFF] mb-3">{tier.minutes}</p>
-									<p className="text-sm text-zinc-400 leading-relaxed text-center">{tier.description}</p>
+									<h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-1 sm:mb-2">{tier.name}</h3>
+									<p className="text-xs sm:text-sm font-mono text-[#7C4DFF] mb-2 sm:mb-3">{tier.minutes}</p>
+									<p className="text-xs sm:text-sm text-zinc-400 leading-relaxed text-center px-1">{tier.description}</p>
 								</div>
 							</div>
 						))}
@@ -152,21 +152,21 @@ const TierShowcase: React.FC = () => {
 
 					{/* Bottom Row - 5 Tiers (Garnet to Dark Matter) centered with flex + calc widths matching top grid */}
 					<div className="flex justify-center">
-						<div className="w-full max-w-7xl flex flex-wrap justify-center gap-6">
+						<div className="w-full max-w-7xl flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
 							{tiers.slice(6).map((tier, index) => (
 								<div
 									key={tier.name}
-									className="group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:border-white/30 transition-all duration-500 hover:transform hover:-translate-y-3 hover:shadow-2xl flex flex-col h-56 w-[calc((100%_-_1.5rem)/2)] md:w-[calc((100%_-_3rem)/3)] lg:w-[calc((100%_-_7.5rem)/6)]"
+									className="group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 hover:border-white/30 transition-all duration-500 hover:transform hover:-translate-y-3 hover:shadow-2xl flex flex-col h-44 sm:h-48 md:h-56 w-[calc((100%_-_0.75rem)/2)] sm:w-[calc((100%_-_2rem)/3)] md:w-[calc((100%_-_3rem)/4)] lg:w-[calc((100%_-_7.5rem)/6)]"
 									style={{
 										boxShadow: `0 0 20px ${tier.color}20`,
 										animationDelay: `${(index + 6) * 100}ms`
 									}}
 								>
-									<div className="relative mb-4">
+									<div className="relative mb-2 sm:mb-3 md:mb-4">
 										<img 
 											src={tier.image} 
 											alt={`${tier.name} tier`}
-											className="w-16 h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
+											className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
 										/>
 										<div 
 											className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300"
@@ -177,9 +177,9 @@ const TierShowcase: React.FC = () => {
 									</div>
 									
 									<div className="flex flex-col items-center text-center flex-grow justify-center">
-										<h3 className="text-lg font-semibold text-white mb-2">{tier.name}</h3>
-										<p className="text-sm font-mono text-[#9E7CFF] mb-3">{tier.minutes}</p>
-										<p className="text-sm text-zinc-400 leading-relaxed text-center">{tier.description}</p>
+										<h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-1 sm:mb-2">{tier.name}</h3>
+										<p className="text-xs sm:text-sm font-mono text-[#9E7CFF] mb-2 sm:mb-3">{tier.minutes}</p>
+										<p className="text-xs sm:text-sm text-zinc-400 leading-relaxed text-center px-1">{tier.description}</p>
 									</div>
 								</div>
 							))}
