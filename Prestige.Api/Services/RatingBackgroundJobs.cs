@@ -154,9 +154,9 @@ namespace Prestige.Api.Services
                 
                 // Update statistics on key tables (this would be SQL Server specific commands)
                 await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS Ratings");
-                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserTracks");
-                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserAlbums");
-                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserArtists");
+                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserTrack");
+                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserAlbum");
+                await _context.Database.ExecuteSqlRawAsync("UPDATE STATISTICS UserArtist");
                 
                 _logger.LogInformation("Completed database optimization tasks");
             }

@@ -78,10 +78,13 @@ const HomePage: React.FC = () => {
     queryFn: async (): Promise<RecentlyUpdatedResponse> => {
       const userId = user?.sub?.split("|").pop();
       if (userId) {
-        // Get items updated in the last hour
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        // Get items updated in the last 24 hours
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        console.log("Fetching recently updated items for user:", userId);
+        console.log("Since:", twentyFourHoursAgo);
         try {
-          const response = await http.getOne<RecentlyUpdatedResponse>(`api/library/${userId}/recently-updated?since=${oneHourAgo}`);
+          const response = await http.getOne<RecentlyUpdatedResponse>(`api/library/${userId}/recently-updated?since=${twentyFourHoursAgo}`);
+          console.log("Recently updated response:", response);
           return response;
         } catch (error) {
           console.error("Error fetching recently updated items:", error);
@@ -91,6 +94,8 @@ const HomePage: React.FC = () => {
       return { tracks: [], albums: [], artists: [] };
     },
     enabled: !!user?.sub && timeFilter === "Recent",
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
+    gcTime: 60 * 60 * 1000, // Keep cached data for 1 hour
   });
 
   const { data: pinnedItems, isLoading: pinnedLoading, error: pinnedError } = useQuery<RecentlyUpdatedResponse>({

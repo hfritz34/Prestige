@@ -13,6 +13,7 @@ namespace Prestige.Api.Domain
         public bool IsPinned { get; private set; }
         public decimal? PersonalRatingScore { get; private set; }
         public int? RatingPosition { get; private set; }
+        public DateTime LastUpdatedAt { get; private set; }
 
         private UserTrack() { }
 
@@ -23,11 +24,13 @@ namespace Prestige.Api.Domain
             Track = track;
             IsFavorite = false;
             IsPinned = false;
+            LastUpdatedAt = DateTime.UtcNow;
         }
 
         public void IncrementTotalTime(int time)
         {
             TotalTime += time;
+            LastUpdatedAt = DateTime.UtcNow;
         }
 
         public void ToggleIsFavorite()

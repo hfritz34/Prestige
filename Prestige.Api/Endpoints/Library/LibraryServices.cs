@@ -9,6 +9,7 @@ using Prestige.Api.Exceptions;
 using Prestige.Api.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
+using System.Linq;
 
 namespace Prestige.Api.Endpoints.Library
 {
@@ -414,11 +415,109 @@ namespace Prestige.Api.Endpoints.Library
                 if (!string.IsNullOrEmpty(cachedData))
                 {
                     _logger.LogInformation($"Returning distributed cached recently updated data for user {userId}");
-                    return JsonSerializer.Deserialize<RecentlyUpdatedResponse>(cachedData) ?? new RecentlyUpdatedResponse();
+                    var deserializedData = JsonSerializer.Deserialize<RecentlyUpdatedResponse>(cachedData);
+                    if (deserializedData != null && (deserializedData.Tracks.Any() || deserializedData.Albums.Any() || deserializedData.Artists.Any()))
+                    {
+                        return deserializedData;
+                    }
                 }
 
-                _logger.LogInformation($"No cached data found for user {userId}, returning empty response");
-                return new RecentlyUpdatedResponse();
+                // Query database for recently updated items
+                _logger.LogInformation($"Querying database for recently updated items for user {userId} since {since}");
+                
+                // First check if user has any tracks at all
+                var totalUserTracks = await PrestigeDb.UserTracks.CountAsync(ut => ut.User.Id == userId);
+                _logger.LogInformation($"User {userId} has {totalUserTracks} total tracks in database");
+                
+                // Get recently updated tracks
+                var recentTracks = await PrestigeDb.UserTracks
+                    .Where(ut => ut.User.Id == userId && ut.LastUpdatedAt >= since)
+                    .Include(ut => ut.Track)
+                        .ThenInclude(t => t.Album)
+                            .ThenInclude(a => a.Images)
+                    .Include(ut => ut.Track)
+                        .ThenInclude(t => t.Artists)
+                            .ThenInclude(ar => ar.Images)
+                    .Include(ut => ut.Track.Album.Artists)
+                        .ThenInclude(ar => ar.Images)
+                    .Include(ut => ut.User)
+                    .OrderByDescending(ut => ut.LastUpdatedAt)
+                    .Take(60)
+                    .ToListAsync();
+
+                // Get recently updated albums
+                var recentAlbums = await PrestigeDb.UserAlbums
+                    .Where(ua => ua.User.Id == userId && ua.LastUpdatedAt >= since)
+                    .Include(ua => ua.Album)
+                        .ThenInclude(a => a.Images)
+                    .Include(ua => ua.Album)
+                        .ThenInclude(a => a.Artists)
+                            .ThenInclude(ar => ar.Images)
+                    .Include(ua => ua.User)
+                    .OrderByDescending(ua => ua.LastUpdatedAt)
+                    .Take(60)
+                    .ToListAsync();
+
+                // Get recently updated artists
+                var recentArtists = await PrestigeDb.UserArtists
+                    .Where(ua => ua.User.Id == userId && ua.LastUpdatedAt >= since)
+                    .Include(ua => ua.Artist)
+                        .ThenInclude(a => a.Images)
+                    .Include(ua => ua.User)
+                    .OrderByDescending(ua => ua.LastUpdatedAt)
+                    .Take(60)
+                    .ToListAsync();
+
+                // Convert to response DTOs
+                var response = new RecentlyUpdatedResponse
+                {
+                    Tracks = recentTracks.Select(ut => new UserTrackResponse
+                    {
+                        Track = new TrackResponse(ut.Track),
+                        TotalTime = ut.TotalTime,
+                        UserId = ut.User.Id,
+                        IsFavorite = ut.IsFavorite,
+                        IsPinned = ut.IsPinned
+                    }).ToList(),
+
+                    Albums = recentAlbums.Select(ua => new UserAlbumResponse
+                    {
+                        Album = new AlbumResponse(ua.Album),
+                        TotalTime = ua.TotalTime,
+                        UserId = ua.User.Id,
+                        IsFavorite = ua.IsFavorite,
+                        IsPinned = ua.IsPinned
+                    }).ToList(),
+
+                    Artists = recentArtists.Select(ua => new UserArtistResponse
+                    {
+                        Artist = new ArtistResponse(ua.Artist),
+                        TotalTime = ua.TotalTime,
+                        UserId = ua.User.Id,
+                        IsFavorite = ua.IsFavorite,
+                        IsPinned = ua.IsPinned
+                    }).ToList()
+                };
+
+                // Cache the result for 1 hour
+                _memoryCache[cacheKey] = (DateTime.UtcNow.AddHours(1), response);
+                
+                // Try to cache in distributed cache as well
+                try
+                {
+                    var cacheOptions = new Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1)
+                    };
+                    await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), cacheOptions);
+                }
+                catch (System.Exception cacheEx)
+                {
+                    _logger.LogWarning(cacheEx, $"Failed to set distributed cache for user {userId}");
+                }
+
+                _logger.LogInformation($"Found {response.Tracks.Count} tracks, {response.Albums.Count} albums, {response.Artists.Count} artists updated since {since} for user {userId}");
+                return response;
             }
             catch (System.Exception ex)
             {
