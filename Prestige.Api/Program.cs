@@ -25,6 +25,7 @@ using Prestige.Api.Endpoints.FriendshipEndpoints;
 using Prestige.Api.Services;
 using AspNetCoreRateLimit;
 using Hangfire;
+using Hangfire.Redis.StackExchange;
 using Hangfire.SqlServer;
 
 namespace Prestige.Api
@@ -210,29 +211,47 @@ namespace Prestige.Api
                 return;
             }
 
-            var connectionString = ResolveSqlConnectionString(builder.Configuration);
-
-            if (string.IsNullOrWhiteSpace(connectionString))
+            // Try to use Redis first, fall back to SQL if Redis is not configured
+            var redisConnection = builder.Configuration.GetConnectionString("Redis");
+            
+            if (!string.IsNullOrEmpty(redisConnection))
             {
-                // Skip Hangfire initialization if no SQL connection is configured
-                return;
+                // Use Redis for Hangfire storage (more cost-effective than SQL)
+                builder.Services.AddHangfire(config =>
+                {
+                    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                          .UseSimpleAssemblyNameTypeSerializer()
+                          .UseRecommendedSerializerSettings()
+                          .UseRedisStorage(redisConnection, new RedisStorageOptions
+                          {
+                              Prefix = "hangfire:",
+                              InvisibilityTimeout = TimeSpan.FromMinutes(5),
+                              ExpiryCheckInterval = TimeSpan.FromHours(1),
+                              DeletedListSize = 1000,
+                              SucceededListSize = 1000
+                          });
+                });
             }
-                
-            // Configure Hangfire
-            builder.Services.AddHangfire(config =>
+            else
             {
-                config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-                      .UseSimpleAssemblyNameTypeSerializer()
-                      .UseRecommendedSerializerSettings()
-                      .UseSqlServerStorage(connectionString, new SqlServerStorageOptions
-                      {
-                          CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
-                          SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
-                          QueuePollInterval = TimeSpan.Zero,
-                          UseRecommendedIsolationLevel = true,
-                          DisableGlobalLocks = true
-                      });
-            });
+                // Fall back to SQL Server if Redis is not available
+                var connectionString = ResolveSqlConnectionString(builder.Configuration);
+
+                if (string.IsNullOrWhiteSpace(connectionString))
+                {
+                    // Skip Hangfire initialization if no storage is configured
+                    return;
+                }
+                    
+                // Configure Hangfire with SQL Server (legacy - consider migrating to Redis)
+                builder.Services.AddHangfire(config =>
+                {
+                    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                          .UseSimpleAssemblyNameTypeSerializer()
+                          .UseRecommendedSerializerSettings()
+                          .UseSqlServerStorage(connectionString);
+                });
+            }
             
             // Add Hangfire server
             builder.Services.AddHangfireServer(options =>
