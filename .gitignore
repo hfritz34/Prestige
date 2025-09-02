@@ -11,6 +11,7 @@ azure.settings.json
 *.settings.json
 PRESTIGE_APPLICATION_OVERVIEW.txt
 BeliExplanation.md
+AZURE_COST_REDUCTION.md
 
 # Build artifacts
 *.zip

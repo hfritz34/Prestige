@@ -76,6 +76,7 @@ namespace Prestige.Api.Endpoints.Library
         {
             // First try to find in user's tracks
             var userTrack = await PrestigeDb.UserTracks
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(ut => ut.Track)
                 .ThenInclude(t => t.Album)
                 .ThenInclude(a => a.Images)
@@ -100,6 +101,7 @@ namespace Prestige.Api.Endpoints.Library
 
             // If not found in user tracks, try to find in general tracks table
             var track2 = await PrestigeDb.Tracks
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(t => t.Album)
                 .ThenInclude(a => a.Images)
                 .Include(t => t.Artists)
@@ -126,6 +128,7 @@ namespace Prestige.Api.Endpoints.Library
         {
             // First try to find in user's albums
             var userAlbum = await PrestigeDb.UserAlbums
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(ua => ua.Album)
                 .ThenInclude(a => a.Images)
                 .Include(ua => ua.Album)
@@ -149,6 +152,7 @@ namespace Prestige.Api.Endpoints.Library
 
             // If not found in user albums, try to find in general albums table
             var album2 = await PrestigeDb.Albums
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(a => a.Images)
                 .Include(a => a.Artists)
                 .Where(a => a.Id == itemId)
@@ -174,6 +178,7 @@ namespace Prestige.Api.Endpoints.Library
         {
             // First try to find in user's artists
             var userArtist = await PrestigeDb.UserArtists
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(ua => ua.Artist)
                 .ThenInclude(a => a.Images)
                 .Where(ua => ua.User.Id == userId && ua.Artist.Id == itemId)
@@ -195,6 +200,7 @@ namespace Prestige.Api.Endpoints.Library
 
             // If not found in user artists, try to find in general artists table
             var artist2 = await PrestigeDb.Artists
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(a => a.Images)
                 .Where(a => a.Id == itemId)
                 .FirstOrDefaultAsync();

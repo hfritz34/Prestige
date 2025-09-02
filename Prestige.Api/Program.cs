@@ -299,7 +299,7 @@ namespace Prestige.Api
 
             if (!string.IsNullOrWhiteSpace(connection))
             {
-                // Use connection pooling for better performance
+                // Use connection pooling for better performance (reduced from 128 to 32 to lower costs)
                 builder.Services.AddDbContextPool<PrestigeContext>(options =>
                     options.UseSqlServer(connection, sqlOptions =>
                     {
@@ -310,7 +310,7 @@ namespace Prestige.Api
                         sqlOptions.CommandTimeout(30);
                     })
                     .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
-                    poolSize: 128);
+                    poolSize: 32);
             }
             else if (builder.Environment.IsDevelopment())
             {
@@ -318,7 +318,7 @@ namespace Prestige.Api
                 builder.Services.AddDbContextPool<PrestigeContext>(options =>
                     options.UseSqlite("Data Source=prestige_dev.db")
                            .EnableSensitiveDataLogging(true),
-                    poolSize: 128);
+                    poolSize: 32);
             }
             else
             {

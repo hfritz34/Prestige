@@ -17,6 +17,7 @@ namespace Prestige.Api.Endpoints.Rating
         public async Task<IEnumerable<RatingCategoryResponse>> GetRatingCategoriesAsync()
         {
             var categories = await PrestigeDb.RatingCategories
+                .AsNoTracking()  // Added for read-only query optimization
                 .OrderBy(c => c.DisplayOrder)
                 .Select(c => new RatingCategoryResponse
                 {
@@ -92,6 +93,7 @@ namespace Prestige.Api.Endpoints.Rating
             var normalizedType = itemType.ToLowerInvariant();
             
             var ratings = await PrestigeDb.Ratings
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(r => r.Category)
                 .Where(r => r.User.Id == userId && r.ItemType.ToLower() == normalizedType)
                 .OrderByDescending(r => r.PersonalScore)

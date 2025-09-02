@@ -128,6 +128,7 @@ namespace Prestige.Api.Endpoints.Prestige
         public UserTrackResponse GetUserTrack(string userId, string trackId)
         {
             var userTrack = PrestigeDb.UserTracks
+                .AsNoTracking()  // Added for read-only query optimization
                 .Include(ut => ut.Track)
                     .ThenInclude(t => t.Album)
                         .ThenInclude(a => a.Images)
