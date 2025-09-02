@@ -59,6 +59,15 @@ namespace RecentlyPlayedTrigger
                 _logger.LogInformation($"Next timer schedule at: {myTimer.ScheduleStatus.Next}");
             }
 
+            // Skip quiet hours to reduce database activity and costs
+            var currentHourUtc = DateTime.UtcNow.Hour;
+            // 12am-6am EST = 5am-11am UTC (EST is UTC-5)
+            if (currentHourUtc >= 5 && currentHourUtc <= 10) // Skip 5am-11am UTC (12am-6am EST)
+            {
+                _logger.LogInformation($"Skipping execution during quiet hours (12am-6am EST). Current hour: {currentHourUtc}:00 UTC / {(currentHourUtc - 5 + 24) % 24}:00 EST");
+                return;
+            }
+
             try
             {
                 var batchId = Guid.NewGuid().ToString();
