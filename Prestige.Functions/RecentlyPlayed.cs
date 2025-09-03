@@ -60,11 +60,22 @@ namespace RecentlyPlayedTrigger
             }
 
             // Skip quiet hours to reduce database activity and costs
+            // During EDT (summer): 12am-6am EDT = 4am-10am UTC
+            // During EST (winter): 12am-6am EST = 5am-11am UTC
             var currentHourUtc = DateTime.UtcNow.Hour;
-            // 12am-6am EST = 5am-11am UTC (EST is UTC-5)
-            if (currentHourUtc >= 5 && currentHourUtc <= 10) // Skip 5am-11am UTC (12am-6am EST)
+            
+            // Check if we're in daylight saving time (roughly March-November)
+            var isDaylightTime = DateTime.UtcNow.Month >= 3 && DateTime.UtcNow.Month <= 11;
+            
+            bool shouldSkip = isDaylightTime 
+                ? (currentHourUtc >= 4 && currentHourUtc < 10)  // EDT: 4am-10am UTC = 12am-6am EDT
+                : (currentHourUtc >= 5 && currentHourUtc < 11); // EST: 5am-11am UTC = 12am-6am EST
+            
+            if (shouldSkip)
             {
-                _logger.LogInformation($"Skipping execution during quiet hours (12am-6am EST). Current hour: {currentHourUtc}:00 UTC / {(currentHourUtc - 5 + 24) % 24}:00 EST");
+                var offset = isDaylightTime ? -4 : -5;
+                var easternHour = (currentHourUtc + offset + 24) % 24;
+                _logger.LogInformation($"Skipping execution during quiet hours (12am-6am ET). Current hour: {currentHourUtc}:00 UTC / {easternHour}:00 ET");
                 return;
             }
 
