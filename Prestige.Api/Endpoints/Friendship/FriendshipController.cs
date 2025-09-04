@@ -260,6 +260,81 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             }
         }
 
+        [HttpGet("{userId}/friends/{friendId}/tracks/{trackId}")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendTrackDetails(string userId, string friendId, string trackId)
+        {
+            try
+            {
+                var trackDetails = await _service.GetFriendTrackDetailsAsync(userId, friendId, trackId);
+                return Ok(trackDetails);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/friends/{friendId}/albums/{albumId}")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendAlbumDetails(string userId, string friendId, string albumId)
+        {
+            try
+            {
+                var albumDetails = await _service.GetFriendAlbumDetailsAsync(userId, friendId, albumId);
+                return Ok(albumDetails);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/friends/{friendId}/artists/{artistId}")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendArtistDetails(string userId, string friendId, string artistId)
+        {
+            try
+            {
+                var artistDetails = await _service.GetFriendArtistDetailsAsync(userId, friendId, artistId);
+                return Ok(artistDetails);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/friends/{friendId}/albums/{albumId}/tracks")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendAlbumTrackRankings(string userId, string friendId, string albumId)
+        {
+            try
+            {
+                var trackRankings = await _service.GetFriendAlbumTrackRankingsAsync(userId, friendId, albumId);
+                return Ok(trackRankings);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
+        [HttpGet("{userId}/friends/{friendId}/artists/{artistId}/albums")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendArtistAlbumRankings(string userId, string friendId, string artistId)
+        {
+            try
+            {
+                var albumRankings = await _service.GetFriendArtistAlbumRankingsAsync(userId, friendId, artistId);
+                return Ok(albumRankings);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
 
     }
 }

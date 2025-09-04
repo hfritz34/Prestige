@@ -560,6 +560,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
 
         public async Task<ItemComparisonResponse> CompareTrackWithFriendAsync(string userId, string trackId, string friendId)
         {
+            await ValidateFriendshipAsync(userId, friendId);
+
             var userTrack = await PrestigeDb.UserTracks
                 .Include(ut => ut.Track)
                     .ThenInclude(t => t.Album)
@@ -571,14 +573,13 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
 
             var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
 
-            // Get ratings if available
-            var userRating = await PrestigeDb.Set<dynamic>().FromSqlRaw(
-                "SELECT PersonalScore FROM Ratings WHERE UserId = {0} AND ItemId = {1} AND ItemType = 'Track'", 
-                userId, trackId).FirstOrDefaultAsync();
+            var userRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == trackId && r.ItemType.ToLower() == "track");
             
-            var friendRating = await PrestigeDb.Set<dynamic>().FromSqlRaw(
-                "SELECT PersonalScore FROM Ratings WHERE UserId = {0} AND ItemId = {1} AND ItemType = 'Track'", 
-                friendId, trackId).FirstOrDefaultAsync();
+            var friendRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == trackId && r.ItemType.ToLower() == "track");
 
             return new ItemComparisonResponse
             {
@@ -591,13 +592,15 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 UserStats = new UserStats
                 {
                     ListeningTime = userTrack?.TotalTime,
-                    RatingScore = userRating?.PersonalScore,
+                    RatingScore = userRating != null ? (double?)userRating.PersonalScore : null,
+                    Position = userRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(userTrack?.TotalTime, "Track")
                 },
                 FriendStats = new UserStats
                 {
                     ListeningTime = friendTrack?.TotalTime,
-                    RatingScore = friendRating?.PersonalScore,
+                    RatingScore = friendRating != null ? (double?)friendRating.PersonalScore : null,
+                    Position = friendRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(friendTrack?.TotalTime, "Track")
                 }
             };
@@ -605,6 +608,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
 
         public async Task<ItemComparisonResponse> CompareAlbumWithFriendAsync(string userId, string albumId, string friendId)
         {
+            await ValidateFriendshipAsync(userId, friendId);
+
             var userAlbum = await PrestigeDb.UserAlbums
                 .Include(ua => ua.Album)
                     .ThenInclude(a => a.Images)
@@ -614,6 +619,14 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 .FirstOrDefaultAsync(ua => ua.User.Id == friendId && ua.Album.Id == albumId);
 
             var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+
+            var userRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == albumId && r.ItemType.ToLower() == "album");
+            
+            var friendRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == albumId && r.ItemType.ToLower() == "album");
 
             return new ItemComparisonResponse
             {
@@ -626,11 +639,15 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 UserStats = new UserStats
                 {
                     ListeningTime = userAlbum?.TotalTime,
+                    RatingScore = userRating != null ? (double?)userRating.PersonalScore : null,
+                    Position = userRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(userAlbum?.TotalTime, "Album")
                 },
                 FriendStats = new UserStats
                 {
                     ListeningTime = friendAlbum?.TotalTime,
+                    RatingScore = friendRating != null ? (double?)friendRating.PersonalScore : null,
+                    Position = friendRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(friendAlbum?.TotalTime, "Album")
                 }
             };
@@ -638,6 +655,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
 
         public async Task<ItemComparisonResponse> CompareArtistWithFriendAsync(string userId, string artistId, string friendId)
         {
+            await ValidateFriendshipAsync(userId, friendId);
+
             var userArtist = await PrestigeDb.UserArtists
                 .Include(ua => ua.Artist)
                     .ThenInclude(a => a.Images)
@@ -647,6 +666,14 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 .FirstOrDefaultAsync(ua => ua.User.Id == friendId && ua.Artist.Id == artistId);
 
             var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+
+            var userRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == artistId && r.ItemType.ToLower() == "artist");
+            
+            var friendRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == artistId && r.ItemType.ToLower() == "artist");
 
             return new ItemComparisonResponse
             {
@@ -659,11 +686,15 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 UserStats = new UserStats
                 {
                     ListeningTime = userArtist?.TotalTime,
+                    RatingScore = userRating != null ? (double?)userRating.PersonalScore : null,
+                    Position = userRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(userArtist?.TotalTime, "Artist")
                 },
                 FriendStats = new UserStats
                 {
                     ListeningTime = friendArtist?.TotalTime,
+                    RatingScore = friendRating != null ? (double?)friendRating.PersonalScore : null,
+                    Position = friendRating?.Position,
                     PrestigeTier = CalculatePrestigeTier(friendArtist?.TotalTime, "Artist")
                 }
             };
@@ -703,6 +734,211 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 },
                 _ => "Unknown"
             };
+        }
+
+        public async Task<FriendItemDetailsResponse> GetFriendTrackDetailsAsync(string userId, string friendId, string trackId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            var friendTrack = await PrestigeDb.UserTracks
+                .Include(ut => ut.Track)
+                    .ThenInclude(t => t.Album)
+                        .ThenInclude(a => a.Images)
+                .Include(ut => ut.Track.Artists)
+                    .ThenInclude(a => a.Images)
+                .FirstOrDefaultAsync(ut => ut.User.Id == friendId && ut.Track.Id == trackId);
+
+            var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+
+            var rating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == trackId && r.ItemType.ToLower() == "track");
+
+            return new FriendItemDetailsResponse
+            {
+                ItemId = trackId,
+                ItemType = "Track",
+                ItemName = friendTrack?.Track.Name ?? "Unknown Track",
+                ItemImageUrl = friendTrack?.Track.Album.Images?.FirstOrDefault()?.Url ?? "",
+                FriendId = friendId,
+                FriendNickname = friend?.NickName ?? "Unknown",
+                FriendListeningTime = friendTrack?.TotalTime,
+                FriendRatingScore = rating != null ? (double?)rating.PersonalScore : null,
+                FriendPosition = rating?.Position,
+                FriendRankWithinAlbum = rating?.RankWithinAlbum,
+                FriendPrestigeTier = CalculatePrestigeTier(friendTrack?.TotalTime, "Track"),
+                IsPinned = friendTrack?.IsPinned ?? false,
+                IsFavorite = friendTrack?.IsFavorite ?? false,
+                AdditionalData = friendTrack?.Track
+            };
+        }
+
+        public async Task<FriendItemDetailsResponse> GetFriendAlbumDetailsAsync(string userId, string friendId, string albumId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            var friendAlbum = await PrestigeDb.UserAlbums
+                .Include(ua => ua.Album)
+                    .ThenInclude(a => a.Images)
+                .Include(ua => ua.Album.Artists)
+                    .ThenInclude(a => a.Images)
+                .FirstOrDefaultAsync(ua => ua.User.Id == friendId && ua.Album.Id == albumId);
+
+            var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+
+            var rating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == albumId && r.ItemType.ToLower() == "album");
+
+            return new FriendItemDetailsResponse
+            {
+                ItemId = albumId,
+                ItemType = "Album",
+                ItemName = friendAlbum?.Album.Name ?? "Unknown Album",
+                ItemImageUrl = friendAlbum?.Album.Images?.FirstOrDefault()?.Url ?? "",
+                FriendId = friendId,
+                FriendNickname = friend?.NickName ?? "Unknown",
+                FriendListeningTime = friendAlbum?.TotalTime,
+                FriendRatingScore = rating != null ? (double?)rating.PersonalScore : null,
+                FriendPosition = rating?.Position,
+                FriendPrestigeTier = CalculatePrestigeTier(friendAlbum?.TotalTime, "Album"),
+                IsPinned = friendAlbum?.IsPinned ?? false,
+                IsFavorite = friendAlbum?.IsFavorite ?? false,
+                AdditionalData = friendAlbum?.Album
+            };
+        }
+
+        public async Task<FriendItemDetailsResponse> GetFriendArtistDetailsAsync(string userId, string friendId, string artistId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            var friendArtist = await PrestigeDb.UserArtists
+                .Include(ua => ua.Artist)
+                    .ThenInclude(a => a.Images)
+                .FirstOrDefaultAsync(ua => ua.User.Id == friendId && ua.Artist.Id == artistId);
+
+            var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+
+            var rating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
+                .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == artistId && r.ItemType.ToLower() == "artist");
+
+            return new FriendItemDetailsResponse
+            {
+                ItemId = artistId,
+                ItemType = "Artist",
+                ItemName = friendArtist?.Artist.Name ?? "Unknown Artist",
+                ItemImageUrl = friendArtist?.Artist.Images?.FirstOrDefault()?.Url ?? "",
+                FriendId = friendId,
+                FriendNickname = friend?.NickName ?? "Unknown",
+                FriendListeningTime = friendArtist?.TotalTime,
+                FriendRatingScore = rating != null ? (double?)rating.PersonalScore : null,
+                FriendPosition = rating?.Position,
+                FriendPrestigeTier = CalculatePrestigeTier(friendArtist?.TotalTime, "Artist"),
+                IsPinned = friendArtist?.IsPinned ?? false,
+                IsFavorite = friendArtist?.IsFavorite ?? false,
+                AdditionalData = friendArtist?.Artist
+            };
+        }
+
+        public async Task<List<FriendTrackRankingResponse>> GetFriendAlbumTrackRankingsAsync(string userId, string friendId, string albumId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            var albumTracks = await PrestigeDb.Tracks
+                .Include(t => t.Album)
+                    .ThenInclude(a => a.Images)
+                .Where(t => t.Album.Id == albumId)
+                .ToListAsync();
+
+            if (!albumTracks.Any())
+            {
+                return new List<FriendTrackRankingResponse>();
+            }
+
+            var trackRankings = new List<FriendTrackRankingResponse>();
+            var albumImage = albumTracks.FirstOrDefault()?.Album?.Images?.FirstOrDefault()?.Url ?? "";
+
+            foreach (var track in albumTracks)
+            {
+                var userTrack = await PrestigeDb.UserTracks
+                    .FirstOrDefaultAsync(ut => ut.User.Id == friendId && ut.Track.Id == track.Id);
+
+                var rating = await PrestigeDb.Ratings
+                    .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == track.Id && r.ItemType.ToLower() == "track");
+
+                trackRankings.Add(new FriendTrackRankingResponse
+                {
+                    TrackId = track.Id,
+                    TrackName = track.Name,
+                    TrackImageUrl = albumImage,
+                    TrackNumber = 0,
+                    Duration = track.DurationMs,
+                    FriendId = friendId,
+                    FriendListeningTime = userTrack?.TotalTime,
+                    FriendRatingScore = rating != null ? (double?)rating.PersonalScore : null,
+                    FriendPosition = rating?.Position,
+                    FriendRankWithinAlbum = rating?.RankWithinAlbum,
+                    FriendPrestigeTier = CalculatePrestigeTier(userTrack?.TotalTime, "Track")
+                });
+            }
+
+            return trackRankings.OrderBy(t => t.FriendRankWithinAlbum ?? int.MaxValue).ToList();
+        }
+
+        public async Task<List<FriendAlbumRatingResponse>> GetFriendArtistAlbumRankingsAsync(string userId, string friendId, string artistId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            var albumRankings = new List<FriendAlbumRatingResponse>();
+
+            var artistAlbums = await PrestigeDb.Albums
+                .Include(a => a.Images)
+                .Include(a => a.Artists)
+                .Where(a => a.Artists.Any(ar => ar.Id == artistId))
+                .ToListAsync();
+
+            foreach (var album in artistAlbums)
+            {
+                var userAlbum = await PrestigeDb.UserAlbums
+                    .FirstOrDefaultAsync(ua => ua.User.Id == friendId && ua.Album.Id == album.Id);
+
+                var rating = await PrestigeDb.Ratings
+                    .FirstOrDefaultAsync(r => r.User.Id == friendId && r.ItemId == album.Id && r.ItemType.ToLower() == "album");
+
+                if (userAlbum != null || rating != null)
+                {
+                    albumRankings.Add(new FriendAlbumRatingResponse
+                    {
+                        AlbumId = album.Id,
+                        AlbumName = album.Name,
+                        AlbumImageUrl = album.Images?.FirstOrDefault()?.Url ?? "",
+                        ReleaseDate = DateTime.MinValue,
+                        TrackCount = 0,
+                        FriendId = friendId,
+                        FriendListeningTime = userAlbum?.TotalTime,
+                        FriendRatingScore = rating != null ? (double?)rating.PersonalScore : null,
+                        FriendPosition = rating?.Position,
+                        FriendPrestigeTier = CalculatePrestigeTier(userAlbum?.TotalTime, "Album"),
+                        IsPinned = userAlbum?.IsPinned ?? false,
+                        IsFavorite = userAlbum?.IsFavorite ?? false
+                    });
+                }
+            }
+
+            return albumRankings.OrderBy(a => a.FriendPosition ?? int.MaxValue).ToList();
+        }
+
+        private async Task ValidateFriendshipAsync(string userId, string friendId)
+        {
+            var friendshipExists = await PrestigeDb.Friendships
+                .AnyAsync(f => (f.UserId == userId && f.FriendId == friendId && f.Status == FriendRequestStatus.Accepted) ||
+                              (f.UserId == friendId && f.FriendId == userId && f.Status == FriendRequestStatus.Accepted));
+
+            if (!friendshipExists)
+            {
+                throw new Exception("Users are not friends or friendship not found.");
+            }
         }
 
     }

@@ -40,4 +40,53 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse
         public string PrestigeTier { get; set; }
         public int? Position { get; set; }
     }
+
+    public class FriendItemDetailsResponse
+    {
+        public string ItemId { get; set; }
+        public string ItemType { get; set; }
+        public string ItemName { get; set; }
+        public string ItemImageUrl { get; set; }
+        public string FriendId { get; set; }
+        public string FriendNickname { get; set; }
+        public int? FriendListeningTime { get; set; }
+        public double? FriendRatingScore { get; set; }
+        public int? FriendPosition { get; set; }
+        public string FriendPrestigeTier { get; set; }
+        public int? FriendRankWithinAlbum { get; set; }
+        public bool IsPinned { get; set; }
+        public bool IsFavorite { get; set; }
+        public object AdditionalData { get; set; }
+    }
+
+    public class FriendTrackRankingResponse
+    {
+        public string TrackId { get; set; }
+        public string TrackName { get; set; }
+        public string TrackImageUrl { get; set; }
+        public int TrackNumber { get; set; }
+        public int Duration { get; set; }
+        public string FriendId { get; set; }
+        public int? FriendListeningTime { get; set; }
+        public double? FriendRatingScore { get; set; }
+        public int? FriendPosition { get; set; }
+        public int? FriendRankWithinAlbum { get; set; }
+        public string FriendPrestigeTier { get; set; }
+    }
+
+    public class FriendAlbumRatingResponse
+    {
+        public string AlbumId { get; set; }
+        public string AlbumName { get; set; }
+        public string AlbumImageUrl { get; set; }
+        public DateTime ReleaseDate { get; set; }
+        public int TrackCount { get; set; }
+        public string FriendId { get; set; }
+        public int? FriendListeningTime { get; set; }
+        public double? FriendRatingScore { get; set; }
+        public int? FriendPosition { get; set; }
+        public string FriendPrestigeTier { get; set; }
+        public bool IsPinned { get; set; }
+        public bool IsFavorite { get; set; }
+    }
 }
