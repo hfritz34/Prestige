@@ -88,20 +88,36 @@ namespace RecentlyPlayedTrigger
 
                 foreach (var user in users)
                 {
-                    var (spotifyAccessToken, spotifyRefreshToken) = await GetSpotifyTokensAsync(user.Id);
-                    _logger.LogInformation($"Spotify tokens fetched successfully for user: {user.Id}");
-
-                    var recentlyPlayedTracksJson = await FetchRecentlyPlayedTracks(spotifyAccessToken, spotifyRefreshToken, user.Id);
-
-                    if (recentlyPlayedTracksJson.GetProperty("items").GetArrayLength() > 0)
+                    // Skip dummy/test users
+                    if (user.Id.StartsWith("dummy_") || user.Id.Contains("test"))
                     {
-                        _logger.LogInformation($"Fetched recently played tracks for user: {user.Id}");
-                        var userBatchItems = await StoreTracksInCosmosDB(user.Id, batchId, recentlyPlayedTracksJson);
-                        allBatchItems.AddRange(userBatchItems);
+                        _logger.LogInformation($"Skipping dummy/test user: {user.Id}");
+                        continue;
                     }
-                    else
+
+                    try
                     {
-                        _logger.LogInformation($"No recently played tracks found for user: {user.Id}");
+                        var (spotifyAccessToken, spotifyRefreshToken) = await GetSpotifyTokensAsync(user.Id);
+                        _logger.LogInformation($"Spotify tokens fetched successfully for user: {user.Id}");
+
+                        var recentlyPlayedTracksJson = await FetchRecentlyPlayedTracks(spotifyAccessToken, spotifyRefreshToken, user.Id);
+
+                        if (recentlyPlayedTracksJson.GetProperty("items").GetArrayLength() > 0)
+                        {
+                            _logger.LogInformation($"Fetched recently played tracks for user: {user.Id}");
+                            var userBatchItems = await StoreTracksInCosmosDB(user.Id, batchId, recentlyPlayedTracksJson);
+                            allBatchItems.AddRange(userBatchItems);
+                        }
+                        else
+                        {
+                            _logger.LogInformation($"No recently played tracks found for user: {user.Id}");
+                        }
+                    }
+                    catch (Exception userEx)
+                    {
+                        _logger.LogError(userEx, $"Error processing user {user.Id}. Continuing with next user.");
+                        // Continue processing other users even if one fails
+                        continue;
                     }
                 }
 

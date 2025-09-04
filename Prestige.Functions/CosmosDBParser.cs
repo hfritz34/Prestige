@@ -35,7 +35,7 @@ namespace CosmosDBParser
            LeaseContainerName = "leases",
            CreateLeaseContainerIfNotExists =  true )] IReadOnlyList<Document> data)
        {
-           _logger.LogInformation($"CosmosDBParser triggered with {data.Count} documents");
+           _logger.LogInformation($"CosmosDBParser triggered with {data.Count} documents at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC");
            
            try 
            {
@@ -109,6 +109,15 @@ namespace CosmosDBParser
                                    {
                                        _logger.LogWarning($"Invalid track data for {doc.trackId} (400) - skipping: {errorContent}");
                                    }
+                                   else if (userTrackResponse.StatusCode == System.Net.HttpStatusCode.InternalServerError)
+                                   {
+                                       _logger.LogError($"API Internal Server Error for track {doc.trackId} user {doc.userId}: {errorContent}");
+                                       // Check if it's a database-related error
+                                       if (errorContent.Contains("LastUpdatedAt") || errorContent.Contains("DateTime"))
+                                       {
+                                           _logger.LogError($"Possible LastUpdatedAt migration issue detected for user {doc.userId}");
+                                       }
+                                   }
                                    else
                                    {
                                        _logger.LogError($"Failed posting track {doc.trackId}: {userTrackResponse.StatusCode} - {errorContent}");
@@ -116,11 +125,22 @@ namespace CosmosDBParser
                                    return false;
                                }
                                
+                               _logger.LogDebug($"Successfully processed track {doc.trackId} for user {doc.userId}");
                                return true;
+                           }
+                           catch (HttpRequestException httpEx)
+                           {
+                               _logger.LogError(httpEx, $"HTTP request failed for track {doc.trackId} user {doc.userId}: {httpEx.Message}");
+                               return false;
+                           }
+                           catch (TaskCanceledException tcEx)
+                           {
+                               _logger.LogError(tcEx, $"Request timeout for track {doc.trackId} user {doc.userId}");
+                               return false;
                            }
                            catch (Exception ex)
                            {
-                               _logger.LogError(ex, $"Error processing track {doc.trackId} for user {doc.userId}");
+                               _logger.LogError(ex, $"Unexpected error processing track {doc.trackId} for user {doc.userId}: {ex.Message}");
                                return false;
                            }
                        });
@@ -130,7 +150,13 @@ namespace CosmosDBParser
                        var successCount = results.Count(r => r);
                        var failureCount = results.Count(r => !r);
                        
-                       _logger.LogInformation($"Batch {batchNumber} completed: {successCount} successful, {failureCount} failed");
+                       _logger.LogInformation($"Batch {batchNumber} for user {userId} completed: {successCount} successful, {failureCount} failed");
+                   
+                   // If we have a high failure rate, log a warning
+                   if (failureCount > 0 && (double)failureCount / results.Length > 0.5)
+                   {
+                       _logger.LogWarning($"High failure rate ({failureCount}/{results.Length}) for user {userId} in batch {batchNumber}. Check API health and database state.");
+                   }
                        batchNumber++;
                        
                        // Small delay between batches to avoid overwhelming the API
