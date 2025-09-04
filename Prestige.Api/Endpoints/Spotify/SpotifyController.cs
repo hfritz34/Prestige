@@ -174,5 +174,41 @@ namespace Prestige.Api.Endpoints.Spotify
             }
         }
 
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetCurrentSpotifyUserProfileAsync()
+        {
+            try
+            {
+                var response = await _service.GetCurrentSpotifyUserProfileAsync();
+                if (response == null)
+                {
+                    return NotFound("Spotify profile not available");
+                }
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpPost("sync-profile-picture/{userId}")]
+        public async Task<IActionResult> SyncUserProfilePictureAsync(string userId)
+        {
+            try
+            {
+                var updated = await _service.SyncUserProfilePictureAsync(userId);
+                return Ok(new { 
+                    profilePictureUpdated = updated,
+                    userId = userId,
+                    timestamp = DateTime.UtcNow
+                });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
     }
 }

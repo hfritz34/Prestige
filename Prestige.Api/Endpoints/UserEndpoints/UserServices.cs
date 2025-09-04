@@ -5,12 +5,14 @@ using Prestige.Api.Endpoints.UserEndpoints.RequestResponse;
 using System.Security.Claims;
 using Prestige.Api.Logging;
 using Microsoft.EntityFrameworkCore;
+using Prestige.Api.Endpoints.Spotify.RequestResponse;
 
 namespace Prestige.Api.Endpoints.UserEndpoints
 {
     public class UserServices : BaseService
     {
         private string UserAuthId => Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("User not found");
+        
         public UserServices(PrestigeContext db, ILogger<UserServices> logger, ClaimsPrincipal principal, IConfiguration config) : base(db, logger, principal, config)
         {
         }
@@ -176,6 +178,60 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 .Take(10)
                 .Select(u => new UserResponse(u))
                 .ToList();
+        }
+
+        /// <summary>
+        /// Updates user profile with Spotify data if profile picture has changed
+        /// </summary>
+        /// <param name="userId">User ID to update</param>
+        /// <param name="spotifyProfile">Current Spotify profile data</param>
+        /// <returns>True if profile was updated</returns>
+        public bool UpdateUserFromSpotifyProfile(string userId, SpotifyUserProfileResponse spotifyProfile)
+        {
+            var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId);
+            if (user == null)
+            {
+                Logger.LogWarning("User not found for profile sync: {UserId}", userId);
+                return false;
+            }
+
+            if (spotifyProfile?.Images == null || !spotifyProfile.Images.Any())
+            {
+                Logger.LogInformation("No Spotify profile picture available for user: {UserId}", userId);
+                return false;
+            }
+
+            // Get the highest quality image (usually first in array)
+            var currentSpotifyProfilePic = spotifyProfile.Images.FirstOrDefault()?.Url;
+            
+            if (string.IsNullOrEmpty(currentSpotifyProfilePic))
+            {
+                Logger.LogInformation("Spotify profile picture URL is empty for user: {UserId}", userId);
+                return false;
+            }
+
+            // Compare with current profile picture
+            if (user.ProfilePicURL != currentSpotifyProfilePic)
+            {
+                Logger.LogInformation("Profile picture changed for user {UserId}. Old: {OldUrl}, New: {NewUrl}", 
+                    userId, user.ProfilePicURL, currentSpotifyProfilePic);
+                
+                // Update user profile fields from Spotify
+                user.UpdateUser(
+                    name: spotifyProfile.DisplayName,
+                    nickName: null, // Don't override user's custom nickname
+                    email: spotifyProfile.Email,
+                    profilePicURL: currentSpotifyProfilePic
+                );
+                
+                PrestigeDb.SaveChanges();
+                
+                Logger.LogInformation("Successfully updated profile picture for user: {UserId}", userId);
+                return true;
+            }
+
+            Logger.LogDebug("Profile picture unchanged for user: {UserId}", userId);
+            return false;
         }
     }
 }

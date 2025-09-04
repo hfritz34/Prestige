@@ -591,5 +591,63 @@ namespace Prestige.Api.Endpoints.Spotify
 
             return tracks;
         }
+
+        /// <summary>
+        /// Fetches current Spotify user profile data from Spotify API
+        /// </summary>
+        /// <returns>Spotify user profile data or null if unavailable</returns>
+        public async Task<SpotifyUserProfileResponse?> GetCurrentSpotifyUserProfileAsync()
+        {
+            try
+            {
+                var spotify = await getUserSpotifyAuthorizedClient();
+                var response = await spotify.GetAsync("me");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.LogWarning("Failed to get Spotify user profile: {StatusCode}", response.StatusCode);
+                    return null;
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var profile = JsonSerializer.Deserialize<SpotifyUserProfileResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error fetching Spotify user profile");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Checks if user's Spotify profile picture has changed and updates it if necessary
+        /// </summary>
+        /// <param name="userId">User ID to check and update</param>
+        /// <returns>True if profile picture was updated, false otherwise</returns>
+        public async Task<bool> SyncUserProfilePictureAsync(string userId)
+        {
+            try
+            {
+                var spotifyProfile = await GetCurrentSpotifyUserProfileAsync();
+                if (spotifyProfile == null)
+                {
+                    Logger.LogInformation("No Spotify profile data available for user: {UserId}", userId);
+                    return false;
+                }
+                
+                // Use UserServices to update the profile to avoid code duplication
+                return _userServices.UpdateUserFromSpotifyProfile(userId, spotifyProfile);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error syncing profile picture for user: {UserId}", userId);
+                return false;
+            }
+        }
     }
 }

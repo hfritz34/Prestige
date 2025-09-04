@@ -477,6 +477,11 @@ namespace Prestige.Api
                     "optimize-database",
                     x => x.OptimizeDatabaseAsync(),
                     Cron.Weekly(DayOfWeek.Sunday, 3)); // Run weekly on Sunday at 3 AM
+
+                RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
+                    "sync-profile-pictures",
+                    x => x.SyncUserProfilePicturesAsync(null),
+                    Cron.Daily(1)); // Run daily at 1 AM to sync all user profile pictures
             }
 
             app.Run();

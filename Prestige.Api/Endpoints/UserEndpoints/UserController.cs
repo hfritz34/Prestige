@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.VisualBasic;
 using Prestige.Api.Endpoints.UserEndpoints.RequestResponse;
 using Exception = Prestige.Api.Exceptions.Exception;
+using Hangfire;
+using Prestige.Api.Services;
 
 namespace Prestige.Api.Endpoints.UserEndpoints
 {
@@ -99,6 +101,28 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             {
                 var userResponse = _service.UpdateIsSetup(id, isSetup);
                 return Ok(userResponse);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
+        [HttpPost("{id}/sync-profile-picture")]
+        public IActionResult SyncUserProfilePicture(string id)
+        {
+            try
+            {
+                // Queue background job to sync profile picture
+                var jobId = BackgroundJob.Enqueue<RatingBackgroundJobs>(job => 
+                    job.SyncUserProfilePicturesAsync(id));
+
+                return Ok(new { 
+                    message = "Profile picture sync queued successfully", 
+                    jobId = jobId,
+                    userId = id,
+                    timestamp = DateTime.UtcNow
+                });
             }
             catch (Exception ex)
             {

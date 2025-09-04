@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Prestige.Api.Data;
 using Prestige.Api.Domain;
+using Prestige.Api.Endpoints.Spotify;
 
 namespace Prestige.Api.Services
 {
@@ -10,12 +11,14 @@ namespace Prestige.Api.Services
         private readonly PrestigeContext _context;
         private readonly ILogger<RatingBackgroundJobs> _logger;
         private readonly PrestigeCacheService _cacheService;
+        private readonly SpotifyServices _spotifyServices;
         
-        public RatingBackgroundJobs(PrestigeContext context, ILogger<RatingBackgroundJobs> logger, PrestigeCacheService cacheService)
+        public RatingBackgroundJobs(PrestigeContext context, ILogger<RatingBackgroundJobs> logger, PrestigeCacheService cacheService, SpotifyServices spotifyServices)
         {
             _context = context;
             _logger = logger;
             _cacheService = cacheService;
+            _spotifyServices = spotifyServices;
         }
         
         [AutomaticRetry(Attempts = 3)]
@@ -203,6 +206,79 @@ namespace Prestige.Api.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing rating update for user {UserId}", userId);
+                throw;
+            }
+        }
+        
+        [AutomaticRetry(Attempts = 3)]
+        [DisableConcurrentExecution(timeoutInSeconds: 120)]
+        public async Task SyncUserProfilePicturesAsync(string? specificUserId = null)
+        {
+            try
+            {
+                _logger.LogInformation("Starting profile picture sync {UserScope}", 
+                    specificUserId != null ? $"for user {specificUserId}" : "for all users");
+                
+                IQueryable<User> usersQuery = _context.Users;
+                
+                // If specific user ID is provided, sync only that user
+                if (!string.IsNullOrEmpty(specificUserId))
+                {
+                    usersQuery = usersQuery.Where(u => u.Id == specificUserId);
+                }
+                else
+                {
+                    // Otherwise, sync users with valid tokens that haven't been synced recently
+                    var cutoffTime = DateTime.UtcNow.AddHours(-6); // Sync every 6 hours max
+                    usersQuery = usersQuery.Where(u => 
+                        !string.IsNullOrEmpty(u.AccessToken) && 
+                        u.ExpiresAt > DateTime.UtcNow);
+                }
+                
+                var users = await usersQuery.ToListAsync();
+                
+                if (!users.Any())
+                {
+                    _logger.LogInformation("No users found for profile picture sync");
+                    return;
+                }
+                
+                int syncedCount = 0;
+                int updatedCount = 0;
+                
+                foreach (var user in users)
+                {
+                    try
+                    {
+                        _logger.LogDebug("Syncing profile picture for user {UserId}", user.Id);
+                        
+                        var wasUpdated = await _spotifyServices.SyncUserProfilePictureAsync(user.Id);
+                        syncedCount++;
+                        
+                        if (wasUpdated)
+                        {
+                            updatedCount++;
+                        }
+                        
+                        // Small delay between users to be respectful to Spotify API
+                        if (users.Count > 1)
+                        {
+                            await Task.Delay(100);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to sync profile picture for user {UserId}", user.Id);
+                        // Continue with other users even if one fails
+                    }
+                }
+                
+                _logger.LogInformation("Profile picture sync completed. Processed: {ProcessedCount}, Updated: {UpdatedCount}", 
+                    syncedCount, updatedCount);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during profile picture sync");
                 throw;
             }
         }
