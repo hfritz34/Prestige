@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Prestige.Api.Configuration;
 using Prestige.Api.Data;
 using Prestige.Api.Domain;
 using Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse;
@@ -700,40 +701,16 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             };
         }
 
-        private string CalculatePrestigeTier(int? totalTime, string itemType)
+        /// <summary>
+        /// Calculate prestige tier using centralized configuration system
+        /// Supports both dev (low thresholds) and production (realistic thresholds) modes
+        /// </summary>
+        /// <param name="totalTimeSeconds">Total listening time in seconds</param>
+        /// <param name="itemType">Item type: "Track", "Album", or "Artist"</param>
+        /// <returns>Prestige tier name</returns>
+        private string CalculatePrestigeTier(int? totalTimeSeconds, string itemType)
         {
-            if (!totalTime.HasValue) return "None";
-            
-            var timeInMinutes = totalTime.Value;
-            
-            return itemType switch
-            {
-                "Track" => timeInMinutes switch
-                {
-                    >= 500 => "Obsessed",
-                    >= 200 => "Devoted",
-                    >= 100 => "Fan",
-                    >= 50 => "Casual",
-                    _ => "Listener"
-                },
-                "Album" => timeInMinutes switch
-                {
-                    >= 2000 => "Obsessed",
-                    >= 1000 => "Devoted", 
-                    >= 500 => "Fan",
-                    >= 200 => "Casual",
-                    _ => "Listener"
-                },
-                "Artist" => timeInMinutes switch
-                {
-                    >= 5000 => "Obsessed",
-                    >= 2500 => "Devoted",
-                    >= 1000 => "Fan",
-                    >= 500 => "Casual",
-                    _ => "Listener"
-                },
-                _ => "Unknown"
-            };
+            return PrestigeThresholds.CalculatePrestigeTier(totalTimeSeconds, itemType);
         }
 
         public async Task<FriendItemDetailsResponse> GetFriendTrackDetailsAsync(string userId, string friendId, string trackId)
