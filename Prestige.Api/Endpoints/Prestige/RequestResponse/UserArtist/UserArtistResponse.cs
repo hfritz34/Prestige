@@ -10,6 +10,7 @@ namespace Prestige.Api.Endpoints.Prestige.RequestResponse
         public required string UserId { get;  set; }
         public bool IsFavorite { get; set; }
         public bool IsPinned { get; set; }
+        public string? PrestigeTier { get; set; }
 
     }
 }

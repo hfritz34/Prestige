@@ -417,7 +417,8 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ut.User.Id,
                     Track = new TrackResponse(ut.Track),
-                    TotalTime = ut.TotalTime
+                    TotalTime = ut.TotalTime,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                 })
                 .ToList();
         }
@@ -484,7 +485,8 @@ namespace Prestige.Api.Endpoints.Profile
                 {
                     UserId = ut.User.Id,
                     Track = new TrackResponse(ut.Track),
-                    TotalTime = ut.TotalTime
+                    TotalTime = ut.TotalTime,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                 })
                 .ToList();
         }
