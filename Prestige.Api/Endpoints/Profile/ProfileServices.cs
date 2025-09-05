@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Prestige.Api.Logging;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
+using Prestige.Api.Configuration;
 using Exception = Prestige.Api.Exceptions.Exception;
 
 namespace Prestige.Api.Endpoints.Profile
@@ -56,7 +57,8 @@ namespace Prestige.Api.Endpoints.Profile
                 TotalTime = ut.TotalTime,
                 UserId = ut.User.Id,
                 IsFavorite = ut.IsFavorite,
-                IsPinned = ut.IsPinned
+                IsPinned = ut.IsPinned,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
             }).ToList();
 
             return topTracks;
@@ -87,7 +89,8 @@ namespace Prestige.Api.Endpoints.Profile
                 Album = new AlbumResponse(ua.Album),
                 TotalTime = ua.TotalTime,
                 IsFavorite = ua.IsFavorite,
-                IsPinned = ua.IsPinned
+                IsPinned = ua.IsPinned,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
             })
                 .ToList();
 
@@ -116,7 +119,8 @@ namespace Prestige.Api.Endpoints.Profile
                 UserId = ua.User.Id,
                 TotalTime = ua.TotalTime,
                 IsFavorite = ua.IsFavorite,
-                IsPinned = ua.IsPinned
+                IsPinned = ua.IsPinned,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
             }).ToList();
 
             return topArtists;
