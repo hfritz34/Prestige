@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 
 const ArtistPage: React.FC = () => {
   const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened } = useFriends();
-  const { getArtistPrestigeTier, togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
+  const { togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -82,7 +82,7 @@ const ArtistPage: React.FC = () => {
     setShowFriends(!showFriends);
   };
 
-  const prestigeLevel = getArtistPrestigeTier(artist.totalTime) || "None";
+  const prestigeLevel = artist.prestigeTier || "None";
 
   const handleAlbumClick = (album: any) => {
     navigate('/prestige/album', { 
@@ -160,7 +160,8 @@ const ArtistPage: React.FC = () => {
               const FriendItem = () => {
                 const friendTimeQuery = useFriendArtistTime(friend.id, artist.artistId, showFriends);
                 const friendTime = friendTimeQuery.data || 0;
-                const friendPrestige = getArtistPrestigeTier(friendTime) || "None";
+                // Friend prestige tier would need to come from backend
+                const friendPrestige = "None"; // TODO: Get from friend data
                 
                 return (
                   <li

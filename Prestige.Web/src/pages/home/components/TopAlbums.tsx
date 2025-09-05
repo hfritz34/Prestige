@@ -35,6 +35,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
       totalTime: album.totalTime,
       imageUrl: album.album.images[0].url,
       isPinned: album.isPinned,
+      prestigeTier: album.prestigeTier,
     });
   };
 
@@ -55,6 +56,7 @@ const TopAlbums: React.FC<TopAlbumsProps> = ({ topAlbums }) => {
               rank={index + 1}
               type="album"
               ratingScore={getAlbumRating(album.album.id)}
+              prestigeTier={album.prestigeTier}
               onClick={() => handleAlbumClick(album)}
             />
           ))}

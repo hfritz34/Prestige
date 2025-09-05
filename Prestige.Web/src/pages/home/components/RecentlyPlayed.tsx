@@ -38,6 +38,7 @@ const RecentlyPlayed: React.FC<RecentlyPlayedProps> = ({ recentItems }) => {
                 name={item.track.name}
                 images={item.track.album.images}
                 artists={item.track.artists}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.track.id, "track")}
               />
             );
@@ -50,6 +51,7 @@ const RecentlyPlayed: React.FC<RecentlyPlayedProps> = ({ recentItems }) => {
                 name={item.album.name}
                 images={item.album.images}
                 artists={item.album.artists}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.album.id, "album")}
               />
             );
@@ -61,6 +63,7 @@ const RecentlyPlayed: React.FC<RecentlyPlayedProps> = ({ recentItems }) => {
                 totalTime={item.totalTime}
                 name={item.artist.name}
                 images={item.artist.images}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.artist.id, "artist")}
               />
             );

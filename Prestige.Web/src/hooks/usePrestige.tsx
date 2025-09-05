@@ -79,48 +79,20 @@ const usePrestige = () => {
       return await http.getOne<ArtistAlbumsWithRankingsResponse>(`prestige/${userId}/artists/${artistId}/albums`);
     };
 
-    const getTrackPrestigeTier = (totalTime: number): string => {
-      if (totalTime >= 200 * 60) return "DarkMatter";
-      else if (totalTime >= 120 * 60) return "Opal";
-      else if (totalTime >= 60 * 60) return "Diamond";
-      else if (totalTime >= 40 * 60) return "Jet";
-      else if (totalTime >= 30 * 60) return "Garnet";
-      else if (totalTime >= 20 * 60) return "Sapphire";
-      else if (totalTime >= 10 * 60) return "Emerald";
-      else if (totalTime >= 6 * 60) return "Gold";
-      else if (totalTime >= 3 * 60) return "Peridot";
-      else if (totalTime >= 2 * 60) return "Silver";
-      else if (totalTime >= 1 * 60) return "Bronze";
+    // Deprecated: These functions are kept for backwards compatibility but should not be used
+    // The backend now calculates and returns the correct prestige tier based on environment settings
+    const getTrackPrestigeTier = (_totalTime: number): string => {
+      console.warn('getTrackPrestigeTier is deprecated. Use prestigeTier from API response instead.');
       return "";
     };
   
-    const getArtistPrestigeTier = (totalTime: number): string => {
-      if (totalTime >= 1500 * 60) return "DarkMatter";
-      else if (totalTime >= 1000 * 60) return "Opal";
-      else if (totalTime >= 600 * 60) return "Diamond";
-      else if (totalTime >= 400 * 60) return "Jet";
-      else if (totalTime >= 250 * 60) return "Garnet";
-      else if (totalTime >= 150 * 60) return "Sapphire";
-      else if (totalTime >= 75 * 60) return "Emerald";
-      else if (totalTime >= 40 * 60) return "Gold";
-      else if (totalTime >= 20 * 60) return "Peridot";
-      else if (totalTime >= 10 * 60) return "Silver";
-      else if (totalTime >= 5 * 60) return "Bronze";
+    const getArtistPrestigeTier = (_totalTime: number): string => {
+      console.warn('getArtistPrestigeTier is deprecated. Use prestigeTier from API response instead.');
       return "";
     };
   
-    const getAlbumPrestigeTier = (totalTime: number): string => {
-      if (totalTime >= 750 * 60) return "DarkMatter";
-      else if (totalTime >= 500 * 60) return "Opal";
-      else if (totalTime >= 250 * 60) return "Diamond";
-      else if (totalTime >= 150 * 60) return "Jet";
-      else if (totalTime >= 100 * 60) return "Garnet";
-      else if (totalTime >= 60 * 60) return "Sapphire";
-      else if (totalTime >= 30 * 60) return "Emerald";
-      else if (totalTime >= 15 * 60) return "Gold";
-      else if (totalTime >= 8 * 60) return "Peridot";
-      else if (totalTime >= 4 * 60) return "Silver";
-      else if (totalTime >= 2 * 60) return "Bronze";
+    const getAlbumPrestigeTier = (_totalTime: number): string => {
+      console.warn('getAlbumPrestigeTier is deprecated. Use prestigeTier from API response instead.');
       return "";
     };
   

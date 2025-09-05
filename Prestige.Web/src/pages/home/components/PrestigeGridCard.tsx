@@ -25,6 +25,7 @@ type PrestigeGridCardProps = {
   id?: string;
   artists?: Array<{name: string}>;
   isPinned?: boolean;
+  prestigeTier?: string;
 };
 
 const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
@@ -40,9 +41,10 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   albumPosition,
   id: _id,
   artists,
-  isPinned: _isPinned
+  isPinned: _isPinned,
+  prestigeTier
 }) => {
-  const { getTrackPrestigeTier, getAlbumPrestigeTier, getArtistPrestigeTier } = usePrestige();
+  // Removed deprecated functions - now using prestigeTier from props
   const { 
     compareTrackWithFriend, 
     compareAlbumWithFriend, 
@@ -114,18 +116,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
     }
   };
   
-  const getPrestige = () => {
-    switch (type) {
-      case 'album':
-        return getAlbumPrestigeTier(totalTime);
-      case 'artist':
-        return getArtistPrestigeTier(totalTime);
-      default:
-        return getTrackPrestigeTier(totalTime);
-    }
-  };
-  
-  const prestige = getPrestige();
+  const prestige = prestigeTier;
   
   // Get rating color based on score (10-point scale)
   const getRatingColor = (score: number) => {

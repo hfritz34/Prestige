@@ -50,6 +50,7 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 name={item.track.name}
                 images={item.track.album.images}
                 artists={item.track.artists}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.track.id, "track")}
                 isPinned={true}
               />
@@ -63,6 +64,7 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 name={item.album.name}
                 images={item.album.images}
                 artists={item.album.artists}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.album.id, "album")}
                 isPinned={true}
               />
@@ -75,6 +77,7 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 totalTime={item.totalTime}
                 name={item.artist.name}
                 images={item.artist.images}
+                prestigeTier={item.prestigeTier}
                 onClick={() => handleCardClick(item.artist.id, "artist")}
                 isPinned={true}
               />

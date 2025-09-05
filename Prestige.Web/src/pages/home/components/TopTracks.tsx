@@ -36,6 +36,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
       totalTime: track.totalTime,
       imageUrl: track.track.album.images[0]?.url,
       isPinned: track.isPinned,
+      prestigeTier: track.prestigeTier,
     });
   };
 
@@ -56,6 +57,7 @@ const TopTracks: React.FC<TopTracksProps> = ({ topTracks }) => {
               rank={index + 1}
               type="track"
               albumPosition={getTrackPosition(track.track.id)}
+              prestigeTier={track.prestigeTier}
               onClick={() => handleTrackClick(track)}
             />
           ))}

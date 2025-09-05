@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 
 const SongPage: React.FC = () => {
   const { getFriendsWhoListenedToTrack, getFriendTrackTimeListened } = useFriends();
-  const { getTrackPrestigeTier, togglePinTrack, getAlbumTracksWithRankings } = usePrestige();
+  const { togglePinTrack, getAlbumTracksWithRankings } = usePrestige();
   const { currentlyPlaying } = useCurrentlyPlaying();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
@@ -93,7 +93,7 @@ const SongPage: React.FC = () => {
     setShowFriends(!showFriends);
   };
 
-  const prestigeLevel = getTrackPrestigeTier(track.totalTime) || "None";
+  const prestigeLevel = track.prestigeTier || "None";
 
   const handleViewAlbum = () => {
     if (albumId && track?.albumName) {
@@ -200,7 +200,8 @@ const SongPage: React.FC = () => {
               const FriendItem = () => {
                 const friendTimeQuery = useFriendTrackTime(friend.id, track.trackId, showFriends);
                 const friendTime = friendTimeQuery.data || 0;
-                const friendPrestige = getTrackPrestigeTier(friendTime) || "None";
+                // Friend prestige tier would need to come from backend
+                const friendPrestige = "None"; // TODO: Get from friend data
                 
                 return (
                   <li

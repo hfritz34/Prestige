@@ -8,7 +8,7 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened } = useFriends();
-  const { getAlbumPrestigeTier, togglePinAlbum, getAlbumTracksWithRankings } = usePrestige();
+  const { togglePinAlbum, getAlbumTracksWithRankings } = usePrestige();
   const { user } = useAuth0();
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -77,7 +77,7 @@ const AlbumPage: React.FC = () => {
     setShowFriends(!showFriends);
   };
 
-  const prestigeLevel = getAlbumPrestigeTier(album.totalTime) || "None";
+  const prestigeLevel = album.prestigeTier || "None";
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center justify-center pb-20">
@@ -144,7 +144,8 @@ const AlbumPage: React.FC = () => {
               const FriendItem = () => {
                 const friendTimeQuery = useFriendAlbumTime(friend.id, album.albumId, showFriends);
                 const friendTime = friendTimeQuery.data || 0;
-                const friendPrestige = getAlbumPrestigeTier(friendTime) || "None";
+                // Friend prestige tier would need to come from backend
+                const friendPrestige = "None"; // TODO: Get from friend data
                 
                 return (
                   <li

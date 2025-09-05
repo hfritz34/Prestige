@@ -9,6 +9,7 @@ export type TopTrackResponse = {
     artistName: string;
     totalTime: number;
     imageUrl: string;
+    prestigeTier?: string;
 };
 
 export type TopAlbumResponse = {
@@ -17,6 +18,7 @@ export type TopAlbumResponse = {
     artistName: string;
     totalTime: number;
     imageUrl: string;
+    prestigeTier?: string;
 };
 
 export type TopArtistResponse = {
@@ -24,6 +26,7 @@ export type TopArtistResponse = {
     artistName: string;
     totalTime: number;
     imageUrl: string;
+    prestigeTier?: string;
 };
 
 export type RecentlyPlayedResponse = {
@@ -51,7 +54,8 @@ export type UserTrackResponse = {
     userId: string,
     totalTime: number,
     isFavorite?: boolean,
-    isPinned?: boolean
+    isPinned?: boolean,
+    prestigeTier?: string
 }
   
 export type UserAlbumResponse = {
@@ -59,7 +63,8 @@ export type UserAlbumResponse = {
     userId: string,
     totalTime: number,
     isFavorite?: boolean,
-    isPinned?: boolean
+    isPinned?: boolean,
+    prestigeTier?: string
 }
   
 export type UserArtistResponse = {
@@ -67,7 +72,8 @@ export type UserArtistResponse = {
     userId: string,
     totalTime: number,
     isFavorite?: boolean,
-    isPinned?: boolean
+    isPinned?: boolean,
+    prestigeTier?: string
 }
   
 export type FavoritesResponse = {

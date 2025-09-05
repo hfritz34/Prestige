@@ -34,6 +34,7 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
       totalTime: artist.totalTime,
       imageUrl: artist.artist.images[0]?.url,
       isPinned: artist.isPinned,
+      prestigeTier: artist.prestigeTier,
     });
   };
 
@@ -54,6 +55,7 @@ const TopArtists: React.FC<TopArtistsProps> = ({ topArtists }) => {
               rank={index + 1}
               type="artist"
               ratingScore={getArtistRating(artist.artist.id)}
+              prestigeTier={artist.prestigeTier}
               onClick={() => handleArtistClick(artist)}
             />
           ))}
