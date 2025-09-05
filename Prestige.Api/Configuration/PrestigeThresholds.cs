@@ -33,14 +33,15 @@ namespace Prestige.Api.Configuration
         };
 
         /// <summary>
-        /// Development thresholds (ultra-low for quick testing)
+        /// Development thresholds (scaled for week-long testing to reach Cosmic tier)
         /// Values in minutes - 15 thresholds for Bronze through Cosmic
+        /// Designed for testers to reach Cosmic with ~2-4 hours daily listening over 7 days
         /// </summary>
         public static readonly Dictionary<string, int[]> DevThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 1, 3, 6, 10, 15, 22, 30, 40, 52, 66, 82, 100, 120, 145, 175 },
-            ["album"] = new int[] { 3, 8, 15, 25, 38, 55, 75, 100, 130, 165, 205, 250, 300, 360, 430 },
-            ["artist"] = new int[] { 6, 15, 28, 45, 68, 96, 130, 170, 218, 275, 340, 415, 500, 600, 720 }
+            ["track"] = new int[] { 1, 2, 4, 6, 9, 13, 18, 24, 32, 42, 54, 68, 85, 105, 130 },
+            ["album"] = new int[] { 2, 5, 10, 16, 24, 34, 46, 60, 77, 97, 120, 147, 178, 214, 255 },
+            ["artist"] = new int[] { 4, 9, 16, 25, 36, 50, 67, 87, 111, 139, 172, 210, 254, 305, 365 }
         };
 
         /// <summary>
