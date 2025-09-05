@@ -11,10 +11,14 @@ namespace Prestige.Api.Services
         private readonly IDistributedCache _cache;
         private readonly ILogger<PrestigeCacheService> _logger;
         
-        private const int UserRatingsCacheMinutes = 30;
-        private const int ItemMetadataCacheHours = 24;
-        private const int SpotifyDataCacheMinutes = 15;
-        private const int RatingCategoriesCacheHours = 48;
+        // Updated cache times to match frontend optimizations
+        private const int UserRatingsCacheMinutes = 60;        // Was 30, now 1 hour
+        private const int ItemMetadataCacheHours = 6;          // Was 24, now 6 hours (metadata rarely changes)
+        private const int SpotifyDataCacheMinutes = 30;        // Was 15, now 30 minutes
+        private const int RatingCategoriesCacheHours = 48;     // Unchanged - categories are very stable
+        private const int FriendDataCacheMinutes = 60;         // New: 1 hour for friend data
+        private const int UserProfileCacheMinutes = 120;       // New: 2 hours for user profiles
+        private const int PrestigeCalculationCacheMinutes = 5; // New: 5 minutes for prestige calculations
         
         public PrestigeCacheService(IDistributedCache cache, ILogger<PrestigeCacheService> logger)
         {
@@ -234,6 +238,124 @@ namespace Prestige.Api.Services
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Error invalidating item metadata cache");
+            }
+        }
+        
+        // Prestige Calculation Cache
+        public async Task<string?> GetPrestigeCalculationAsync(string userId, string itemType, string itemId)
+        {
+            var cacheKey = $"prestige:{userId}:{itemType}:{itemId}";
+            
+            try
+            {
+                var cached = await _cache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(cached))
+                {
+                    _logger.LogDebug("Cache hit for prestige calculation: {CacheKey}", cacheKey);
+                    return cached;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error reading prestige from cache for key: {CacheKey}", cacheKey);
+            }
+            
+            return null;
+        }
+        
+        public async Task SetPrestigeCalculationAsync(string userId, string itemType, string itemId, string prestigeTier)
+        {
+            var cacheKey = $"prestige:{userId}:{itemType}:{itemId}";
+            
+            try
+            {
+                await _cache.SetStringAsync(cacheKey, prestigeTier, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(PrestigeCalculationCacheMinutes)
+                });
+                _logger.LogDebug("Cached prestige calculation: {CacheKey}", cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error writing prestige to cache for key: {CacheKey}", cacheKey);
+            }
+        }
+        
+        // Friend Data Cache
+        public async Task<T?> GetFriendDataAsync<T>(string cacheKey) where T : class
+        {
+            try
+            {
+                var cached = await _cache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(cached))
+                {
+                    _logger.LogDebug("Cache hit for friend data: {CacheKey}", cacheKey);
+                    return JsonSerializer.Deserialize<T>(cached);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error reading friend data from cache for key: {CacheKey}", cacheKey);
+            }
+            
+            return null;
+        }
+        
+        public async Task SetFriendDataAsync<T>(string cacheKey, T data) where T : class
+        {
+            try
+            {
+                var serialized = JsonSerializer.Serialize(data);
+                await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(FriendDataCacheMinutes)
+                });
+                _logger.LogDebug("Cached friend data: {CacheKey}", cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error writing friend data to cache for key: {CacheKey}", cacheKey);
+            }
+        }
+        
+        // User Profile Cache
+        public async Task<T?> GetUserProfileAsync<T>(string userId) where T : class
+        {
+            var cacheKey = $"user_profile:{userId}";
+            
+            try
+            {
+                var cached = await _cache.GetStringAsync(cacheKey);
+                if (!string.IsNullOrEmpty(cached))
+                {
+                    _logger.LogDebug("Cache hit for user profile: {CacheKey}", cacheKey);
+                    return JsonSerializer.Deserialize<T>(cached);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error reading user profile from cache for key: {CacheKey}", cacheKey);
+            }
+            
+            return null;
+        }
+        
+        public async Task SetUserProfileAsync<T>(string userId, T profile) where T : class
+        {
+            var cacheKey = $"user_profile:{userId}";
+            
+            try
+            {
+                var serialized = JsonSerializer.Serialize(profile);
+                await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(UserProfileCacheMinutes)
+                });
+                _logger.LogDebug("Cached user profile: {CacheKey}", cacheKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error writing user profile to cache for key: {CacheKey}", cacheKey);
             }
         }
     }
