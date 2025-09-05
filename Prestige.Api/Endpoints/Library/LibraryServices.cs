@@ -10,6 +10,7 @@ using Prestige.Api.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text.Json;
 using System.Linq;
+using Prestige.Api.Configuration;
 
 namespace Prestige.Api.Endpoints.Library
 {
@@ -483,7 +484,8 @@ namespace Prestige.Api.Endpoints.Library
                         TotalTime = ut.TotalTime,
                         UserId = ut.User.Id,
                         IsFavorite = ut.IsFavorite,
-                        IsPinned = ut.IsPinned
+                        IsPinned = ut.IsPinned,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                     }).ToList(),
 
                     Albums = recentAlbums.Select(ua => new UserAlbumResponse
@@ -492,7 +494,8 @@ namespace Prestige.Api.Endpoints.Library
                         TotalTime = ua.TotalTime,
                         UserId = ua.User.Id,
                         IsFavorite = ua.IsFavorite,
-                        IsPinned = ua.IsPinned
+                        IsPinned = ua.IsPinned,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
                     }).ToList(),
 
                     Artists = recentArtists.Select(ua => new UserArtistResponse
@@ -501,7 +504,8 @@ namespace Prestige.Api.Endpoints.Library
                         TotalTime = ua.TotalTime,
                         UserId = ua.User.Id,
                         IsFavorite = ua.IsFavorite,
-                        IsPinned = ua.IsPinned
+                        IsPinned = ua.IsPinned,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
                     }).ToList()
                 };
 
@@ -606,7 +610,8 @@ namespace Prestige.Api.Endpoints.Library
                             TotalTime = ut.TotalTime,
                             UserId = ut.User.Id,
                             IsFavorite = ut.IsFavorite,
-                            IsPinned = ut.IsPinned
+                            IsPinned = ut.IsPinned,
+                            PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                         }).ToList(),
 
                         Albums = userAlbums.Select(ua => new UserAlbumResponse
@@ -615,7 +620,8 @@ namespace Prestige.Api.Endpoints.Library
                             TotalTime = ua.TotalTime,
                             UserId = ua.User.Id,
                             IsFavorite = ua.IsFavorite,
-                            IsPinned = ua.IsPinned
+                            IsPinned = ua.IsPinned,
+                            PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
                         }).ToList(),
 
                         Artists = userArtists.Select(ua => new UserArtistResponse
@@ -624,7 +630,8 @@ namespace Prestige.Api.Endpoints.Library
                             TotalTime = ua.TotalTime,
                             UserId = ua.User.Id,
                             IsFavorite = ua.IsFavorite,
-                            IsPinned = ua.IsPinned
+                            IsPinned = ua.IsPinned,
+                            PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
                         }).ToList()
                     };
 

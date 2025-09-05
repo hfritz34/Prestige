@@ -292,7 +292,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             {
                 Track = new TrackResponse(ut.Track),
                 TotalTime = ut.TotalTime,
-                UserId = ut.User.Id
+                UserId = ut.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
             }).ToList();
 
             return topTracks;
@@ -316,7 +317,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             {
                 UserId = ua.User.Id,
                 Album = new AlbumResponse(ua.Album),
-                TotalTime = ua.TotalTime
+                TotalTime = ua.TotalTime,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
             }).ToList();
 
             return topAlbums;
@@ -338,7 +340,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             {
                 Artist = new ArtistResponse(ua.Artist),
                 UserId = ua.User.Id,
-                TotalTime = ua.TotalTime
+                TotalTime = ua.TotalTime,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
             }).ToList();
 
             return topArtists;
@@ -401,7 +404,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     {
                         UserId = ut.User.Id,
                         Track = new TrackResponse(ut.Track),
-                        TotalTime = ut.TotalTime
+                        TotalTime = ut.TotalTime,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                     })
                     .ToList();
 
@@ -415,7 +419,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     {
                         UserId = ua.User.Id,
                         Album = new AlbumResponse(ua.Album),
-                        TotalTime = ua.TotalTime
+                        TotalTime = ua.TotalTime,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
                     })
                     .ToList();
 
@@ -427,7 +432,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     {
                         UserId = ua.User.Id,
                         Artist = new ArtistResponse(ua.Artist),
-                        TotalTime = ua.TotalTime
+                        TotalTime = ua.TotalTime,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
                     })
                     .ToList();
             }

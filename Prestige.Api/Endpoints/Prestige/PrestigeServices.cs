@@ -7,6 +7,7 @@ using Prestige.Api.Endpoints.Spotify;
 using Prestige.Api.Logging;
 using Microsoft.EntityFrameworkCore;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
+using Prestige.Api.Configuration;
 
 namespace Prestige.Api.Endpoints.Prestige
 {
@@ -50,7 +51,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 {
                     TotalTime = userTrack.TotalTime,
                     Track = new TrackResponse(userTrack.Track),
-                    UserId = userTrack.User.Id
+                    UserId = userTrack.User.Id,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userTrack.TotalTime, "track")
                 };
             }
 
@@ -121,7 +123,8 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 TotalTime = userTrack.TotalTime,
                 Track = new TrackResponse(userTrack.Track),
-                UserId = userTrack.User.Id
+                UserId = userTrack.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userTrack.TotalTime, "track")
             };
         }
 
@@ -143,7 +146,8 @@ namespace Prestige.Api.Endpoints.Prestige
             var res = new UserTrackResponse(){
                 TotalTime = userTrack.TotalTime,
                 Track = new TrackResponse(userTrack.Track),
-                UserId = userTrack.User.Id
+                UserId = userTrack.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userTrack.TotalTime, "track")
             };
             return res;
         }
@@ -166,7 +170,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 {
                     TotalTime = userAlbum.TotalTime,
                     Album = new AlbumResponse(userAlbum.Album),
-                    UserId = userAlbum.User.Id
+                    UserId = userAlbum.User.Id,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userAlbum.TotalTime, "album")
                 };
             }
 
@@ -203,7 +208,8 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 TotalTime = userAlbum.TotalTime,
                 Album = new AlbumResponse(userAlbum.Album),
-                UserId = userAlbum.User.Id
+                UserId = userAlbum.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userAlbum.TotalTime, "album")
             };
         }
 
@@ -221,7 +227,8 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 TotalTime = userAlbum.TotalTime,
                 Album = new AlbumResponse(userAlbum.Album),
-                UserId = userAlbum.User.Id
+                UserId = userAlbum.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userAlbum.TotalTime, "album")
             };
         }
 
@@ -240,7 +247,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 {
                     TotalTime = userArtist.TotalTime,
                     Artist = new ArtistResponse(userArtist.Artist),
-                    UserId = userArtist.User.Id
+                    UserId = userArtist.User.Id,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userArtist.TotalTime, "artist")
                 };
             }
 
@@ -273,7 +281,8 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 TotalTime = userArtist.TotalTime,
                 Artist = new ArtistResponse(userArtist.Artist),
-                UserId = userArtist.User.Id
+                UserId = userArtist.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userArtist.TotalTime, "artist")
             };
         }
 
@@ -289,7 +298,8 @@ namespace Prestige.Api.Endpoints.Prestige
             {
                 TotalTime = userArtist.TotalTime,
                 Artist = new ArtistResponse(userArtist.Artist),
-                UserId = userArtist.User.Id
+                UserId = userArtist.User.Id,
+                PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userArtist.TotalTime, "artist")
             };
         }
 
@@ -345,7 +355,8 @@ namespace Prestige.Api.Endpoints.Prestige
                     Track = new TrackResponse(ut.Track),
                     UserId = ut.User.Id,
                     IsFavorite = ut.IsFavorite,
-                    IsPinned = ut.IsPinned
+                    IsPinned = ut.IsPinned,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ut.TotalTime, "track")
                 })
                 .ToList();
 
@@ -361,7 +372,8 @@ namespace Prestige.Api.Endpoints.Prestige
                     Album = new AlbumResponse(ua.Album),
                     UserId = ua.User.Id,
                     IsFavorite = ua.IsFavorite,
-                    IsPinned = ua.IsPinned
+                    IsPinned = ua.IsPinned,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "album")
                 })
                 .ToList();
 
@@ -375,7 +387,8 @@ namespace Prestige.Api.Endpoints.Prestige
                     Artist = new ArtistResponse(ua.Artist),
                     UserId = ua.User.Id,
                     IsFavorite = ua.IsFavorite,
-                    IsPinned = ua.IsPinned
+                    IsPinned = ua.IsPinned,
+                    PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(ua.TotalTime, "artist")
                 })
                 .ToList();
 
