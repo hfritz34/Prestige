@@ -38,9 +38,9 @@ namespace Prestige.Api.Configuration
         /// </summary>
         public static readonly Dictionary<string, int[]> DevThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 2, 5, 8, 12, 18, 25, 35, 50, 70, 95, 130, 170, 220, 300, 400 },
-            ["album"] = new int[] { 5, 10, 15, 25, 35, 50, 70, 95, 130, 170, 220, 280, 350, 450, 600 },
-            ["artist"] = new int[] { 10, 20, 30, 45, 65, 90, 120, 160, 210, 270, 340, 420, 520, 650, 800 }
+            ["track"] = new int[] { 1, 3, 6, 10, 15, 22, 30, 40, 52, 66, 82, 100, 120, 145, 175 },
+            ["album"] = new int[] { 3, 8, 15, 25, 38, 55, 75, 100, 130, 165, 205, 250, 300, 360, 430 },
+            ["artist"] = new int[] { 6, 15, 28, 45, 68, 96, 130, 170, 218, 275, 340, 415, 500, 600, 720 }
         };
 
         /// <summary>
