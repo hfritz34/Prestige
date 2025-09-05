@@ -22,7 +22,7 @@ namespace Prestige.Api.Configuration
             "Emerald", 
             "Sapphire",
             "Ruby",
-            "Garnet",
+            "Amber",
             "Jade",
             "Amethyst",
             "Jet",

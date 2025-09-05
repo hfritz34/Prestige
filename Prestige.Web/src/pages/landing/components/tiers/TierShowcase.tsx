@@ -6,7 +6,7 @@ import diamondTier from "@/assets/tiers/diamond.png";
 import emeraldTier from "@/assets/tiers/emerald.png";
 import sapphireTier from "@/assets/tiers/sapphire.png";
 import rubyTier from "@/assets/tiers/ruby.png";
-import garnetTier from "@/assets/tiers/garnet.png";
+import amberTier from "@/assets/tiers/amber.png";
 import jadeTier from "@/assets/tiers/jade.png";
 import amethystTier from "@/assets/tiers/amethyst.png";
 import opalTier from "@/assets/tiers/opal.png";
@@ -29,7 +29,7 @@ const TierShowcase: React.FC = () => {
 			{ name: "Emerald", image: emeraldTier, minutes: "2h", description: "Deep connection", color: "#50C878" },
 			{ name: "Sapphire", image: sapphireTier, minutes: "3h", description: "Passionate listener", color: "#0F52BA" },
 			{ name: "Ruby", image: rubyTier, minutes: "4h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Garnet", image: garnetTier, minutes: "5h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Amber", image: amberTier, minutes: "5h", description: "Unwavering loyalty", color: "#722F37" },
 			{ name: "Jade", image: jadeTier, minutes: "8h", description: "Precious devotion", color: "#00A86B" },
 			{ name: "Amethyst", image: amethystTier, minutes: "11h", description: "Mystical bond", color: "#9966CC" },
 			{ name: "Jet", image: jetTier, minutes: "15h", description: "Extraordinary bond", color: "#343434" },
@@ -46,7 +46,7 @@ const TierShowcase: React.FC = () => {
 			{ name: "Emerald", image: emeraldTier, minutes: "6h", description: "Deep connection", color: "#50C878" },
 			{ name: "Sapphire", image: sapphireTier, minutes: "9h", description: "Passionate listener", color: "#0F52BA" },
 			{ name: "Ruby", image: rubyTier, minutes: "13h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Garnet", image: garnetTier, minutes: "20h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Amber", image: amberTier, minutes: "20h", description: "Unwavering loyalty", color: "#722F37" },
 			{ name: "Jade", image: jadeTier, minutes: "28h", description: "Precious devotion", color: "#00A86B" },
 			{ name: "Amethyst", image: amethystTier, minutes: "40h", description: "Mystical bond", color: "#9966CC" },
 			{ name: "Jet", image: jetTier, minutes: "57h", description: "Extraordinary bond", color: "#343434" },
@@ -63,7 +63,7 @@ const TierShowcase: React.FC = () => {
 			{ name: "Emerald", image: emeraldTier, minutes: "9h", description: "Deep connection", color: "#50C878" },
 			{ name: "Sapphire", image: sapphireTier, minutes: "14h", description: "Passionate listener", color: "#0F52BA" },
 			{ name: "Ruby", image: rubyTier, minutes: "22h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Garnet", image: garnetTier, minutes: "32h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Amber", image: amberTier, minutes: "32h", description: "Unwavering loyalty", color: "#722F37" },
 			{ name: "Jade", image: jadeTier, minutes: "45h", description: "Precious devotion", color: "#00A86B" },
 			{ name: "Amethyst", image: amethystTier, minutes: "62h", description: "Mystical bond", color: "#9966CC" },
 			{ name: "Jet", image: jetTier, minutes: "83h", description: "Extraordinary bond", color: "#343434" },
