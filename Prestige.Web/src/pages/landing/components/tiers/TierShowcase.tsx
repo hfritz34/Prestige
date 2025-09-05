@@ -5,11 +5,15 @@ import goldTier from "@/assets/tiers/gold.png";
 import diamondTier from "@/assets/tiers/diamond.png";
 import emeraldTier from "@/assets/tiers/emerald.png";
 import sapphireTier from "@/assets/tiers/sapphire.png";
+import rubyTier from "@/assets/tiers/ruby.png";
 import garnetTier from "@/assets/tiers/garnet.png";
+import jadeTier from "@/assets/tiers/jade.png";
+import amethystTier from "@/assets/tiers/amethyst.png";
 import opalTier from "@/assets/tiers/opal.png";
 import peridotTier from "@/assets/tiers/peridot.png";
 import jetTier from "@/assets/tiers/jet.png";
 import darkmatterTier from "@/assets/tiers/darkmatter.png";
+import cosmicTier from "@/assets/tiers/cosmic.png";
 
 type TierType = 'track' | 'album' | 'artist';
 
@@ -18,43 +22,55 @@ const TierShowcase: React.FC = () => {
 	
 	const tierData = {
 		track: [
-			{ name: "Bronze", image: bronzeTier, minutes: "1h", description: "Your journey begins", color: "#CD7F32" },
-			{ name: "Silver", image: silverTier, minutes: "2h", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "3h", description: "Growing passion", color: "#E6E200" },
-			{ name: "Gold", image: goldTier, minutes: "6h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "10h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "20h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Garnet", image: garnetTier, minutes: "30h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jet", image: jetTier, minutes: "40h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "60h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "120h", description: "Rare devotion", color: "#A8C3BC" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "200h", description: "Ultimate transcendence", color: "#1a0033" }
+			{ name: "Bronze", image: bronzeTier, minutes: "10m", description: "Your journey begins", color: "#CD7F32" },
+			{ name: "Silver", image: silverTier, minutes: "20m", description: "Building dedication", color: "#C0C0C0" },
+			{ name: "Peridot", image: peridotTier, minutes: "35m", description: "Growing passion", color: "#9ACD32" },
+			{ name: "Gold", image: goldTier, minutes: "1h", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "2h", description: "Deep connection", color: "#50C878" },
+			{ name: "Sapphire", image: sapphireTier, minutes: "3h", description: "Passionate listener", color: "#0F52BA" },
+			{ name: "Ruby", image: rubyTier, minutes: "4h", description: "Fiery dedication", color: "#E0115F" },
+			{ name: "Garnet", image: garnetTier, minutes: "5h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Jade", image: jadeTier, minutes: "8h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Amethyst", image: amethystTier, minutes: "11h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Jet", image: jetTier, minutes: "15h", description: "Extraordinary bond", color: "#343434" },
+			{ name: "Diamond", image: diamondTier, minutes: "22h", description: "Exceptional taste", color: "#B9F2FF" },
+			{ name: "Opal", image: opalTier, minutes: "30h", description: "Rare devotion", color: "#FFEFDB" },
+			{ name: "Dark Matter", image: darkmatterTier, minutes: "40h", description: "Ultimate transcendence", color: "#301934" },
+			{ name: "Cosmic", image: cosmicTier, minutes: "50h", description: "Beyond mortal limits", color: "#4B0082" }
 		],
 		album: [
-			{ name: "Bronze", image: bronzeTier, minutes: "2h", description: "Your journey begins", color: "#CD7F32" },
-			{ name: "Silver", image: silverTier, minutes: "4h", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "8h", description: "Growing passion", color: "#E6E200" },
-			{ name: "Gold", image: goldTier, minutes: "15h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "30h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "60h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Garnet", image: garnetTier, minutes: "100h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jet", image: jetTier, minutes: "150h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "250h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "500h", description: "Rare devotion", color: "#A8C3BC" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "750h", description: "Ultimate transcendence", color: "#1a0033" }
+			{ name: "Bronze", image: bronzeTier, minutes: "30m", description: "Your journey begins", color: "#CD7F32" },
+			{ name: "Silver", image: silverTier, minutes: "1h", description: "Building dedication", color: "#C0C0C0" },
+			{ name: "Peridot", image: peridotTier, minutes: "2h", description: "Growing passion", color: "#9ACD32" },
+			{ name: "Gold", image: goldTier, minutes: "3h", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "6h", description: "Deep connection", color: "#50C878" },
+			{ name: "Sapphire", image: sapphireTier, minutes: "9h", description: "Passionate listener", color: "#0F52BA" },
+			{ name: "Ruby", image: rubyTier, minutes: "13h", description: "Fiery dedication", color: "#E0115F" },
+			{ name: "Garnet", image: garnetTier, minutes: "20h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Jade", image: jadeTier, minutes: "28h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Amethyst", image: amethystTier, minutes: "40h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Jet", image: jetTier, minutes: "57h", description: "Extraordinary bond", color: "#343434" },
+			{ name: "Diamond", image: diamondTier, minutes: "80h", description: "Exceptional taste", color: "#B9F2FF" },
+			{ name: "Opal", image: opalTier, minutes: "108h", description: "Rare devotion", color: "#FFEFDB" },
+			{ name: "Dark Matter", image: darkmatterTier, minutes: "167h", description: "Ultimate transcendence", color: "#301934" },
+			{ name: "Cosmic", image: cosmicTier, minutes: "200h", description: "Beyond mortal limits", color: "#4B0082" }
 		],
 		artist: [
-			{ name: "Bronze", image: bronzeTier, minutes: "5h", description: "Your journey begins", color: "#CD7F32" },
-			{ name: "Silver", image: silverTier, minutes: "10h", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "20h", description: "Growing passion", color: "#E6E200" },
-			{ name: "Gold", image: goldTier, minutes: "40h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "75h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "150h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Garnet", image: garnetTier, minutes: "250h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jet", image: jetTier, minutes: "400h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "600h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "1000h", description: "Rare devotion", color: "#A8C3BC" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "1500h", description: "Ultimate transcendence", color: "#1a0033" }
+			{ name: "Bronze", image: bronzeTier, minutes: "1h", description: "Your journey begins", color: "#CD7F32" },
+			{ name: "Silver", image: silverTier, minutes: "2h", description: "Building dedication", color: "#C0C0C0" },
+			{ name: "Peridot", image: peridotTier, minutes: "3h", description: "Growing passion", color: "#9ACD32" },
+			{ name: "Gold", image: goldTier, minutes: "6h", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "9h", description: "Deep connection", color: "#50C878" },
+			{ name: "Sapphire", image: sapphireTier, minutes: "14h", description: "Passionate listener", color: "#0F52BA" },
+			{ name: "Ruby", image: rubyTier, minutes: "22h", description: "Fiery dedication", color: "#E0115F" },
+			{ name: "Garnet", image: garnetTier, minutes: "32h", description: "Unwavering loyalty", color: "#722F37" },
+			{ name: "Jade", image: jadeTier, minutes: "45h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Amethyst", image: amethystTier, minutes: "62h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Jet", image: jetTier, minutes: "83h", description: "Extraordinary bond", color: "#343434" },
+			{ name: "Diamond", image: diamondTier, minutes: "108h", description: "Exceptional taste", color: "#B9F2FF" },
+			{ name: "Opal", image: opalTier, minutes: "142h", description: "Rare devotion", color: "#FFEFDB" },
+			{ name: "Dark Matter", image: darkmatterTier, minutes: "200h", description: "Ultimate transcendence", color: "#301934" },
+			{ name: "Cosmic", image: cosmicTier, minutes: "250h", description: "Beyond mortal limits", color: "#4B0082" }
 		]
 	};
 
@@ -73,7 +89,7 @@ const TierShowcase: React.FC = () => {
 						Unlock Your <span className="text-[#7C4DFF]">Prestige</span>
 					</h2>
 					<p className="text-xl text-zinc-300 max-w-3xl mx-auto mb-8">
-						Every minute of listening earns you prestige. Climb through 11 unique tiers, each representing deeper dedication to your music.
+						Every minute of listening earns you prestige. Climb through 15 unique tiers, each representing deeper dedication to your music.
 					</p>
 
 					{/* Dropdown Toggle */}
@@ -115,76 +131,41 @@ const TierShowcase: React.FC = () => {
 					</div>
 				</div>
 
-				{/* 6 on Top, 5 on Bottom Layout */}
-				<div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-					{/* Top Row - 6 Tiers (Bronze to Sapphire) */}
-					<div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
-						{tiers.slice(0, 6).map((tier, index) => (
+				{/* Clean Grid Layout - 5 rows x 3 cols on mobile, 3 cols x 5 rows on desktop */}
+				<div className="max-w-5xl mx-auto">
+					<div className="grid grid-cols-3 md:grid-cols-3 gap-3 md:gap-6">
+						{tiers.map((tier, index) => (
 							<div
 								key={tier.name}
-								className="group relative bg-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/10 hover:border-white/20 transition-all duration-500 hover:transform hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/10 flex flex-col h-44 sm:h-48 md:h-56"
+								className="group relative bg-white/5 backdrop-blur-sm rounded-lg md:rounded-xl p-2 md:p-4 border border-white/10 hover:border-white/20 transition-all duration-500 hover:transform hover:-translate-y-1 hover:shadow-2xl flex flex-col aspect-square"
 								style={{
-									animationDelay: `${index * 100}ms`
+									boxShadow: `0 0 20px ${tier.color}15`,
+									animationDelay: `${index * 80}ms`
 								}}
 							>
-								<div className="relative mb-2 sm:mb-3 md:mb-4">
+								<div className="relative flex-grow flex items-center justify-center mb-1 md:mb-2">
 									<img 
 										src={tier.image} 
 										alt={`${tier.name} tier`}
-										className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
+										className="w-16 h-16 md:w-28 md:h-28 object-contain group-hover:scale-110 transition-transform duration-300"
 									/>
 									<div 
-										className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"
+										className="absolute -inset-3 md:-inset-6 rounded-full opacity-0 group-hover:opacity-25 transition-opacity duration-300"
 										style={{
 											background: `radial-gradient(circle, ${tier.color}40, transparent)`
 										}}
 									/>
 								</div>
 								
-								<div className="flex flex-col items-center text-center flex-grow justify-center">
-									<h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-1 sm:mb-2">{tier.name}</h3>
-									<p className="text-xs sm:text-sm font-mono text-[#7C4DFF] mb-2 sm:mb-3">{tier.minutes}</p>
-									<p className="text-xs sm:text-sm text-zinc-400 leading-relaxed text-center px-1">{tier.description}</p>
+								<div className="flex flex-col items-center text-center flex-shrink-0">
+									<h3 className="text-xs md:text-lg font-semibold text-white mb-0.5 md:mb-1">{tier.name}</h3>
+									<p className="text-xs md:text-sm font-mono text-[#7C4DFF] mb-0.5 md:mb-1">{tier.minutes}</p>
+									<p className="text-xs md:text-xs text-zinc-400 leading-tight px-0.5 md:px-1 hidden sm:block">{tier.description}</p>
 								</div>
 							</div>
 						))}
 					</div>
 
-					{/* Bottom Row - 5 Tiers (Garnet to Dark Matter) centered with flex + calc widths matching top grid */}
-					<div className="flex justify-center">
-						<div className="w-full max-w-7xl flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6">
-							{tiers.slice(6).map((tier, index) => (
-								<div
-									key={tier.name}
-									className="group relative bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 border border-white/20 hover:border-white/30 transition-all duration-500 hover:transform hover:-translate-y-3 hover:shadow-2xl flex flex-col h-44 sm:h-48 md:h-56 w-[calc((100%_-_0.75rem)/2)] sm:w-[calc((100%_-_2rem)/3)] md:w-[calc((100%_-_3rem)/4)] lg:w-[calc((100%_-_7.5rem)/6)]"
-									style={{
-										boxShadow: `0 0 20px ${tier.color}20`,
-										animationDelay: `${(index + 6) * 100}ms`
-									}}
-								>
-									<div className="relative mb-2 sm:mb-3 md:mb-4">
-										<img 
-											src={tier.image} 
-											alt={`${tier.name} tier`}
-											className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto object-contain group-hover:scale-110 transition-transform duration-300"
-										/>
-										<div 
-											className="absolute -inset-4 rounded-full opacity-0 group-hover:opacity-30 transition-opacity duration-300"
-											style={{
-												background: `radial-gradient(circle, ${tier.color}60, transparent)`
-											}}
-										/>
-									</div>
-									
-									<div className="flex flex-col items-center text-center flex-grow justify-center">
-										<h3 className="text-sm sm:text-base md:text-lg font-semibold text-white mb-1 sm:mb-2">{tier.name}</h3>
-										<p className="text-xs sm:text-sm font-mono text-[#9E7CFF] mb-2 sm:mb-3">{tier.minutes}</p>
-										<p className="text-xs sm:text-sm text-zinc-400 leading-relaxed text-center px-1">{tier.description}</p>
-									</div>
-								</div>
-							))}
-						</div>
-					</div>
 				</div>
 
 				<div className="text-center mt-16">

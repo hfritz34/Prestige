@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import usePrestige from "@/hooks/usePrestige";
 import useFriends, { ItemComparisonResponse, Friend } from "@/hooks/useFriends";
 import { useQuery } from "@tanstack/react-query";
 import {

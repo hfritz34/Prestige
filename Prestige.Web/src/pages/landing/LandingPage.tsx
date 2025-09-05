@@ -76,10 +76,10 @@ const LandingPage: React.FC = () => {
 						<div>
 							<h2 className="text-2xl md:text-3xl font-semibold">Level up your Prestige with your listening time</h2>
 							<p className="mt-4 text-zinc-300">
-								Prestige is earned by minutes listened per track, album, and artist. Hit thresholds to unlock tiers—from Bronze to Dark Matter.
+								Prestige is earned by minutes listened per track, album, and artist. Hit thresholds to unlock tiers—from Bronze to Cosmic.
 							</p>
 							<ul className="mt-6 space-y-2 text-sm text-zinc-400 list-disc list-inside">
-								<li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … DarkMatter ≥ 15,000m</li>
+								<li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … Cosmic ≥ 30,000m</li>
 								<li>Albums and Artists: higher thresholds to reflect bigger commitments</li>
 							</ul>
 						</div>
@@ -114,7 +114,7 @@ const LandingPage: React.FC = () => {
 					<div className="grid md:grid-cols-3 gap-6">
 						<div className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-all duration-300">
 							<h3 className="text-lg font-semibold">Earn Prestige Over Time</h3>
-							<p className="mt-2 text-sm text-zinc-300"><strong>Real-time tracking</strong> from 1 hour to 200+ hours per song. Unlock Bronze through Dark Matter tiers as your dedication grows. Your listening creates lasting achievements.</p>
+							<p className="mt-2 text-sm text-zinc-300"><strong>Real-time tracking</strong> from 1 hour to 500+ hours per song. Unlock Bronze through Cosmic tiers as your dedication grows. Your listening creates lasting achievements.</p>
 						</div>
 						<div className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-all duration-300">
 							<h3 className="text-lg font-semibold">Complete Listening History</h3>

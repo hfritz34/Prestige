@@ -10,7 +10,7 @@ namespace Prestige.Api.Configuration
     {
         /// <summary>
         /// Prestige tier names in order (matches web assets and iOS enum)
-        /// Based on actual tier assets: bronze, silver, peridot, gold, emerald, sapphire, ruby, garnet, jade, amethyst, jet, diamond, opal, darkmatter
+        /// Based on actual tier assets: bronze, silver, peridot, gold, emerald, sapphire, ruby, garnet, jade, amethyst, jet, diamond, opal, darkmatter, cosmic
         /// </summary>
         public static readonly string[] TierNames = new string[]
         {
@@ -28,32 +28,32 @@ namespace Prestige.Api.Configuration
             "Jet",
             "Diamond",
             "Opal", 
-            "Dark Matter"
+            "Dark Matter",
+            "Cosmic"
         };
 
         /// <summary>
         /// Development thresholds (ultra-low for quick testing)
-        /// Values in minutes - 14 thresholds for Bronze through Dark Matter
+        /// Values in minutes - 15 thresholds for Bronze through Cosmic
         /// </summary>
         public static readonly Dictionary<string, int[]> DevThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 2, 5, 8, 12, 18, 25, 35, 50, 70, 95, 130, 170, 220, 300 },
-            ["album"] = new int[] { 5, 10, 15, 25, 35, 50, 70, 95, 130, 170, 220, 280, 350, 450 },
-            ["artist"] = new int[] { 10, 20, 30, 45, 65, 90, 120, 160, 210, 270, 340, 420, 520, 650 }
+            ["track"] = new int[] { 2, 5, 8, 12, 18, 25, 35, 50, 70, 95, 130, 170, 220, 300, 400 },
+            ["album"] = new int[] { 5, 10, 15, 25, 35, 50, 70, 95, 130, 170, 220, 280, 350, 450, 600 },
+            ["artist"] = new int[] { 10, 20, 30, 45, 65, 90, 120, 160, 210, 270, 340, 420, 520, 650, 800 }
         };
 
         /// <summary>
-        /// Production thresholds (realistic values for real users)
-        /// Values in minutes - 14 thresholds for Bronze through Dark Matter
-        /// Track: 1hr -> 250hrs+ listening progression
-        /// Album: 3hrs -> 833hrs+ listening progression  
-        /// Artist: 6hrs -> 1666hrs+ listening progression
+        /// Production thresholds (optimized for user engagement and progression)
+        /// Values in minutes - 15 thresholds for Bronze through Cosmic
+        /// Easy entry (Bronze: 10min track) → Prestigious Cosmic (2 years of 10min/day listening)
+        /// Exponential progression gets harder as tiers increase
         /// </summary>
         public static readonly Dictionary<string, int[]> ProductionThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 60, 120, 180, 300, 500, 800, 1200, 1800, 2600, 3600, 5000, 7000, 10000, 15000 },
-            ["album"] = new int[] { 180, 300, 450, 700, 1100, 1700, 2500, 3600, 5000, 7000, 10000, 15000, 25000, 50000 },
-            ["artist"] = new int[] { 360, 600, 900, 1400, 2200, 3400, 5000, 7500, 11000, 16000, 24000, 36000, 55000, 100000 }
+            ["track"] = new int[] { 10, 20, 35, 60, 100, 150, 220, 320, 450, 650, 900, 1300, 1800, 2400, 3000 },
+            ["album"] = new int[] { 30, 60, 120, 200, 350, 550, 800, 1200, 1700, 2400, 3400, 4800, 6500, 10000, 12000 },
+            ["artist"] = new int[] { 60, 120, 200, 350, 550, 850, 1300, 1900, 2700, 3700, 5000, 6500, 8500, 12000, 15000 }
         };
 
         /// <summary>
@@ -129,7 +129,7 @@ namespace Prestige.Api.Configuration
                 },
                 TierNames = TierNames,
                 TierCount = TierNames.Length - 1, // Excluding "None"
-                TierMapping = "None, Bronze, Silver, Peridot, Gold, Emerald, Sapphire, Ruby, Garnet, Jade, Amethyst, Jet, Diamond, Opal, Dark Matter"
+                TierMapping = "None, Bronze, Silver, Peridot, Gold, Emerald, Sapphire, Ruby, Garnet, Jade, Amethyst, Jet, Diamond, Opal, Dark Matter, Cosmic"
             };
         }
     }
