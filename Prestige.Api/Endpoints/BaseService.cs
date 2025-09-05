@@ -155,10 +155,10 @@ namespace Prestige.Api.Endpoints
             {
                 var UserAuthId = Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 _logger.LogInformation($"[Debug] Starting Auth0 token refresh for user ID: {UserAuthId}");
-                if (UserAuthId == null)
+                if (string.IsNullOrEmpty(UserAuthId))
                 {
-                    _logger.LogError("[Debug] NameIdentifier claim not found in Principal");
-                    throw Logger.UserNotFound("AUTH");
+                    _logger.LogError("[Debug] NameIdentifier claim not found in Principal - user authentication required");
+                    throw new Exception("User authentication required for Auth0 operations");
                 }
 
                 var auth0Domain = Config.GetSection("Auth0:Domain").Value;

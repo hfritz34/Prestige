@@ -66,6 +66,25 @@ namespace Prestige.Api.Endpoints.Spotify
             return spotify;
         }
 
+        private async Task<HttpClient> getUserSpotifyAuthorizedClientForUser(string userId)
+        {
+            var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId) ?? throw Logger.UserNotFound(userId);
+            
+            // Check if token is still valid
+            if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
+            {
+                Logger.LogWarning("User {UserId} has expired token, cannot sync profile picture", userId);
+                throw new Exception($"User {userId} has expired Spotify token");
+            }
+            
+            var spotify = new HttpClient
+            {
+                BaseAddress = new Uri("https://api.spotify.com/v1/")
+            };
+            spotify.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", user.AccessToken);
+            return spotify;
+        }
+
         public async Task<IEnumerable<TrackResponse>> SearchForTracksAsync(SearchRequest request)
         {
 
@@ -625,6 +644,39 @@ namespace Prestige.Api.Endpoints.Spotify
         }
 
         /// <summary>
+        /// Fetches Spotify user profile data for a specific user (for background jobs)
+        /// </summary>
+        /// <param name="userId">The user ID to fetch profile for</param>
+        /// <returns>Spotify user profile data or null if unavailable</returns>
+        private async Task<SpotifyUserProfileResponse?> GetSpotifyUserProfileForUserAsync(string userId)
+        {
+            try
+            {
+                var spotify = await getUserSpotifyAuthorizedClientForUser(userId);
+                var response = await spotify.GetAsync("me");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.LogWarning("Failed to get Spotify user profile for user {UserId}: {StatusCode}", userId, response.StatusCode);
+                    return null;
+                }
+                
+                var content = await response.Content.ReadAsStringAsync();
+                var profile = JsonSerializer.Deserialize<SpotifyUserProfileResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                return profile;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to get Spotify user profile for user {UserId}", userId);
+                return null;
+            }
+        }
+
+        /// <summary>
         /// Checks if user's Spotify profile picture has changed and updates it if necessary
         /// </summary>
         /// <param name="userId">User ID to check and update</param>
@@ -633,7 +685,8 @@ namespace Prestige.Api.Endpoints.Spotify
         {
             try
             {
-                var spotifyProfile = await GetCurrentSpotifyUserProfileAsync();
+                // Use the background job version that doesn't require authenticated Principal
+                var spotifyProfile = await GetSpotifyUserProfileForUserAsync(userId);
                 if (spotifyProfile == null)
                 {
                     Logger.LogInformation("No Spotify profile data available for user: {UserId}", userId);

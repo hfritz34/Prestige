@@ -422,7 +422,14 @@ namespace Prestige.Api
             {
                 var accessor = sp.GetRequiredService<IHttpContextAccessor>();
                 var user = accessor?.HttpContext?.User;
-                return user ?? throw new InvalidOperationException("User not found");
+                
+                // For background jobs, create an empty ClaimsPrincipal
+                if (user == null)
+                {
+                    return new ClaimsPrincipal(new ClaimsIdentity());
+                }
+                
+                return user;
             });
         }
 

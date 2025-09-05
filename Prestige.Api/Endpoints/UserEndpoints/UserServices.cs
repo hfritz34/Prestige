@@ -11,7 +11,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 {
     public class UserServices : BaseService
     {
-        private string UserAuthId => Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? throw new Exception("User not found");
+        private string? UserAuthId => Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         
         public UserServices(PrestigeContext db, ILogger<UserServices> logger, ClaimsPrincipal principal, IConfiguration config) : base(db, logger, principal, config)
         {
@@ -19,6 +19,10 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public async Task<UserResponse> CreateUserAsync(UserRequest request)
         {
+            if (string.IsNullOrEmpty(UserAuthId))
+            {
+                throw new Exception("User authentication required for user creation");
+            }
 
             var auth0User = await GetAuth0UserAsync();
             if(request.Id != UserAuthId.Split("|").Last())
@@ -48,6 +52,11 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public async Task<(UserResponse, bool)> GetUserAsync(string id)
         {
+            if (string.IsNullOrEmpty(UserAuthId))
+            {
+                throw new Exception("User authentication required");
+            }
+            
             if (id != UserAuthId.Split("|").Last())
             {
                 throw Logger.UserUnauthorized(id);
@@ -65,14 +74,13 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public new async Task<string> GetAccessToken(string id)
         {
-
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
             if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
             {
-                // Only refresh token if it's the current user
-                if (id != UserAuthId.Split("|").Last())
+                // Only refresh token if it's the current user and we have authentication
+                if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
                 {
-                    // For other users, we can't refresh their token
+                    // For other users or background jobs, we can't refresh their token
                     throw Logger.UserUnauthorized(id);
                 }
                 
@@ -127,6 +135,11 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         var accessToken = value.ToString();
         _logger.LogInformation("Successfully got management token");
 
+        if (string.IsNullOrEmpty(UserAuthId))
+        {
+            throw new Exception("User authentication required for Auth0 API calls");
+        }
+        
         var userRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/v2/users/{UserAuthId}");
         userRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -149,7 +162,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 }
         public UserResponse UpdateNickName(string id, string nickName)
         {
-            if (id != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
             {
                 throw Logger.UserUnauthorized(id);
             }
@@ -161,7 +174,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public UserResponse UpdateIsSetup(string id, bool isSetup)
         {
-            if (id != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
             {
                 throw Logger.UserUnauthorized(id);
             }
