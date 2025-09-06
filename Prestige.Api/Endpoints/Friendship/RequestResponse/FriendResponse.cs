@@ -45,6 +45,18 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse
         
         [JsonPropertyName("topArtists")]
         public List<UserArtistResponse> TopArtists { get; set; } = new List<UserArtistResponse>();
+        
+        [JsonPropertyName("recentlyPlayed")]
+        public List<RecentlyPlayedResponse> RecentlyPlayed { get; set; } = new List<RecentlyPlayedResponse>();
+        
+        [JsonPropertyName("ratedTracks")]
+        public List<UserTrackResponse> RatedTracks { get; set; } = new List<UserTrackResponse>();
+        
+        [JsonPropertyName("ratedAlbums")]
+        public List<UserAlbumResponse> RatedAlbums { get; set; } = new List<UserAlbumResponse>();
+        
+        [JsonPropertyName("ratedArtists")]
+        public List<UserArtistResponse> RatedArtists { get; set; } = new List<UserArtistResponse>();
     }
 
     public class ItemComparisonResponse

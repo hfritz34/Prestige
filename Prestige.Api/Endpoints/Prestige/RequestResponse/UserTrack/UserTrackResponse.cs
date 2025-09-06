@@ -11,6 +11,8 @@ namespace Prestige.Api.Endpoints.Prestige.RequestResponse
         public bool IsFavorite { get; set; }
         public bool IsPinned { get; set; }
         public string? PrestigeTier { get; set; }
+        public decimal? PersonalRatingScore { get; set; }
+        public int? RatingPosition { get; set; }
 
     }
 }

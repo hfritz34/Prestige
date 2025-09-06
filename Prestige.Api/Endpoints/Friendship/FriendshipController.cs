@@ -349,6 +349,21 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             }
         }
 
+        [HttpGet("{userId}/friends/{friendId}/recently-played")]
+        [Authorize]
+        public async Task<IActionResult> GetFriendRecentlyPlayed(string userId, string friendId)
+        {
+            try
+            {
+                var recentlyPlayed = await _service.GetFriendRecentlyPlayedAsync(userId, friendId);
+                return Ok(recentlyPlayed);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request." });
+            }
+        }
+
 
     }
 }

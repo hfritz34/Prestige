@@ -9,7 +9,10 @@ using Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse;
 using Prestige.Api.Endpoints.Prestige.RequestResponse;
 using Prestige.Api.Endpoints.Profile;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
+using Prestige.Api.Endpoints.UserEndpoints.RequestResponse;
 using Prestige.Api.Logging;
+using System.Net.Http.Headers;
+using System.Text.Json;
 
 namespace Prestige.Api.Endpoints.FriendshipEndpoints
 {
@@ -392,6 +395,128 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             return topArtists;
         }
 
+        public async Task<IEnumerable<UserTrackResponse>> GetFriendRatedTracksAsync(string userId)
+        {
+            var ratings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "track")
+                .OrderByDescending(r => r.PersonalScore)
+                .ThenBy(r => r.Position)
+                .Take(10)
+                .ToListAsync();
+
+            var trackIds = ratings.Select(r => r.ItemId).ToList();
+            
+            var userTracks = await PrestigeDb.UserTracks
+                .Where(ut => ut.User.Id == userId && trackIds.Contains(ut.Track.Id))
+                .Include(ut => ut.Track)
+                    .ThenInclude(t => t.Album)
+                        .ThenInclude(a => a.Images)
+                .Include(ut => ut.Track.Artists)
+                    .ThenInclude(ar => ar.Images)
+                .Include(ut => ut.Track.Album.Artists)
+                    .ThenInclude(ar => ar.Images)
+                .ToDictionaryAsync(ut => ut.Track.Id);
+
+            var ratedTracks = new List<UserTrackResponse>();
+            foreach (var rating in ratings)
+            {
+                if (userTracks.TryGetValue(rating.ItemId, out var userTrack))
+                {
+                    ratedTracks.Add(new UserTrackResponse
+                    {
+                        Track = new TrackResponse(userTrack.Track),
+                        TotalTime = userTrack.TotalTime,
+                        UserId = userId,
+                        IsFavorite = userTrack.IsFavorite,
+                        IsPinned = userTrack.IsPinned,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userTrack.TotalTime, "track"),
+                        PersonalRatingScore = (decimal)rating.PersonalScore,
+                        RatingPosition = rating.Position
+                    });
+                }
+            }
+
+            return ratedTracks;
+        }
+
+        public async Task<IEnumerable<UserAlbumResponse>> GetFriendRatedAlbumsAsync(string userId)
+        {
+            var ratings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "album")
+                .OrderByDescending(r => r.PersonalScore)
+                .ThenBy(r => r.Position)
+                .Take(10)
+                .ToListAsync();
+
+            var albumIds = ratings.Select(r => r.ItemId).ToList();
+            
+            var userAlbums = await PrestigeDb.UserAlbums
+                .Where(ua => ua.User.Id == userId && albumIds.Contains(ua.Album.Id))
+                .Include(ua => ua.Album)
+                    .ThenInclude(a => a.Images)
+                .Include(ua => ua.Album.Artists)
+                    .ThenInclude(ar => ar.Images)
+                .ToDictionaryAsync(ua => ua.Album.Id);
+
+            var ratedAlbums = new List<UserAlbumResponse>();
+            foreach (var rating in ratings)
+            {
+                if (userAlbums.TryGetValue(rating.ItemId, out var userAlbum))
+                {
+                    ratedAlbums.Add(new UserAlbumResponse
+                    {
+                        Album = new AlbumResponse(userAlbum.Album),
+                        TotalTime = userAlbum.TotalTime,
+                        UserId = userId,
+                        IsFavorite = userAlbum.IsFavorite,
+                        IsPinned = userAlbum.IsPinned,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userAlbum.TotalTime, "album"),
+                        PersonalRatingScore = (decimal)rating.PersonalScore,
+                        RatingPosition = rating.Position
+                    });
+                }
+            }
+
+            return ratedAlbums;
+        }
+
+        public async Task<IEnumerable<UserArtistResponse>> GetFriendRatedArtistsAsync(string userId)
+        {
+            var ratings = await PrestigeDb.Ratings
+                .Where(r => r.User.Id == userId && r.ItemType.ToLower() == "artist")
+                .OrderByDescending(r => r.PersonalScore)
+                .ThenBy(r => r.Position)
+                .Take(10)
+                .ToListAsync();
+
+            var artistIds = ratings.Select(r => r.ItemId).ToList();
+            
+            var userArtists = await PrestigeDb.UserArtists
+                .Where(ua => ua.User.Id == userId && artistIds.Contains(ua.Artist.Id))
+                .Include(ua => ua.Artist)
+                    .ThenInclude(a => a.Images)
+                .ToDictionaryAsync(ua => ua.Artist.Id);
+
+            var ratedArtists = new List<UserArtistResponse>();
+            foreach (var rating in ratings)
+            {
+                if (userArtists.TryGetValue(rating.ItemId, out var userArtist))
+                {
+                    ratedArtists.Add(new UserArtistResponse
+                    {
+                        Artist = new ArtistResponse(userArtist.Artist),
+                        TotalTime = userArtist.TotalTime,
+                        UserId = userId,
+                        PrestigeTier = PrestigeThresholds.CalculatePrestigeTier(userArtist.TotalTime, "artist"),
+                        PersonalRatingScore = (decimal)rating.PersonalScore,
+                        RatingPosition = rating.Position
+                    });
+                }
+            }
+
+            return ratedArtists;
+        }
+
         public async Task<List<FriendResponse>> GetFriendsAsync(string userId)
         {
             return await PrestigeDb.Friendships
@@ -435,6 +560,10 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 friend.TopTracks = (await GetFriendTopTracksAsync(friendId)).ToList();
                 friend.TopAlbums = (await GetFriendTopAlbumsAsync(friendId)).ToList();
                 friend.TopArtists = (await GetFriendTopArtistsAsync(friendId)).ToList();
+                friend.RatedTracks = (await GetFriendRatedTracksAsync(friendId)).ToList();
+                friend.RatedAlbums = (await GetFriendRatedAlbumsAsync(friendId)).ToList();
+                friend.RatedArtists = (await GetFriendRatedArtistsAsync(friendId)).ToList();
+                friend.RecentlyPlayed = await GetFriendRecentlyPlayedAsync(userId, friendId);
 
                 friend.FavoriteTracks = PrestigeDb.UserTracks
                     .Include(ut => ut.Track)
@@ -955,6 +1084,93 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             }
 
             return albumRankings.OrderBy(a => a.FriendPosition ?? int.MaxValue).ToList();
+        }
+
+        public async Task<List<RecentlyPlayedResponse>> GetFriendRecentlyPlayedAsync(string userId, string friendId)
+        {
+            await ValidateFriendshipAsync(userId, friendId);
+
+            // Get friend's user data to access their Spotify tokens
+            var friend = await PrestigeDb.Users.FirstOrDefaultAsync(u => u.Id == friendId);
+            if (friend == null || string.IsNullOrEmpty(friend.AccessToken))
+            {
+                _logger.LogWarning($"Friend {friendId} not found or has no access token");
+                return new List<RecentlyPlayedResponse>();
+            }
+
+            try
+            {
+                var httpClient = new HttpClient();
+                var spotifyRecentlyPlayedUrl = "https://api.spotify.com/v1/me/player/recently-played?limit=20";
+                
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", friend.AccessToken);
+                var response = await httpClient.GetAsync(spotifyRecentlyPlayedUrl);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    // Try to refresh the token
+                    _logger.LogInformation($"Refreshing Spotify token for friend {friendId}");
+                    
+                    if (!string.IsNullOrEmpty(friend.RefreshToken))
+                    {
+                        var (newAccessToken, newRefreshToken) = await base.RefreshSpotifyTokensAsync(friend.RefreshToken);
+                        if (!string.IsNullOrEmpty(newAccessToken))
+                        {
+                            // Update tokens using the User's UpdateTokens method
+                            friend.UpdateTokens(newAccessToken, newRefreshToken ?? friend.RefreshToken, DateTime.UtcNow.AddHours(1));
+                            await PrestigeDb.SaveChangesAsync();
+
+                            // Retry with new token
+                            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", newAccessToken);
+                            response = await httpClient.GetAsync(spotifyRecentlyPlayedUrl);
+                        }
+                    }
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning($"Failed to get recently played for friend {friendId}: {response.StatusCode}");
+                    return new List<RecentlyPlayedResponse>();
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var spotifyResponse = JsonSerializer.Deserialize<SpotifyRecentlyPlayedResponse>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (spotifyResponse?.Items == null)
+                {
+                    return new List<RecentlyPlayedResponse>();
+                }
+
+                var recentlyPlayed = new List<RecentlyPlayedResponse>();
+                
+                foreach (var item in spotifyResponse.Items.Take(20))
+                {
+                    var track = item.Track;
+                    
+                    // Get first artist name
+                    var artistName = track.Artists?.FirstOrDefault()?.Name ?? "Unknown Artist";
+                    
+                    // Get album image
+                    var imageUrl = track.Album?.Images?.FirstOrDefault()?.Url ?? "";
+
+                    recentlyPlayed.Add(new RecentlyPlayedResponse(
+                        trackName: track.Name,
+                        artistName: artistName,
+                        imageUrl: imageUrl,
+                        id: track.Id
+                    ));
+                }
+
+                return recentlyPlayed;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting recently played for friend {friendId}");
+                return new List<RecentlyPlayedResponse>();
+            }
         }
 
         private async Task ValidateFriendshipAsync(string userId, string friendId)
