@@ -9,6 +9,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints.RequestResponse
         public string NickName { get; set; }
         public string? Email { get; set; }
         public string ProfilePicURL { get; set; }
+        public string? Bio { get; set; }
         public bool IsSetup { get; set; }
 
         public UserResponse(User user)
@@ -18,6 +19,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints.RequestResponse
             NickName = user.NickName;
             Email = user.Email;
             ProfilePicURL = user.ProfilePicURL;
+            Bio = user.Bio;
             IsSetup = user.IsSetup;
         }   
     }

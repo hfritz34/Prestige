@@ -80,6 +80,20 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             }
         }
 
+        [HttpPatch("{id}/profile")]
+        public IActionResult UpdateProfile(string id, UpdateProfileRequest request)
+        {
+            try
+            {
+                var userResponse = _service.UpdateProfile(id, request.NickName, request.Bio);
+                return Ok(userResponse);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
         [HttpGet("search")]
         public IActionResult SearchUsers([FromQuery] string query)
         {

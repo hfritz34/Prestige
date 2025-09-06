@@ -11,6 +11,7 @@ namespace Prestige.Api.Domain
                 public string NickName { get; private set; }
                 public string Email { get; private set; }
                 public string ProfilePicURL { get; private set; }
+                public string? Bio { get; private set; }
                 public string AccessToken { get; private set; }
                 public string RefreshToken { get; private set; }
                 public DateTime ExpiresAt { get; private set; } = DateTime.Now;
@@ -53,6 +54,13 @@ namespace Prestige.Api.Domain
                 public void UpdateNickName(string nickName)
                 {
                         NickName = nickName;
+                }
+
+                public void UpdateProfile(string? nickName, string? bio)
+                {
+                        if (nickName != null)
+                                NickName = nickName;
+                        Bio = bio;
                 }
 
                 public void UpdateIsSetup(bool isSetup)

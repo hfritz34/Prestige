@@ -172,6 +172,18 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             return new UserResponse(user);
         }
 
+        public UserResponse UpdateProfile(string id, string? nickName, string? bio)
+        {
+            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
+            {
+                throw Logger.UserUnauthorized(id);
+            }
+            var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
+            user.UpdateProfile(nickName, bio);
+            PrestigeDb.SaveChanges();
+            return new UserResponse(user);
+        }
+
         public UserResponse UpdateIsSetup(string id, bool isSetup)
         {
             if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
