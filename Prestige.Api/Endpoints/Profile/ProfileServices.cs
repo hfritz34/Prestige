@@ -483,7 +483,7 @@ namespace Prestige.Api.Endpoints.Profile
                 .Where(ut => ut.User.Id == id && ut.IsFavorite)
                 .Count();
 
-            if (totalFavoriteTracks >= 10 && !thisTrack.IsFavorite)
+            if (totalFavoriteTracks >= 30 && !thisTrack.IsFavorite)
             {
                 throw Logger.FavoritesLengthExceeded(id, "Track");
             }
@@ -561,7 +561,7 @@ namespace Prestige.Api.Endpoints.Profile
                 .Where(ua => ua.User.Id == id && ua.IsFavorite)
                 .Count();
 
-            if (totalFavoriteAlbums >= 10 && !thisAlbum.IsFavorite)
+            if (totalFavoriteAlbums >= 30 && !thisAlbum.IsFavorite)
             {
                 throw Logger.FavoritesLengthExceeded(id, "Album");
             }
@@ -635,7 +635,7 @@ namespace Prestige.Api.Endpoints.Profile
                 .Where(ua => ua.User.Id == id && ua.IsFavorite)
                 .Count();
 
-            if (totalFavoriteArtists >= 10 && !thisArtist.IsFavorite)
+            if (totalFavoriteArtists >= 30 && !thisArtist.IsFavorite)
             {
                 throw Logger.FavoritesLengthExceeded(id, "Artist");
             }
