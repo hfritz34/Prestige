@@ -34,12 +34,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 return new FriendResponse()
                 {
                     Id = existingFriendship.Friend.Id,
-                    Name = existingFriendship.Friend.Name,
-                    Nickname = existingFriendship.Friend.NickName,
-                    ProfilePicUrl = existingFriendship.Friend.ProfilePicURL,
+                    Name = existingFriendship.Friend.Name ?? "",
+                    Nickname = existingFriendship.Friend.NickName ?? "",
+                    ProfilePicUrl = existingFriendship.Friend.ProfilePicURL ?? "",
                     Status = existingFriendship.Status,
-                    RequestDate = existingFriendship.RequestDate,
-                    AcceptedDate = existingFriendship.AcceptedDate
+                    RequestDate = existingFriendship.AcceptedDate, // Use AcceptedDate since it's accepted
+                    MutualFriends = 0
                 };
             }
 
@@ -70,12 +70,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             return new FriendResponse()
             {
                 Id = friendship1.Friend.Id,
-                Name = friendship1.Friend.Name,
-                Nickname = friendship1.Friend.NickName,
-                ProfilePicUrl = friendship1.Friend.ProfilePicURL,
+                Name = friendship1.Friend.Name ?? "",
+                Nickname = friendship1.Friend.NickName ?? "",
+                ProfilePicUrl = friendship1.Friend.ProfilePicURL ?? "",
                 Status = friendship1.Status,
-                RequestDate = friendship1.RequestDate,
-                AcceptedDate = friendship1.AcceptedDate
+                RequestDate = friendship1.AcceptedDate, // Use AcceptedDate since it's accepted
+                MutualFriends = 0
             };
         }
 
@@ -122,12 +122,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 return new FriendResponse()
                 {
                     Id = existingRequest.Friend.Id,
-                    Name = existingRequest.Friend.Name,
-                    Nickname = existingRequest.Friend.NickName,
-                    ProfilePicUrl = existingRequest.Friend.ProfilePicURL,
+                    Name = existingRequest.Friend.Name ?? "",
+                    Nickname = existingRequest.Friend.NickName ?? "",
+                    ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
                     Status = existingRequest.Status,
-                    RequestDate = existingRequest.RequestDate,
-                    AcceptedDate = existingRequest.AcceptedDate
+                    RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
+                    MutualFriends = 0
                 };
             }
             
@@ -137,12 +137,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 return new FriendResponse()
                 {
                     Id = existingRequest.Friend.Id,
-                    Name = existingRequest.Friend.Name,
-                    Nickname = existingRequest.Friend.NickName,
-                    ProfilePicUrl = existingRequest.Friend.ProfilePicURL,
+                    Name = existingRequest.Friend.Name ?? "",
+                    Nickname = existingRequest.Friend.NickName ?? "",
+                    ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
                     Status = existingRequest.Status,
-                    RequestDate = existingRequest.RequestDate,
-                    AcceptedDate = existingRequest.AcceptedDate
+                    RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
+                    MutualFriends = 0
                 };
             }
 
@@ -179,12 +179,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             return new FriendResponse()
             {
                 Id = friendship.Friend.Id,
-                Name = friendship.Friend.Name,
-                Nickname = friendship.Friend.NickName,
-                ProfilePicUrl = friendship.Friend.ProfilePicURL,
+                Name = friendship.Friend.Name ?? "",
+                Nickname = friendship.Friend.NickName ?? "",
+                ProfilePicUrl = friendship.Friend.ProfilePicURL ?? "",
                 Status = friendship.Status,
-                RequestDate = friendship.RequestDate,
-                AcceptedDate = friendship.AcceptedDate
+                RequestDate = friendship.Status == FriendRequestStatus.Accepted ? friendship.AcceptedDate : friendship.RequestDate,
+                MutualFriends = 0
             };
         }
 
@@ -192,6 +192,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
         {
             var friendshipRequest = await PrestigeDb.Friendships
                 .Include(f => f.Friend)
+                .Include(f => f.User)
                 .FirstOrDefaultAsync(f => f.UserId == friendId && f.FriendId == userId && f.Status == FriendRequestStatus.Pending);
             
             if (friendshipRequest == null)
@@ -202,28 +203,41 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             friendshipRequest.Status = FriendRequestStatus.Accepted;
             friendshipRequest.AcceptedDate = DateTime.UtcNow;
 
-            // Create reverse friendship
-            var reverseFriendship = new Friendship
-            {
-                UserId = userId,
-                FriendId = friendId,
-                Status = FriendRequestStatus.Accepted,
-                RequestDate = DateTime.UtcNow,
-                AcceptedDate = DateTime.UtcNow
-            };
+            // Check if reverse friendship already exists
+            var existingReverseFriendship = await PrestigeDb.Friendships
+                .FirstOrDefaultAsync(f => f.UserId == userId && f.FriendId == friendId);
 
-            PrestigeDb.Friendships.Add(reverseFriendship);
+            if (existingReverseFriendship == null)
+            {
+                // Create reverse friendship
+                var reverseFriendship = new Friendship
+                {
+                    UserId = userId,
+                    FriendId = friendId,
+                    Status = FriendRequestStatus.Accepted,
+                    RequestDate = DateTime.UtcNow,
+                    AcceptedDate = DateTime.UtcNow
+                };
+                PrestigeDb.Friendships.Add(reverseFriendship);
+            }
+            else
+            {
+                // Update existing reverse friendship to accepted
+                existingReverseFriendship.Status = FriendRequestStatus.Accepted;
+                existingReverseFriendship.AcceptedDate = DateTime.UtcNow;
+            }
+
             await PrestigeDb.SaveChangesAsync();
 
             return new FriendResponse()
             {
                 Id = friendshipRequest.Friend.Id,
-                Name = friendshipRequest.Friend.Name,
-                Nickname = friendshipRequest.Friend.NickName,
-                ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL,
+                Name = friendshipRequest.Friend.Name ?? "",
+                Nickname = friendshipRequest.Friend.NickName ?? "",
+                ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
                 Status = friendshipRequest.Status,
-                RequestDate = friendshipRequest.RequestDate,
-                AcceptedDate = friendshipRequest.AcceptedDate
+                RequestDate = friendshipRequest.AcceptedDate, // Use AcceptedDate as friendshipDate
+                MutualFriends = 0 // TODO: Calculate mutual friends count if needed
             };
         }
 
@@ -231,6 +245,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
         {
             var friendshipRequest = await PrestigeDb.Friendships
                 .Include(f => f.Friend)
+                .Include(f => f.User)
                 .FirstOrDefaultAsync(f => f.UserId == friendId && f.FriendId == userId && f.Status == FriendRequestStatus.Pending);
             
             if (friendshipRequest == null)
@@ -244,12 +259,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             return new FriendResponse()
             {
                 Id = friendshipRequest.Friend.Id,
-                Name = friendshipRequest.Friend.Name,
-                Nickname = friendshipRequest.Friend.NickName,
-                ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL,
+                Name = friendshipRequest.Friend.Name ?? "",
+                Nickname = friendshipRequest.Friend.NickName ?? "",
+                ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
                 Status = friendshipRequest.Status,
-                RequestDate = friendshipRequest.RequestDate,
-                AcceptedDate = friendshipRequest.AcceptedDate
+                RequestDate = friendshipRequest.RequestDate, // Keep as RequestDate since it's declined
+                MutualFriends = 0
             };
         }
 
@@ -384,12 +399,12 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 .Select(f => new FriendResponse
                 {
                     Id = f.Friend.Id,
-                    Nickname = f.Friend.NickName,
-                    ProfilePicUrl = f.Friend.ProfilePicURL,
-                    Name = f.Friend.Name,
+                    Nickname = f.Friend.NickName ?? "",
+                    ProfilePicUrl = f.Friend.ProfilePicURL ?? "",
+                    Name = f.Friend.Name ?? "",
                     Status = f.Status,
-                    RequestDate = f.RequestDate,
-                    AcceptedDate = f.AcceptedDate
+                    RequestDate = f.AcceptedDate, // Use AcceptedDate since these are accepted friendships
+                    MutualFriends = 0 // TODO: Calculate mutual friends if needed
                 })
                 .ToListAsync();
         }

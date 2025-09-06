@@ -1,23 +1,49 @@
 using Prestige.Api.Endpoints.Prestige.RequestResponse;
 using Prestige.Api.Endpoints.Profile;
 using Prestige.Api.Domain;
+using System.Text.Json.Serialization;
 
 namespace Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse
 {
     public class FriendResponse
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; }
+        
+        [JsonPropertyName("nickname")]
         public string Nickname { get; set; }
+        
+        [JsonPropertyName("profilePicUrl")]
         public string ProfilePicUrl { get; set; }
+        
+        [JsonPropertyName("name")]
         public string Name { get; set; }
+        
+        [JsonPropertyName("status")]
         public FriendRequestStatus Status { get; set; } = FriendRequestStatus.Accepted;
+        
+        [JsonPropertyName("friendshipDate")]
         public DateTime? RequestDate { get; set; }
-        public DateTime? AcceptedDate { get; set; }
+        
+        [JsonPropertyName("mutualFriends")]
+        public int? MutualFriends { get; set; } = 0;
+        
+        [JsonPropertyName("favoriteTracks")]
         public List<UserTrackResponse> FavoriteTracks { get; set; } = new List<UserTrackResponse>();
+        
+        [JsonPropertyName("favoriteAlbums")]
         public List<UserAlbumResponse> FavoriteAlbums { get; set; } = new List<UserAlbumResponse>();
+        
+        [JsonPropertyName("favoriteArtists")]
         public List<UserArtistResponse> FavoriteArtists { get; set; } = new List<UserArtistResponse>();
+        
+        [JsonPropertyName("topTracks")]
         public List<UserTrackResponse> TopTracks { get; set; } = new List<UserTrackResponse>();
+        
+        [JsonPropertyName("topAlbums")]
         public List<UserAlbumResponse> TopAlbums { get; set; } = new List<UserAlbumResponse>();
+        
+        [JsonPropertyName("topArtists")]
         public List<UserArtistResponse> TopArtists { get; set; } = new List<UserArtistResponse>();
     }
 
