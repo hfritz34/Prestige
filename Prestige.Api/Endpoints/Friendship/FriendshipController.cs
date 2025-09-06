@@ -72,11 +72,25 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
         }
 
         [HttpGet("{userId}/friend-requests")]
-        public async Task<IActionResult> GetFriendRequests(string userId)
+        public async Task<IActionResult> GetIncomingFriendRequests(string userId)
         {
             try
             {
-                var requests = await _service.GetFriendRequestsAsync(userId);
+                var requests = await _service.GetIncomingFriendRequestsAsync(userId);
+                return Ok(requests);
+            }
+            catch
+            {
+                return StatusCode(500);
+            }
+        }
+
+        [HttpGet("{userId}/outgoing-friend-requests")]
+        public async Task<IActionResult> GetOutgoingFriendRequests(string userId)
+        {
+            try
+            {
+                var requests = await _service.GetOutgoingFriendRequestsAsync(userId);
                 return Ok(requests);
             }
             catch

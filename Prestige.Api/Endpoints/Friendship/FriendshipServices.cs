@@ -253,17 +253,47 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
             };
         }
 
-        public async Task<List<FriendResponse>> GetFriendRequestsAsync(string userId)
+        public async Task<List<FriendRequestResponse>> GetIncomingFriendRequestsAsync(string userId)
         {
             return await PrestigeDb.Friendships
                 .Where(f => f.FriendId == userId && f.Status == FriendRequestStatus.Pending)
                 .Include(f => f.User)
-                .Select(f => new FriendResponse
+                .Include(f => f.Friend)
+                .Select(f => new FriendRequestResponse
                 {
-                    Id = f.User.Id,
-                    Nickname = f.User.NickName,
-                    ProfilePicUrl = f.User.ProfilePicURL,
-                    Name = f.User.Name,
+                    Id = $"{f.UserId}_{f.FriendId}",
+                    FromUserId = f.User.Id,
+                    ToUserId = f.Friend.Id,
+                    FromUserName = f.User.Name ?? "",
+                    FromUserNickname = f.User.NickName ?? "",
+                    FromUserProfilePicUrl = f.User.ProfilePicURL ?? "",
+                    ToUserName = f.Friend.Name ?? "",
+                    ToUserNickname = f.Friend.NickName ?? "",
+                    ToUserProfilePicUrl = f.Friend.ProfilePicURL ?? "",
+                    Status = f.Status,
+                    RequestDate = f.RequestDate,
+                    AcceptedDate = f.AcceptedDate
+                })
+                .ToListAsync();
+        }
+
+        public async Task<List<FriendRequestResponse>> GetOutgoingFriendRequestsAsync(string userId)
+        {
+            return await PrestigeDb.Friendships
+                .Where(f => f.UserId == userId && f.Status == FriendRequestStatus.Pending)
+                .Include(f => f.User)
+                .Include(f => f.Friend)
+                .Select(f => new FriendRequestResponse
+                {
+                    Id = $"{f.UserId}_{f.FriendId}",
+                    FromUserId = f.User.Id,
+                    ToUserId = f.Friend.Id,
+                    FromUserName = f.User.Name ?? "",
+                    FromUserNickname = f.User.NickName ?? "",
+                    FromUserProfilePicUrl = f.User.ProfilePicURL ?? "",
+                    ToUserName = f.Friend.Name ?? "",
+                    ToUserNickname = f.Friend.NickName ?? "",
+                    ToUserProfilePicUrl = f.Friend.ProfilePicURL ?? "",
                     Status = f.Status,
                     RequestDate = f.RequestDate,
                     AcceptedDate = f.AcceptedDate
