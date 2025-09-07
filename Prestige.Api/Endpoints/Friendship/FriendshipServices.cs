@@ -40,6 +40,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Name = existingFriendship.Friend.Name ?? "",
                     Nickname = existingFriendship.Friend.NickName ?? "",
                     ProfilePicUrl = existingFriendship.Friend.ProfilePicURL ?? "",
+                    Bio = existingFriendship.Friend.Bio,
                     Status = existingFriendship.Status,
                     RequestDate = existingFriendship.AcceptedDate, // Use AcceptedDate since it's accepted
                     MutualFriends = 0
@@ -76,6 +77,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Name = friendship1.Friend.Name ?? "",
                 Nickname = friendship1.Friend.NickName ?? "",
                 ProfilePicUrl = friendship1.Friend.ProfilePicURL ?? "",
+                Bio = friendship1.Friend.Bio,
                 Status = friendship1.Status,
                 RequestDate = friendship1.AcceptedDate, // Use AcceptedDate since it's accepted
                 MutualFriends = 0
@@ -128,6 +130,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Name = existingRequest.Friend.Name ?? "",
                     Nickname = existingRequest.Friend.NickName ?? "",
                     ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
+                    Bio = existingRequest.Friend.Bio,
                     Status = existingRequest.Status,
                     RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
                     MutualFriends = 0
@@ -143,6 +146,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Name = existingRequest.Friend.Name ?? "",
                     Nickname = existingRequest.Friend.NickName ?? "",
                     ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
+                    Bio = existingRequest.Friend.Bio,
                     Status = existingRequest.Status,
                     RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
                     MutualFriends = 0
@@ -185,6 +189,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Name = friendship.Friend.Name ?? "",
                 Nickname = friendship.Friend.NickName ?? "",
                 ProfilePicUrl = friendship.Friend.ProfilePicURL ?? "",
+                Bio = friendship.Friend.Bio,
                 Status = friendship.Status,
                 RequestDate = friendship.Status == FriendRequestStatus.Accepted ? friendship.AcceptedDate : friendship.RequestDate,
                 MutualFriends = 0
@@ -238,6 +243,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Name = friendshipRequest.Friend.Name ?? "",
                 Nickname = friendshipRequest.Friend.NickName ?? "",
                 ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
+                Bio = friendshipRequest.Friend.Bio,
                 Status = friendshipRequest.Status,
                 RequestDate = friendshipRequest.AcceptedDate, // Use AcceptedDate as friendshipDate
                 MutualFriends = 0 // TODO: Calculate mutual friends count if needed
@@ -265,6 +271,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Name = friendshipRequest.Friend.Name ?? "",
                 Nickname = friendshipRequest.Friend.NickName ?? "",
                 ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
+                Bio = friendshipRequest.Friend.Bio,
                 Status = friendshipRequest.Status,
                 RequestDate = friendshipRequest.RequestDate, // Keep as RequestDate since it's declined
                 MutualFriends = 0
@@ -527,6 +534,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = f.Friend.NickName ?? "",
                     ProfilePicUrl = f.Friend.ProfilePicURL ?? "",
                     Name = f.Friend.Name ?? "",
+                    Bio = f.Friend.Bio,
                     Status = f.Status,
                     RequestDate = f.AcceptedDate, // Use AcceptedDate since these are accepted friendships
                     MutualFriends = 0 // TODO: Calculate mutual friends if needed
@@ -551,7 +559,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Id = f.Friend.Id,
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
-                    Name = f.Friend.Name
+                    Name = f.Friend.Name,
+                    Bio = f.Friend.Bio
                 })
                 .FirstOrDefaultAsync();
 
@@ -628,7 +637,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Id = friendship.Friend.Id,
                 Name = friendship.Friend.Name,
                 Nickname = friendship.Friend.NickName,
-                ProfilePicUrl = friendship.Friend.ProfilePicURL
+                ProfilePicUrl = friendship.Friend.ProfilePicURL,
+                Bio = friendship.Friend.Bio
             };
         }
 
@@ -665,7 +675,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Id = f.Friend.Id,
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
-                    Name = f.Friend.Name
+                    Name = f.Friend.Name,
+                    Bio = f.Friend.Bio
                 })
                 .ToListAsync();
 
@@ -692,7 +703,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Id = f.Friend.Id,
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
-                    Name = f.Friend.Name
+                    Name = f.Friend.Name,
+                    Bio = f.Friend.Bio
                 })
                 .ToListAsync();
 
@@ -720,7 +732,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Id = f.Friend.Id,
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
-                    Name = f.Friend.Name
+                    Name = f.Friend.Name,
+                    Bio = f.Friend.Bio
                 })
                 .ToListAsync();
 

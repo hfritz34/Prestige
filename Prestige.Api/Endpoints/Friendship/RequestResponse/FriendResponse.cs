@@ -19,6 +19,9 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse
         [JsonPropertyName("name")]
         public string Name { get; set; }
         
+        [JsonPropertyName("bio")]
+        public string? Bio { get; set; }
+        
         [JsonPropertyName("status")]
         public FriendRequestStatus Status { get; set; } = FriendRequestStatus.Accepted;
         

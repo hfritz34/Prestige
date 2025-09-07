@@ -449,7 +449,7 @@ namespace Prestige.Api.Endpoints.Library
                         .ThenInclude(ar => ar.Images)
                     .Include(ut => ut.User)
                     .OrderByDescending(ut => ut.LastUpdatedAt)
-                    .Take(60)
+                    .Take(100)
                     .ToListAsync();
 
                 // Get recently updated albums
@@ -462,7 +462,7 @@ namespace Prestige.Api.Endpoints.Library
                             .ThenInclude(ar => ar.Images)
                     .Include(ua => ua.User)
                     .OrderByDescending(ua => ua.LastUpdatedAt)
-                    .Take(60)
+                    .Take(100)
                     .ToListAsync();
 
                 // Get recently updated artists
@@ -472,7 +472,7 @@ namespace Prestige.Api.Endpoints.Library
                         .ThenInclude(a => a.Images)
                     .Include(ua => ua.User)
                     .OrderByDescending(ua => ua.LastUpdatedAt)
-                    .Take(60)
+                    .Take(100)
                     .ToListAsync();
 
                 // Convert to response DTOs
@@ -575,7 +575,7 @@ namespace Prestige.Api.Endpoints.Library
                         .Include(ut => ut.Track.Album.Artists)
                             .ThenInclude(ar => ar.Images)
                         .Include(ut => ut.User)
-                        .Take(60) // Limit as requested
+                        .Take(100) // Limit as requested
                         .ToListAsync();
 
                     // Get unique album IDs from the tracks
@@ -588,7 +588,7 @@ namespace Prestige.Api.Endpoints.Library
                             .ThenInclude(a => a.Artists)
                                 .ThenInclude(ar => ar.Images)
                         .Include(ua => ua.User)
-                        .Take(60)
+                        .Take(100)
                         .ToListAsync();
 
                     // Get unique artist IDs from the tracks
@@ -598,7 +598,7 @@ namespace Prestige.Api.Endpoints.Library
                         .Include(ua => ua.Artist)
                             .ThenInclude(a => a.Images)
                         .Include(ua => ua.User)
-                        .Take(60)
+                        .Take(100)
                         .ToListAsync();
 
                     // Convert to response DTOs
