@@ -2,18 +2,19 @@ import React, { useState } from "react";
 import bronzeTier from "@/assets/tiers/bronze.png";
 import silverTier from "@/assets/tiers/silver.png";
 import goldTier from "@/assets/tiers/gold.png";
-import diamondTier from "@/assets/tiers/diamond.png";
 import emeraldTier from "@/assets/tiers/emerald.png";
-import sapphireTier from "@/assets/tiers/sapphire.png";
-import rubyTier from "@/assets/tiers/ruby.png";
 import amberTier from "@/assets/tiers/amber.png";
-import jadeTier from "@/assets/tiers/jade.png";
 import amethystTier from "@/assets/tiers/amethyst.png";
-import opalTier from "@/assets/tiers/opal.png";
-import peridotTier from "@/assets/tiers/peridot.png";
-import jetTier from "@/assets/tiers/jet.png";
-import darkmatterTier from "@/assets/tiers/darkmatter.png";
-import cosmicTier from "@/assets/tiers/cosmic.png";
+import quartzTier from "@/assets/tiers/quartz.png";
+import diamondTier from "@/assets/tiers/diamond.png";
+import jadeTier from "@/assets/tiers/jade.png";
+import rubyTier from "@/assets/tiers/ruby.png";
+import pearlTier from "@/assets/tiers/pearl.png";
+import loveydoveyTier from "@/assets/tiers/loveydovey.png";
+import tourmalineTier from "@/assets/tiers/tourmaline.png";
+import topazTier from "@/assets/tiers/topaz.png";
+import tanazaniteTier from "@/assets/tiers/tanazanite.png";
+import prestigeTier from "@/assets/tiers/prestige.png";
 
 type TierType = 'track' | 'album' | 'artist';
 
@@ -24,53 +25,56 @@ const TierShowcase: React.FC = () => {
 		track: [
 			{ name: "Bronze", image: bronzeTier, minutes: "10m", description: "Your journey begins", color: "#CD7F32" },
 			{ name: "Silver", image: silverTier, minutes: "20m", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "35m", description: "Growing passion", color: "#9ACD32" },
-			{ name: "Gold", image: goldTier, minutes: "1h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "2h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "3h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Ruby", image: rubyTier, minutes: "4h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Amber", image: amberTier, minutes: "5h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jade", image: jadeTier, minutes: "8h", description: "Precious devotion", color: "#00A86B" },
-			{ name: "Amethyst", image: amethystTier, minutes: "11h", description: "Mystical bond", color: "#9966CC" },
-			{ name: "Jet", image: jetTier, minutes: "15h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "22h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "30h", description: "Rare devotion", color: "#FFEFDB" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "40h", description: "Ultimate transcendence", color: "#301934" },
-			{ name: "Cosmic", image: cosmicTier, minutes: "50h", description: "Beyond mortal limits", color: "#4B0082" }
+			{ name: "Gold", image: goldTier, minutes: "35m", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "55m", description: "Deep connection", color: "#50C878" },
+			{ name: "Amber", image: amberTier, minutes: "1.4h", description: "Warm devotion", color: "#FFBF00" },
+			{ name: "Amethyst", image: amethystTier, minutes: "2.1h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Quartz", image: quartzTier, minutes: "3h", description: "Crystal clarity", color: "#FFB6C1" },
+			{ name: "Diamond", image: diamondTier, minutes: "4.2h", description: "Unbreakable bond", color: "#B9F2FF" },
+			{ name: "Jade", image: jadeTier, minutes: "5.7h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Ruby", image: rubyTier, minutes: "7.7h", description: "Fiery passion", color: "#E0115F" },
+			{ name: "Pearl", image: pearlTier, minutes: "10h", description: "Refined taste", color: "#F8F8FF" },
+			{ name: "Loveydovey", image: loveydoveyTier, minutes: "13h", description: "Endless love", color: "#FF69B4" },
+			{ name: "Tourmaline", image: tourmalineTier, minutes: "18h", description: "Watermelon", color: "#D02090" },
+			{ name: "Topaz", image: topazTier, minutes: "23h", description: "Golden excellence", color: "#FFC87C" },
+			{ name: "Tanazanite", image: tanazaniteTier, minutes: "29h", description: "Rare beauty", color: "#4B0082" },
+			{ name: "Prestige", image: prestigeTier, minutes: "38h", description: "Ultimate prestige", color: "#8B00FF" }
 		],
 		album: [
 			{ name: "Bronze", image: bronzeTier, minutes: "30m", description: "Your journey begins", color: "#CD7F32" },
 			{ name: "Silver", image: silverTier, minutes: "1h", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "2h", description: "Growing passion", color: "#9ACD32" },
-			{ name: "Gold", image: goldTier, minutes: "3h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "6h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "9h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Ruby", image: rubyTier, minutes: "13h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Amber", image: amberTier, minutes: "20h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jade", image: jadeTier, minutes: "28h", description: "Precious devotion", color: "#00A86B" },
-			{ name: "Amethyst", image: amethystTier, minutes: "40h", description: "Mystical bond", color: "#9966CC" },
-			{ name: "Jet", image: jetTier, minutes: "57h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "80h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "108h", description: "Rare devotion", color: "#FFEFDB" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "167h", description: "Ultimate transcendence", color: "#301934" },
-			{ name: "Cosmic", image: cosmicTier, minutes: "200h", description: "Beyond mortal limits", color: "#4B0082" }
+			{ name: "Gold", image: goldTier, minutes: "1.8h", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "3h", description: "Deep connection", color: "#50C878" },
+			{ name: "Amber", image: amberTier, minutes: "4.7h", description: "Warm devotion", color: "#FFBF00" },
+			{ name: "Amethyst", image: amethystTier, minutes: "7h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Quartz", image: quartzTier, minutes: "10h", description: "Crystal clarity", color: "#FFB6C1" },
+			{ name: "Diamond", image: diamondTier, minutes: "14h", description: "Unbreakable bond", color: "#B9F2FF" },
+			{ name: "Jade", image: jadeTier, minutes: "20h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Ruby", image: rubyTier, minutes: "28h", description: "Fiery passion", color: "#E0115F" },
+			{ name: "Pearl", image: pearlTier, minutes: "38h", description: "Refined taste", color: "#F8F8FF" },
+			{ name: "Loveydovey", image: loveydoveyTier, minutes: "50h", description: "Endless love", color: "#FF69B4" },
+			{ name: "Tourmaline", image: tourmalineTier, minutes: "66h", description: "Watermelon", color: "#D02090" },
+			{ name: "Topaz", image: topazTier, minutes: "86h", description: "Golden excellence", color: "#FFC87C" },
+			{ name: "Tanazanite", image: tanazaniteTier, minutes: "111h", description: "Rare beauty", color: "#4B0082" },
+			{ name: "Prestige", image: prestigeTier, minutes: "142h", description: "Ultimate prestige", color: "#8B00FF" }
 		],
 		artist: [
 			{ name: "Bronze", image: bronzeTier, minutes: "1h", description: "Your journey begins", color: "#CD7F32" },
 			{ name: "Silver", image: silverTier, minutes: "2h", description: "Building dedication", color: "#C0C0C0" },
-			{ name: "Peridot", image: peridotTier, minutes: "3h", description: "Growing passion", color: "#9ACD32" },
-			{ name: "Gold", image: goldTier, minutes: "6h", description: "True appreciation", color: "#FFD700" },
-			{ name: "Emerald", image: emeraldTier, minutes: "9h", description: "Deep connection", color: "#50C878" },
-			{ name: "Sapphire", image: sapphireTier, minutes: "14h", description: "Passionate listener", color: "#0F52BA" },
-			{ name: "Ruby", image: rubyTier, minutes: "22h", description: "Fiery dedication", color: "#E0115F" },
-			{ name: "Amber", image: amberTier, minutes: "32h", description: "Unwavering loyalty", color: "#722F37" },
-			{ name: "Jade", image: jadeTier, minutes: "45h", description: "Precious devotion", color: "#00A86B" },
-			{ name: "Amethyst", image: amethystTier, minutes: "62h", description: "Mystical bond", color: "#9966CC" },
-			{ name: "Jet", image: jetTier, minutes: "83h", description: "Extraordinary bond", color: "#343434" },
-			{ name: "Diamond", image: diamondTier, minutes: "108h", description: "Exceptional taste", color: "#B9F2FF" },
-			{ name: "Opal", image: opalTier, minutes: "142h", description: "Rare devotion", color: "#FFEFDB" },
-			{ name: "Dark Matter", image: darkmatterTier, minutes: "200h", description: "Ultimate transcendence", color: "#301934" },
-			{ name: "Cosmic", image: cosmicTier, minutes: "250h", description: "Beyond mortal limits", color: "#4B0082" }
+			{ name: "Gold", image: goldTier, minutes: "3.3h", description: "True appreciation", color: "#FFD700" },
+			{ name: "Emerald", image: emeraldTier, minutes: "5.3h", description: "Deep connection", color: "#50C878" },
+			{ name: "Amber", image: amberTier, minutes: "8h", description: "Warm devotion", color: "#FFBF00" },
+			{ name: "Amethyst", image: amethystTier, minutes: "12h", description: "Mystical bond", color: "#9966CC" },
+			{ name: "Quartz", image: quartzTier, minutes: "17h", description: "Crystal clarity", color: "#FFB6C1" },
+			{ name: "Diamond", image: diamondTier, minutes: "23h", description: "Unbreakable bond", color: "#B9F2FF" },
+			{ name: "Jade", image: jadeTier, minutes: "33h", description: "Precious devotion", color: "#00A86B" },
+			{ name: "Ruby", image: rubyTier, minutes: "44h", description: "Fiery passion", color: "#E0115F" },
+			{ name: "Pearl", image: pearlTier, minutes: "59h", description: "Refined taste", color: "#F8F8FF" },
+			{ name: "Loveydovey", image: loveydoveyTier, minutes: "78h", description: "Endless love", color: "#FF69B4" },
+			{ name: "Tourmaline", image: tourmalineTier, minutes: "103h", description: "Watermelon", color: "#D02090" },
+			{ name: "Topaz", image: topazTier, minutes: "133h", description: "Golden excellence", color: "#FFC87C" },
+			{ name: "Tanazanite", image: tanazaniteTier, minutes: "170h", description: "Rare beauty", color: "#4B0082" },
+			{ name: "Prestige", image: prestigeTier, minutes: "217h", description: "Ultimate prestige", color: "#8B00FF" }
 		]
 	};
 
@@ -89,7 +93,7 @@ const TierShowcase: React.FC = () => {
 						Unlock Your <span className="text-[#7C4DFF]">Prestige</span>
 					</h2>
 					<p className="text-xl text-zinc-300 max-w-3xl mx-auto mb-8">
-						Every minute of listening earns you prestige. Climb through 15 unique tiers, each representing deeper dedication to your music.
+						Every minute of listening earns you prestige. Climb through 16 unique tiers, each representing deeper dedication to your music.
 					</p>
 
 					{/* Dropdown Toggle */}
@@ -131,9 +135,9 @@ const TierShowcase: React.FC = () => {
 					</div>
 				</div>
 
-				{/* Clean Grid Layout - 5 rows x 3 cols on mobile, 3 cols x 5 rows on desktop */}
-				<div className="max-w-5xl mx-auto">
-					<div className="grid grid-cols-3 md:grid-cols-3 gap-3 md:gap-6">
+				{/* Clean Grid Layout - 2 cols x 8 rows on mobile, 4 cols x 4 rows on desktop */}
+				<div className="max-w-6xl mx-auto">
+					<div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
 						{tiers.map((tier, index) => (
 							<div
 								key={tier.name}
@@ -147,7 +151,7 @@ const TierShowcase: React.FC = () => {
 									<img 
 										src={tier.image} 
 										alt={`${tier.name} tier`}
-										className="w-16 h-16 md:w-28 md:h-28 object-contain group-hover:scale-110 transition-transform duration-300"
+										className="w-16 h-16 md:w-24 md:h-24 object-contain group-hover:scale-110 transition-transform duration-300 rounded-lg"
 									/>
 									<div 
 										className="absolute -inset-3 md:-inset-6 rounded-full opacity-0 group-hover:opacity-25 transition-opacity duration-300"

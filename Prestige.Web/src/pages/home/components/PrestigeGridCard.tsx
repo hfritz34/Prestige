@@ -141,7 +141,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
           {/* Prestige tier background image */}
           {prestige && (
             <img
-              src={`src/assets/tiers/${prestige.toLowerCase()}.png`}
+              src={`src/assets/tiers/${prestige.toLowerCase().replace(' ', '')}.png`}
               alt={prestige}
               className="absolute inset-0 w-full h-full object-cover opacity-20 rounded-xl"
             />

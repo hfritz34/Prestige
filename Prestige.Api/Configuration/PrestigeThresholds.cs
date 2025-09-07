@@ -10,51 +10,52 @@ namespace Prestige.Api.Configuration
     {
         /// <summary>
         /// Prestige tier names in order (matches web assets and iOS enum)
-        /// Based on actual tier assets: bronze, silver, peridot, gold, emerald, sapphire, ruby, garnet, jade, amethyst, jet, diamond, opal, darkmatter, cosmic
+        /// New 16-tier structure: bronze -> silver -> gold -> emerald -> amber -> amethyst -> quartz -> diamond -> jade -> ruby -> pearl -> loveydovey -> tourmaline -> topaz -> tanazanite -> prestige
         /// </summary>
         public static readonly string[] TierNames = new string[]
         {
             "None",
             "Bronze", 
             "Silver",
-            "Peridot",
             "Gold",
-            "Emerald", 
-            "Sapphire",
-            "Ruby",
-            "Amber",
-            "Jade",
+            "Emerald",
+            "Amber", 
             "Amethyst",
-            "Jet",
+            "Quartz",
             "Diamond",
-            "Opal", 
-            "Dark Matter",
-            "Cosmic"
+            "Jade",
+            "Ruby",
+            "Pearl",
+            "Loveydovey",
+            "Tourmaline",
+            "Topaz",
+            "Tanazanite",
+            "Prestige"
         };
 
         /// <summary>
-        /// Development thresholds (scaled for week-long testing to reach Cosmic tier)
-        /// Values in minutes - 15 thresholds for Bronze through Cosmic
-        /// Designed for testers to reach Cosmic with ~2-4 hours daily listening over 7 days
+        /// Development thresholds (scaled for week-long testing to reach Prestige tier)
+        /// Values in minutes - 16 thresholds for Bronze through Prestige
+        /// Designed for testers to reach Prestige with ~2-4 hours daily listening over 7 days
         /// </summary>
         public static readonly Dictionary<string, int[]> DevThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 1, 2, 4, 6, 9, 13, 18, 24, 32, 42, 54, 68, 85, 105, 130 },
-            ["album"] = new int[] { 2, 5, 10, 16, 24, 34, 46, 60, 77, 97, 120, 147, 178, 214, 255 },
-            ["artist"] = new int[] { 4, 9, 16, 25, 36, 50, 67, 87, 111, 139, 172, 210, 254, 305, 365 }
+            ["track"] = new int[] { 1, 2, 4, 6, 9, 12, 16, 21, 27, 34, 42, 51, 61, 72, 84, 97 },
+            ["album"] = new int[] { 2, 5, 9, 14, 20, 27, 35, 44, 54, 65, 77, 90, 104, 119, 135, 152 },
+            ["artist"] = new int[] { 4, 8, 13, 19, 26, 34, 43, 53, 64, 76, 89, 103, 118, 134, 151, 169 }
         };
 
         /// <summary>
         /// Production thresholds (optimized for user engagement and progression)
-        /// Values in minutes - 15 thresholds for Bronze through Cosmic
-        /// Easy entry (Bronze: 10min track) → Prestigious Cosmic (2 years of 10min/day listening)
+        /// Values in minutes - 16 thresholds for Bronze through Prestige
+        /// Easy entry (Bronze: 10min track) → Prestigious final tier (2+ years of dedicated listening)
         /// Exponential progression gets harder as tiers increase
         /// </summary>
         public static readonly Dictionary<string, int[]> ProductionThresholds = new Dictionary<string, int[]>
         {
-            ["track"] = new int[] { 10, 20, 35, 60, 100, 150, 220, 320, 450, 650, 900, 1300, 1800, 2400, 3000 },
-            ["album"] = new int[] { 30, 60, 120, 200, 350, 550, 800, 1200, 1700, 2400, 3400, 4800, 6500, 10000, 12000 },
-            ["artist"] = new int[] { 60, 120, 200, 350, 550, 850, 1300, 1900, 2700, 3700, 5000, 6500, 8500, 12000, 15000 }
+            ["track"] = new int[] { 10, 20, 35, 55, 85, 125, 180, 250, 340, 460, 610, 800, 1050, 1350, 1750, 2250 },
+            ["album"] = new int[] { 30, 60, 110, 180, 280, 420, 600, 850, 1200, 1650, 2250, 3000, 3950, 5150, 6650, 8500 },
+            ["artist"] = new int[] { 60, 120, 200, 320, 480, 700, 1000, 1400, 1950, 2650, 3550, 4700, 6150, 7950, 10200, 13000 }
         };
 
         /// <summary>
@@ -130,7 +131,7 @@ namespace Prestige.Api.Configuration
                 },
                 TierNames = TierNames,
                 TierCount = TierNames.Length - 1, // Excluding "None"
-                TierMapping = "None, Bronze, Silver, Peridot, Gold, Emerald, Sapphire, Ruby, Garnet, Jade, Amethyst, Jet, Diamond, Opal, Dark Matter, Cosmic"
+                TierMapping = "None, Bronze, Silver, Gold, Emerald, Amber, Amethyst, Quartz, Diamond, Jade, Ruby, Pearl, Loveydovey, Tourmaline, Topaz, Tanazanite, Prestige"
             };
         }
     }

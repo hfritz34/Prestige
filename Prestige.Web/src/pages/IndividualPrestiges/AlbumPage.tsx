@@ -85,9 +85,9 @@ const AlbumPage: React.FC = () => {
         <div className="relative w-64 h-64 mb-6">
           {prestigeLevel !== "None" && (
             <img
-              src={`../../src/assets/tiers/${prestigeLevel}.png`}
+              src={`../../src/assets/tiers/${prestigeLevel.toLowerCase().replace(' ', '')}.png`}
               alt={prestigeLevel}
-              className="absolute inset-0 w-full h-full object-cover z-0 opacity-100"
+              className="absolute inset-0 w-full h-full object-cover z-0 opacity-100 rounded-lg"
               style={{ transform: 'translate(-50%, -50%)', top: '50%', left: '50%' }}
             />
           )}
@@ -144,21 +144,12 @@ const AlbumPage: React.FC = () => {
               const FriendItem = () => {
                 const friendTimeQuery = useFriendAlbumTime(friend.id, album.albumId, showFriends);
                 const friendTime = friendTimeQuery.data || 0;
-                // Friend prestige tier would need to come from backend
-                const friendPrestige = "None"; // TODO: Get from friend data
                 
                 return (
                   <li
                     key={friend.id}
                     className="flex items-center bg-gray-700 rounded-lg p-4 mb-4 relative"
                   >
-                    {friendPrestige !== "None" && (
-                      <img
-                        src={`../../src/assets/tiers/${friendPrestige}.png`}
-                        alt={friendPrestige}
-                        className="absolute inset-0 w-full h-full object-cover rounded-lg z-0"
-                      />
-                    )}
                     <div className="shrink-0 w-20 h-20 relative z-10">
                       <img
                         src={friend.profilePicUrl}
@@ -171,7 +162,6 @@ const AlbumPage: React.FC = () => {
                       <p className="text-zinc-50">
                         Total Time: {friendTimeQuery.isLoading ? 'Loading...' : `${(friendTime / 60).toFixed(1)} minutes`}
                       </p>
-                      <p className="text-zinc-50">Prestige Level: {friendPrestige}</p>
                     </div>
                   </li>
                 );
