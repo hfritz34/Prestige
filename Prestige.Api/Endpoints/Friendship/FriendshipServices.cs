@@ -41,6 +41,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = existingFriendship.Friend.NickName ?? "",
                     ProfilePicUrl = existingFriendship.Friend.ProfilePicURL ?? "",
                     Bio = existingFriendship.Friend.Bio,
+                    IsVerified = existingFriendship.Friend.IsVerified,
                     Status = existingFriendship.Status,
                     RequestDate = existingFriendship.AcceptedDate, // Use AcceptedDate since it's accepted
                     MutualFriends = 0
@@ -78,6 +79,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Nickname = friendship1.Friend.NickName ?? "",
                 ProfilePicUrl = friendship1.Friend.ProfilePicURL ?? "",
                 Bio = friendship1.Friend.Bio,
+                IsVerified = friendship1.Friend.IsVerified,
                 Status = friendship1.Status,
                 RequestDate = friendship1.AcceptedDate, // Use AcceptedDate since it's accepted
                 MutualFriends = 0
@@ -131,6 +133,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = existingRequest.Friend.NickName ?? "",
                     ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
                     Bio = existingRequest.Friend.Bio,
+                    IsVerified = existingRequest.Friend.IsVerified,
                     Status = existingRequest.Status,
                     RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
                     MutualFriends = 0
@@ -147,6 +150,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = existingRequest.Friend.NickName ?? "",
                     ProfilePicUrl = existingRequest.Friend.ProfilePicURL ?? "",
                     Bio = existingRequest.Friend.Bio,
+                    IsVerified = existingRequest.Friend.IsVerified,
                     Status = existingRequest.Status,
                     RequestDate = existingRequest.Status == FriendRequestStatus.Accepted ? existingRequest.AcceptedDate : existingRequest.RequestDate,
                     MutualFriends = 0
@@ -190,6 +194,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Nickname = friendship.Friend.NickName ?? "",
                 ProfilePicUrl = friendship.Friend.ProfilePicURL ?? "",
                 Bio = friendship.Friend.Bio,
+                IsVerified = friendship.Friend.IsVerified,
                 Status = friendship.Status,
                 RequestDate = friendship.Status == FriendRequestStatus.Accepted ? friendship.AcceptedDate : friendship.RequestDate,
                 MutualFriends = 0
@@ -535,6 +540,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     ProfilePicUrl = f.Friend.ProfilePicURL ?? "",
                     Name = f.Friend.Name ?? "",
                     Bio = f.Friend.Bio,
+                    IsVerified = f.Friend.IsVerified,
                     Status = f.Status,
                     RequestDate = f.AcceptedDate, // Use AcceptedDate since these are accepted friendships
                     MutualFriends = 0 // TODO: Calculate mutual friends if needed
@@ -560,7 +566,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
                     Name = f.Friend.Name,
-                    Bio = f.Friend.Bio
+                    Bio = f.Friend.Bio,
+                    IsVerified = f.Friend.IsVerified
                 })
                 .FirstOrDefaultAsync();
 
@@ -676,7 +683,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
                     Name = f.Friend.Name,
-                    Bio = f.Friend.Bio
+                    Bio = f.Friend.Bio,
+                    IsVerified = f.Friend.IsVerified
                 })
                 .ToListAsync();
 
@@ -704,7 +712,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
                     Name = f.Friend.Name,
-                    Bio = f.Friend.Bio
+                    Bio = f.Friend.Bio,
+                    IsVerified = f.Friend.IsVerified
                 })
                 .ToListAsync();
 
@@ -733,7 +742,8 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     Nickname = f.Friend.NickName,
                     ProfilePicUrl = f.Friend.ProfilePicURL,
                     Name = f.Friend.Name,
-                    Bio = f.Friend.Bio
+                    Bio = f.Friend.Bio,
+                    IsVerified = f.Friend.IsVerified
                 })
                 .ToListAsync();
 

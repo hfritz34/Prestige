@@ -10,9 +10,11 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints.RequestResponse
         public string FromUserName { get; set; } = string.Empty;
         public string FromUserNickname { get; set; } = string.Empty;
         public string FromUserProfilePicUrl { get; set; } = string.Empty;
+        public bool FromUserIsVerified { get; set; } = false;
         public string ToUserName { get; set; } = string.Empty;
         public string ToUserNickname { get; set; } = string.Empty;
         public string ToUserProfilePicUrl { get; set; } = string.Empty;
+        public bool ToUserIsVerified { get; set; } = false;
         public FriendRequestStatus Status { get; set; }
         public DateTime RequestDate { get; set; }
         public DateTime? AcceptedDate { get; set; }

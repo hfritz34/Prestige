@@ -45,11 +45,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 auth0User.Identities.FirstOrDefault()?.RefreshToken ?? throw Logger.TokenNotFound("Refresh Token")
                 );
 
-            // Set verification status for the specific user
-            if (IsUserVerified(request.Id))
-            {
-                newUser.UpdateVerificationStatus(true);
-            }
+            // Verification status will be set based on database field
 
             PrestigeDb.Users.Add(newUser);
             PrestigeDb.SaveChanges();
@@ -76,13 +72,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 }), true);
             }
 
-            // Ensure verification status is up-to-date for existing users
-            bool shouldBeVerified = IsUserVerified(id);
-            if (user.IsVerified != shouldBeVerified)
-            {
-                user.UpdateVerificationStatus(shouldBeVerified);
-                PrestigeDb.SaveChanges();
-            }
+            // Verification status is managed through database field
 
             return (new UserResponse(user), false);
         }
@@ -222,8 +212,8 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public bool IsUserVerified(string userId)
         {
-            // Check if the user ID matches the specific verified user
-            return userId == "qzi7c4c3aokmqtge8zmebup6u";
+            var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId);
+            return user?.IsVerified ?? false;
         }
 
         /// <summary>
