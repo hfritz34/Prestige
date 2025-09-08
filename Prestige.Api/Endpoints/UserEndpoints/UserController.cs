@@ -160,5 +160,19 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 return HandleException(ex);
             }
         }
+
+        [HttpGet("{id}/statistics")]
+        public IActionResult GetUserStatistics(string id)
+        {
+            try
+            {
+                var statistics = _service.GetUserStatistics(id);
+                return Ok(statistics);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
     }
 }

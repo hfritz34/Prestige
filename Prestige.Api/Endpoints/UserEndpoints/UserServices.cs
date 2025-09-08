@@ -222,6 +222,37 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         /// <param name="userId">User ID to update</param>
         /// <param name="spotifyProfile">Current Spotify profile data</param>
         /// <returns>True if profile was updated</returns>
+        public UserStatisticsResponse GetUserStatistics(string userId)
+        {
+            // Get friends count
+            var friendsCount = PrestigeDb.Friendships
+                .Count(f => (f.UserId == userId || f.FriendId == userId) && f.Status == FriendRequestStatus.Accepted);
+            
+            // Get ratings count (total number of items rated)
+            var ratingsCount = PrestigeDb.Ratings
+                .Count(r => r.UserId == userId);
+            
+            // Get prestiges count (items with prestige level bronze or above)
+            // Use the prestige threshold configuration to support both dev and production modes
+            var trackThresholds = Configuration.PrestigeThresholds.GetThresholds("track");
+            var albumThresholds = Configuration.PrestigeThresholds.GetThresholds("album");
+            var artistThresholds = Configuration.PrestigeThresholds.GetThresholds("artist");
+            
+            // Bronze is the first threshold (index 0) in minutes, convert to milliseconds
+            var trackBronzeMs = trackThresholds.Length > 0 ? trackThresholds[0] * 60 * 1000 : 600000; // Default 10 min
+            var albumBronzeMs = albumThresholds.Length > 0 ? albumThresholds[0] * 60 * 1000 : 1800000; // Default 30 min  
+            var artistBronzeMs = artistThresholds.Length > 0 ? artistThresholds[0] * 60 * 1000 : 3600000; // Default 60 min
+            
+            var prestigesCount = PrestigeDb.UserTracks
+                .Count(ut => ut.UserId == userId && ut.TotalTime >= trackBronzeMs) +
+                PrestigeDb.UserAlbums
+                .Count(ua => ua.UserId == userId && ua.TotalTime >= albumBronzeMs) +
+                PrestigeDb.UserArtists
+                .Count(ua => ua.UserId == userId && ua.TotalTime >= artistBronzeMs);
+            
+            return new UserStatisticsResponse(friendsCount, ratingsCount, prestigesCount);
+        }
+
         public bool UpdateUserFromSpotifyProfile(string userId, SpotifyUserProfileResponse spotifyProfile)
         {
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId);
