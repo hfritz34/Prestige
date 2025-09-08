@@ -347,7 +347,25 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
             {
                 // Calculate based on recent activity
                 var dailyAverage = recentActivity.TotalMinutesLast30Days / 30.0;
+                
+                // Apply intelligent scaling based on how close they are to the next tier
+                // If very close (< 60 minutes), assume higher engagement
+                if (minutesNeeded < 60)
+                {
+                    dailyAverage = Math.Max(dailyAverage, 10.0); // At least 10 min/day when close
+                }
+                else if (minutesNeeded < 180)
+                {
+                    dailyAverage = Math.Max(dailyAverage, 5.0); // At least 5 min/day when moderately close
+                }
+                
                 var estimatedDays = minutesNeeded / dailyAverage;
+                
+                // Cap estimates at reasonable maximums
+                if (estimatedDays > 365)
+                {
+                    estimatedDays = 365; // Cap at 1 year
+                }
                 
                 return new TimeEstimation
                 {
@@ -358,11 +376,33 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
             }
             else
             {
-                // Fallback: assume minimal activity
+                // Fallback: Use intelligent defaults based on item type
+                double dailyEstimate = itemType switch
+                {
+                    "tracks" => 3.5,  // One play per day for a track
+                    "albums" => 15.0,  // Partial album listen per day
+                    "artists" => 10.0, // Few tracks per day
+                    _ => 5.0
+                };
+                
+                // Scale up if they're very close to the next tier
+                if (minutesNeeded < 60)
+                {
+                    dailyEstimate *= 2.0; // Double the rate when very close
+                }
+                
+                var estimatedDays = minutesNeeded / dailyEstimate;
+                
+                // Cap at reasonable maximum
+                if (estimatedDays > 365)
+                {
+                    estimatedDays = 365;
+                }
+                
                 return new TimeEstimation
                 {
                     MinutesRemaining = minutesNeeded,
-                    FormattedTime = FormatTimeEstimate(minutesNeeded / 5.0), // Assume 5 min/day minimum
+                    FormattedTime = FormatTimeEstimate(estimatedDays),
                     EstimationType = "minimum_rate_estimate"
                 };
             }
@@ -391,12 +431,16 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
             var userTrack = await PrestigeDb.UserTracks
                 .FirstOrDefaultAsync(ut => ut.User.Id == userId && ut.Track.Id == trackId);
 
-            // Simplified: assume recent activity based on last update
+            // Better estimation: if played recently, estimate based on track length
             if (userTrack?.LastUpdatedAt >= cutoffDate)
             {
+                // Tracks are typically 3-4 minutes, estimate 10-20 plays in last 30 days if active
+                var estimatedPlaysLast30Days = 15.0; // Reasonable estimate for active listening
+                var averageTrackLength = 3.5; // minutes
+                
                 return new RecentItemActivity
                 {
-                    TotalMinutesLast30Days = Math.Min(userTrack.TotalTime / 60.0, 60.0) // Cap at 1 hour for estimation
+                    TotalMinutesLast30Days = estimatedPlaysLast30Days * averageTrackLength
                 };
             }
 
@@ -410,9 +454,13 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
 
             if (userAlbum?.LastUpdatedAt >= cutoffDate)
             {
+                // Albums are typically 40-60 minutes, estimate 3-5 plays in last 30 days if active
+                var estimatedPlaysLast30Days = 4.0;
+                var averageAlbumLength = 45.0; // minutes
+                
                 return new RecentItemActivity
                 {
-                    TotalMinutesLast30Days = Math.Min(userAlbum.TotalTime / 60.0, 120.0) // Cap at 2 hours for estimation
+                    TotalMinutesLast30Days = estimatedPlaysLast30Days * averageAlbumLength
                 };
             }
 
@@ -426,9 +474,14 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
 
             if (userArtist?.LastUpdatedAt >= cutoffDate)
             {
+                // For artists, estimate based on typical listening patterns
+                // Active listener might play 20-30 tracks from an artist in 30 days
+                var estimatedTracksLast30Days = 25.0;
+                var averageTrackLength = 3.5; // minutes
+                
                 return new RecentItemActivity
                 {
-                    TotalMinutesLast30Days = Math.Min(userArtist.TotalTime / 60.0, 240.0) // Cap at 4 hours for estimation
+                    TotalMinutesLast30Days = estimatedTracksLast30Days * averageTrackLength
                 };
             }
 
@@ -436,40 +489,27 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         }
 
         /// <summary>
-        /// Format time estimate into human-readable string
+        /// Format time estimate into human-readable string (hours as maximum unit)
         /// </summary>
         private string FormatTimeEstimate(double days)
         {
-            if (days < 1)
+            // Convert days to total hours
+            var totalHours = days * 24;
+            
+            // If less than 1 hour, show minutes
+            if (totalHours < 1)
             {
-                var hours = days * 24;
-                if (hours < 1)
-                {
-                    var minutes = hours * 60;
-                    return $"{Math.Ceiling(minutes)}m";
-                }
-                return $"{Math.Ceiling(hours)}h";
+                var minutes = totalHours * 60;
+                return $"{Math.Ceiling(minutes)}m";
             }
             
-            if (days < 7)
+            // For any amount of time, show in hours (capped at 999h for display)
+            if (totalHours > 999)
             {
-                return $"{Math.Ceiling(days)}d";
+                return "999+h";
             }
             
-            if (days < 30)
-            {
-                var weeks = days / 7;
-                return $"{Math.Ceiling(weeks)}w";
-            }
-            
-            if (days < 365)
-            {
-                var months = days / 30;
-                return $"{Math.Ceiling(months)}mo";
-            }
-            
-            var years = days / 365;
-            return $"{Math.Ceiling(years)}y";
+            return $"{Math.Ceiling(totalHours)}h";
         }
 
         /// <summary>
