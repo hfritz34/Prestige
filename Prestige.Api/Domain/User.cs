@@ -21,6 +21,7 @@ namespace Prestige.Api.Domain
                 public List<Friendship> Friendships { get; set; }
                 public List<Friendship> Friends { get; set; }
                 public bool IsSetup { get; private set; } = false;
+        public bool IsVerified { get; private set; } = false;
 
                 public User(string id, string name, string nickName, string email, string profilePicURL, string accessToken, string refreshToken)
                 {
@@ -66,6 +67,11 @@ namespace Prestige.Api.Domain
                 public void UpdateIsSetup(bool isSetup)
                 {
                         IsSetup = isSetup;
+                }
+
+                public void UpdateVerificationStatus(bool isVerified)
+                {
+                        IsVerified = isVerified;
                 }
 
                 public void UpdateUser(string? name, string? nickName, string? email, string? profilePicURL){

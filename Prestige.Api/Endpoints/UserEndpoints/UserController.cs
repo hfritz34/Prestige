@@ -143,5 +143,22 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 return HandleException(ex);
             }
         }
+
+        [HttpGet("{id}/verification-status")]
+        public IActionResult GetVerificationStatus(string id)
+        {
+            try
+            {
+                var isVerified = _service.IsUserVerified(id);
+                return Ok(new { 
+                    userId = id,
+                    isVerified = isVerified
+                });
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
     }
 }

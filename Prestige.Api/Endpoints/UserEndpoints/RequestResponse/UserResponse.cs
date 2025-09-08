@@ -11,6 +11,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints.RequestResponse
         public string ProfilePicURL { get; set; }
         public string? Bio { get; set; }
         public bool IsSetup { get; set; }
+        public bool IsVerified { get; set; }
 
         public UserResponse(User user)
         {
@@ -21,6 +22,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints.RequestResponse
             ProfilePicURL = user.ProfilePicURL;
             Bio = user.Bio;
             IsSetup = user.IsSetup;
+            IsVerified = user.IsVerified;
         }   
     }
 }
