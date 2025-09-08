@@ -230,7 +230,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             
             // Get ratings count (total number of items rated)
             var ratingsCount = PrestigeDb.Ratings
-                .Count(r => r.UserId == userId);
+                .Count(r => r.User.Id == userId);
             
             // Get prestiges count (items with prestige level bronze or above)
             // Use the prestige threshold configuration to support both dev and production modes
@@ -244,11 +244,11 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             var artistBronzeMs = artistThresholds.Length > 0 ? artistThresholds[0] * 60 * 1000 : 3600000; // Default 60 min
             
             var prestigesCount = PrestigeDb.UserTracks
-                .Count(ut => ut.UserId == userId && ut.TotalTime >= trackBronzeMs) +
+                .Count(ut => ut.User.Id == userId && ut.TotalTime >= trackBronzeMs) +
                 PrestigeDb.UserAlbums
-                .Count(ua => ua.UserId == userId && ua.TotalTime >= albumBronzeMs) +
+                .Count(ua => ua.User.Id == userId && ua.TotalTime >= albumBronzeMs) +
                 PrestigeDb.UserArtists
-                .Count(ua => ua.UserId == userId && ua.TotalTime >= artistBronzeMs);
+                .Count(ua => ua.User.Id == userId && ua.TotalTime >= artistBronzeMs);
             
             return new UserStatisticsResponse(friendsCount, ratingsCount, prestigesCount);
         }
