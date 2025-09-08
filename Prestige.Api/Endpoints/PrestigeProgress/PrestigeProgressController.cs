@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Prestige.Api.Configuration;
 using Prestige.Api.Endpoints.PrestigeProgress.RequestResponse;
 using Exception = Prestige.Api.Exceptions.Exception;
 
@@ -106,6 +107,18 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         {
             var validTypes = new[] { "tracks", "albums", "artists" };
             return validTypes.Contains(itemType.ToLower());
+        }
+        
+        /// <summary>
+        /// Debug endpoint to check which thresholds are currently active
+        /// </summary>
+        [HttpGet("prestige-progress/debug/thresholds")]
+        [AllowAnonymous] // Allow checking without auth for debugging
+        public IActionResult GetActiveThresholds()
+        {
+            var configInfo = PrestigeThresholds.GetConfigurationInfo();
+            Console.WriteLine($"🔍 DEBUG: Prestige thresholds configuration - {System.Text.Json.JsonSerializer.Serialize(configInfo)}");
+            return Ok(configInfo);
         }
     }
 }

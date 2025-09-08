@@ -88,10 +88,20 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 };
                 
                 Logger.LogInformation($"Getting thresholds for itemType: {normalizedItemType} (config key: {configItemType})");
+                
+                // Debug environment variable reading
+                var envVar = Environment.GetEnvironmentVariable("USE_DEV_PRESTIGE_THRESHOLDS");
+                Logger.LogInformation($"🔍 Environment variable USE_DEV_PRESTIGE_THRESHOLDS = '{envVar}'");
+                Logger.LogInformation($"🔍 Using DEV thresholds: {PrestigeThresholds.UseDevThresholds}");
+                
                 var thresholds = PrestigeThresholds.GetThresholds(configItemType);
                 var tierNames = PrestigeThresholds.TierNames;
                 
                 Logger.LogInformation($"Retrieved {thresholds?.Length ?? 0} thresholds and {tierNames?.Length ?? 0} tier names");
+                if (thresholds != null && thresholds.Length > 0)
+                {
+                    Logger.LogInformation($"First 3 thresholds for {configItemType}: [{string.Join(", ", thresholds.Take(3))}]");
+                }
 
                 if (thresholds == null || thresholds.Length == 0)
                 {
@@ -128,13 +138,20 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
             }
 
             // Calculate progress percentage
+            Logger.LogInformation($"Calculating progress percentage - currentMinutes: {currentMinutes}, currentTierIndex: {currentTierIndex}");
             var progressPercentage = CalculateProgressPercentage(currentMinutes, currentTierIndex, thresholds);
+            Logger.LogInformation($"Calculated progress percentage: {progressPercentage}%");
 
             // Calculate time estimation
             TimeEstimation? timeEstimation = null;
             if (nextTier != null)
             {
+                Logger.LogInformation($"🔍 Time estimation - nextTier threshold: {nextTier.Threshold}, currentMinutes: {currentStats.TotalMinutes}");
                 timeEstimation = await EstimateTimeToNextTierAsync(userId, itemId, normalizedItemType, currentStats, nextTier.Threshold);
+                if (timeEstimation != null)
+                {
+                    Logger.LogInformation($"🔍 Time estimation result - remaining: {timeEstimation.MinutesRemaining} min, formatted: {timeEstimation.FormattedTime}");
+                }
             }
 
             return new PrestigeProgressResponse
@@ -292,9 +309,12 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         /// </summary>
         private double CalculateProgressPercentage(double currentMinutes, int currentTierIndex, int[] thresholds)
         {
+            Logger.LogInformation($"🔍 Progress calculation - minutes: {currentMinutes}, tier: {currentTierIndex}, thresholds: [{string.Join(", ", thresholds)}]");
+            
             // If at max level, return 100%
             if (currentTierIndex >= PrestigeThresholds.TierNames.Length - 1)
             {
+                Logger.LogInformation($"🔍 At max level, returning 100%");
                 return 100.0;
             }
 
@@ -303,7 +323,9 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
             {
                 if (thresholds.Length > 0)
                 {
-                    return Math.Min((currentMinutes / thresholds[0]) * 100.0, 100.0);
+                    var result = Math.Min((currentMinutes / thresholds[0]) * 100.0, 100.0);
+                    Logger.LogInformation($"🔍 None tier - progress to {thresholds[0]}: {result}%");
+                    return result;
                 }
                 return 0.0;
             }
@@ -317,9 +339,12 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 var progressInTier = currentMinutes - currentThreshold;
                 var tierRange = nextThreshold - currentThreshold;
                 
-                return tierRange > 0 ? Math.Min((progressInTier / tierRange) * 100.0, 100.0) : 0.0;
+                var result = tierRange > 0 ? Math.Min((progressInTier / tierRange) * 100.0, 100.0) : 0.0;
+                Logger.LogInformation($"🔍 Between tiers - from {currentThreshold} to {nextThreshold}, progress: {progressInTier}/{tierRange} = {result}%");
+                return result;
             }
 
+            Logger.LogInformation($"🔍 Fallback to 100%");
             return 100.0;
         }
 
@@ -329,6 +354,7 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         private async Task<TimeEstimation> EstimateTimeToNextTierAsync(string userId, string itemId, string itemType, UserItemStats currentStats, double nextThreshold)
         {
             var minutesNeeded = nextThreshold - currentStats.TotalMinutes;
+            Logger.LogInformation($"🔍 Exact calculation - minutesNeeded: {minutesNeeded}, nextThreshold: {nextThreshold}, currentMinutes: {currentStats.TotalMinutes}");
             
             if (minutesNeeded <= 0)
             {
@@ -340,72 +366,16 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 };
             }
 
-            // Get recent listening activity for this specific item (last 30 days)
-            var recentActivity = await GetRecentItemActivityAsync(userId, itemId, itemType, 30);
+            // Simple and exact - just show how many more minutes are needed
+            var formattedTime = FormatExactTime(minutesNeeded);
+            Logger.LogInformation($"🔍 Exact time remaining: {formattedTime}");
             
-            if (recentActivity.TotalMinutesLast30Days > 0)
+            return new TimeEstimation
             {
-                // Calculate based on recent activity
-                var dailyAverage = recentActivity.TotalMinutesLast30Days / 30.0;
-                
-                // Apply intelligent scaling based on how close they are to the next tier
-                // If very close (< 60 minutes), assume higher engagement
-                if (minutesNeeded < 60)
-                {
-                    dailyAverage = Math.Max(dailyAverage, 10.0); // At least 10 min/day when close
-                }
-                else if (minutesNeeded < 180)
-                {
-                    dailyAverage = Math.Max(dailyAverage, 5.0); // At least 5 min/day when moderately close
-                }
-                
-                var estimatedDays = minutesNeeded / dailyAverage;
-                
-                // Cap estimates at reasonable maximums
-                if (estimatedDays > 365)
-                {
-                    estimatedDays = 365; // Cap at 1 year
-                }
-                
-                return new TimeEstimation
-                {
-                    MinutesRemaining = minutesNeeded,
-                    FormattedTime = FormatTimeEstimate(estimatedDays),
-                    EstimationType = "based_on_recent_activity"
-                };
-            }
-            else
-            {
-                // Fallback: Use intelligent defaults based on item type
-                double dailyEstimate = itemType switch
-                {
-                    "tracks" => 3.5,  // One play per day for a track
-                    "albums" => 15.0,  // Partial album listen per day
-                    "artists" => 10.0, // Few tracks per day
-                    _ => 5.0
-                };
-                
-                // Scale up if they're very close to the next tier
-                if (minutesNeeded < 60)
-                {
-                    dailyEstimate *= 2.0; // Double the rate when very close
-                }
-                
-                var estimatedDays = minutesNeeded / dailyEstimate;
-                
-                // Cap at reasonable maximum
-                if (estimatedDays > 365)
-                {
-                    estimatedDays = 365;
-                }
-                
-                return new TimeEstimation
-                {
-                    MinutesRemaining = minutesNeeded,
-                    FormattedTime = FormatTimeEstimate(estimatedDays),
-                    EstimationType = "minimum_rate_estimate"
-                };
-            }
+                MinutesRemaining = minutesNeeded,
+                FormattedTime = formattedTime,
+                EstimationType = "exact_minutes_needed"
+            };
         }
 
         /// <summary>
@@ -489,7 +459,35 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         }
 
         /// <summary>
-        /// Format time estimate into human-readable string (hours as maximum unit)
+        /// Format exact minutes remaining into human-readable string
+        /// </summary>
+        private string FormatExactTime(double minutesRemaining)
+        {
+            if (minutesRemaining < 1)
+            {
+                return "< 1m";
+            }
+            
+            var minutes = Math.Ceiling(minutesRemaining);
+            
+            if (minutes < 60)
+            {
+                return $"{minutes}m";
+            }
+            
+            var hours = Math.Floor(minutes / 60);
+            var remainingMinutes = minutes % 60;
+            
+            if (remainingMinutes == 0)
+            {
+                return $"{hours}h";
+            }
+            
+            return $"{hours}h {remainingMinutes}m";
+        }
+        
+        /// <summary>
+        /// Format time estimate into human-readable string (hours as maximum unit) - LEGACY
         /// </summary>
         private string FormatTimeEstimate(double days)
         {
