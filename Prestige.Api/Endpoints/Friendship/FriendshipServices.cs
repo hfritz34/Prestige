@@ -249,6 +249,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Nickname = friendshipRequest.Friend.NickName ?? "",
                 ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
                 Bio = friendshipRequest.Friend.Bio,
+                IsVerified = friendshipRequest.Friend.IsVerified,
                 Status = friendshipRequest.Status,
                 RequestDate = friendshipRequest.AcceptedDate, // Use AcceptedDate as friendshipDate
                 MutualFriends = 0 // TODO: Calculate mutual friends count if needed
@@ -277,6 +278,7 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                 Nickname = friendshipRequest.Friend.NickName ?? "",
                 ProfilePicUrl = friendshipRequest.Friend.ProfilePicURL ?? "",
                 Bio = friendshipRequest.Friend.Bio,
+                IsVerified = friendshipRequest.Friend.IsVerified,
                 Status = friendshipRequest.Status,
                 RequestDate = friendshipRequest.RequestDate, // Keep as RequestDate since it's declined
                 MutualFriends = 0
@@ -297,9 +299,11 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     FromUserName = f.User.Name ?? "",
                     FromUserNickname = f.User.NickName ?? "",
                     FromUserProfilePicUrl = f.User.ProfilePicURL ?? "",
+                    FromUserIsVerified = f.User.IsVerified,
                     ToUserName = f.Friend.Name ?? "",
                     ToUserNickname = f.Friend.NickName ?? "",
                     ToUserProfilePicUrl = f.Friend.ProfilePicURL ?? "",
+                    ToUserIsVerified = f.Friend.IsVerified,
                     Status = f.Status,
                     RequestDate = f.RequestDate,
                     AcceptedDate = f.AcceptedDate
@@ -321,9 +325,11 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
                     FromUserName = f.User.Name ?? "",
                     FromUserNickname = f.User.NickName ?? "",
                     FromUserProfilePicUrl = f.User.ProfilePicURL ?? "",
+                    FromUserIsVerified = f.User.IsVerified,
                     ToUserName = f.Friend.Name ?? "",
                     ToUserNickname = f.Friend.NickName ?? "",
                     ToUserProfilePicUrl = f.Friend.ProfilePicURL ?? "",
+                    ToUserIsVerified = f.Friend.IsVerified,
                     Status = f.Status,
                     RequestDate = f.RequestDate,
                     AcceptedDate = f.AcceptedDate
@@ -634,18 +640,33 @@ namespace Prestige.Api.Endpoints.FriendshipEndpoints
 
         public FriendResponse RemoveFriend(string userId, string friendId)
         {
+            // Find the friendship from user to friend
             var friendship = PrestigeDb.Friendships
                 .FirstOrDefault(f => f.UserId == userId && f.FriendId == friendId) ?? throw new Exception("Friendship not found");
+            
+            // Load the friend data before deleting
             PrestigeDb.Friendships.Entry(friendship).Reference(f => f.Friend).Load();
+            
+            // Remove both directions of the friendship
+            var reverseFriendship = PrestigeDb.Friendships
+                .FirstOrDefault(f => f.UserId == friendId && f.FriendId == userId);
+            
             PrestigeDb.Friendships.Remove(friendship);
+            if (reverseFriendship != null)
+            {
+                PrestigeDb.Friendships.Remove(reverseFriendship);
+            }
+            
             PrestigeDb.SaveChanges();
+            
             return new FriendResponse()
             {
                 Id = friendship.Friend.Id,
                 Name = friendship.Friend.Name,
                 Nickname = friendship.Friend.NickName,
                 ProfilePicUrl = friendship.Friend.ProfilePicURL,
-                Bio = friendship.Friend.Bio
+                Bio = friendship.Friend.Bio,
+                IsVerified = friendship.Friend.IsVerified
             };
         }
 
