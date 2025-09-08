@@ -17,12 +17,14 @@ namespace Prestige.Api.Endpoints.PrestigeProgress.RequestResponse
         public PrestigeTierInfo CurrentLevel { get; set; } = new();
 
         [JsonPropertyName("next_level")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public PrestigeTierInfo? NextLevel { get; set; }
 
         [JsonPropertyName("progress")]
         public ProgressStats Progress { get; set; } = new();
 
         [JsonPropertyName("estimated_time_to_next")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public TimeEstimation? EstimatedTimeToNext { get; set; }
     }
 }

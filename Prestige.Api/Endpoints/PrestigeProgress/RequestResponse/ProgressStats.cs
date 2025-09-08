@@ -8,6 +8,7 @@ namespace Prestige.Api.Endpoints.PrestigeProgress.RequestResponse
         public double CurrentValue { get; set; }
 
         [JsonPropertyName("next_threshold")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public double? NextThreshold { get; set; }
 
         [JsonPropertyName("percentage")]

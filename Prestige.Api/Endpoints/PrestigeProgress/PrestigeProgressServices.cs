@@ -55,29 +55,45 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         /// </summary>
         private async Task<PrestigeProgressResponse> CalculatePrestigeProgressAsync(string userId, string itemType, string itemId)
         {
-            var normalizedItemType = itemType.ToLower();
-            
-            // Get user's current stats for this item
-            var currentStats = await GetUserItemStatsAsync(userId, itemId, normalizedItemType);
-            
-            // Get item name
-            var itemName = await GetItemNameAsync(itemId, normalizedItemType);
-
-            // Get prestige tier thresholds
-            var thresholds = PrestigeThresholds.GetThresholds(normalizedItemType);
-            var tierNames = PrestigeThresholds.TierNames;
-
-            if (thresholds.Length == 0)
+            try
             {
-                throw new ArgumentException($"Invalid item type: {itemType}");
-            }
+                var normalizedItemType = itemType.ToLower();
+                
+                // Get user's current stats for this item
+                var currentStats = await GetUserItemStatsAsync(userId, itemId, normalizedItemType);
+                if (currentStats == null)
+                {
+                    throw new InvalidOperationException($"Could not retrieve stats for user {userId}, item {itemId}");
+                }
+                
+                // Get item name
+                var itemName = await GetItemNameAsync(itemId, normalizedItemType);
+                if (string.IsNullOrEmpty(itemName))
+                {
+                    itemName = $"Unknown {normalizedItemType}";
+                }
 
-            // Convert seconds to minutes for threshold comparison
-            var currentMinutes = currentStats.TotalMinutes;
+                // Get prestige tier thresholds
+                var thresholds = PrestigeThresholds.GetThresholds(normalizedItemType);
+                var tierNames = PrestigeThresholds.TierNames;
+
+                if (thresholds == null || thresholds.Length == 0)
+                {
+                    throw new ArgumentException($"No thresholds found for item type: {itemType}");
+                }
+
+                if (tierNames == null || tierNames.Length == 0)
+                {
+                    throw new InvalidOperationException("Tier names configuration is missing");
+                }
+
+                // Convert seconds to minutes for threshold comparison
+                var currentMinutes = currentStats.TotalMinutes;
             
             // Find current tier
             var currentTierIndex = GetCurrentTierIndex(currentMinutes, thresholds);
-            var currentTier = CreateTierInfo(tierNames[currentTierIndex], thresholds, currentTierIndex - 1);
+            var currentThresholdIndex = Math.Max(0, currentTierIndex - 1);
+            var currentTier = CreateTierInfo(tierNames[currentTierIndex], thresholds, currentThresholdIndex);
 
             // Find next tier (if not at max level)
             PrestigeTierInfo? nextTier = null;
@@ -104,16 +120,22 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 ItemType = CamelCaseItemType(itemType),
                 ItemName = itemName,
                 CurrentLevel = currentTier,
-                NextLevel = nextTier,
+                NextLevel = nextTier, // This will be null for max level
                 Progress = new ProgressStats
                 {
                     CurrentValue = currentMinutes,
-                    NextThreshold = nextTier?.Threshold,
-                    Percentage = progressPercentage,
+                    NextThreshold = isMaxLevel ? null : nextTier?.Threshold, // Explicitly null for max level
+                    Percentage = isMaxLevel ? 100.0 : progressPercentage, // Always 100% at max level
                     IsMaxLevel = isMaxLevel
                 },
-                EstimatedTimeToNext = timeEstimation
+                EstimatedTimeToNext = isMaxLevel ? null : timeEstimation // No time estimation at max level
             };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, $"Error calculating prestige progress for user {userId}, itemType {itemType}, itemId {itemId}");
+                throw;
+            }
         }
 
         /// <summary>
@@ -137,8 +159,8 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
 
             return new UserItemStats
             {
-                TotalMinutes = userTrack != null ? Math.Floor(userTrack.TotalTime / 60.0) : 0,
-                PlayCount = 1, // Simplified - you might want to add play count tracking
+                TotalMinutes = userTrack != null ? Math.Floor(userTrack.TotalTime / 60.0) : 0.0,
+                PlayCount = userTrack != null ? 1 : 0, // Simplified - you might want to add play count tracking
                 LastPlayed = userTrack?.LastUpdatedAt ?? DateTime.MinValue
             };
         }
@@ -150,8 +172,8 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
 
             return new UserItemStats
             {
-                TotalMinutes = userAlbum != null ? Math.Floor(userAlbum.TotalTime / 60.0) : 0,
-                PlayCount = 1,
+                TotalMinutes = userAlbum != null ? Math.Floor(userAlbum.TotalTime / 60.0) : 0.0,
+                PlayCount = userAlbum != null ? 1 : 0,
                 LastPlayed = userAlbum?.LastUpdatedAt ?? DateTime.MinValue
             };
         }
@@ -163,8 +185,8 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
 
             return new UserItemStats
             {
-                TotalMinutes = userArtist != null ? Math.Floor(userArtist.TotalTime / 60.0) : 0,
-                PlayCount = 1,
+                TotalMinutes = userArtist != null ? Math.Floor(userArtist.TotalTime / 60.0) : 0.0,
+                PlayCount = userArtist != null ? 1 : 0,
                 LastPlayed = userArtist?.LastUpdatedAt ?? DateTime.MinValue
             };
         }
@@ -237,7 +259,8 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 DisplayName = tierName,
                 Color = tierColors.GetValueOrDefault(tierName.ToLower(), "#888888"),
                 ImageName = tierImageNames.GetValueOrDefault(tierName.ToLower(), $"{tierName.ToLower()}_prestige"),
-                Threshold = thresholdIndex >= 0 && thresholdIndex < thresholds.Length ? thresholds[thresholdIndex] : 0
+                Threshold = thresholdIndex >= 0 && thresholdIndex < thresholds.Length ? thresholds[thresholdIndex] : 
+                           (tierName.ToLower() == "prestige" && thresholds.Length > 0 ? thresholds[thresholds.Length - 1] : 0)
             };
         }
 
