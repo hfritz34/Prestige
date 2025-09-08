@@ -224,10 +224,10 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         /// <returns>True if profile was updated</returns>
         public UserStatisticsResponse GetUserStatistics(string userId)
         {
-            // Get friends count - only count ACCEPTED friendships where user is involved
-            // Count each friendship only once (user can be either UserId or FriendId)
+            // Get friends count - only count ACCEPTED friendships where user is the initiator (UserId)
+            // Since friendships are stored bidirectionally (2 rows per friendship), we only count one direction
             var friendsCount = PrestigeDb.Friendships
-                .Where(f => (f.UserId == userId || f.FriendId == userId) && f.Status == FriendRequestStatus.Accepted)
+                .Where(f => f.UserId == userId && f.Status == FriendRequestStatus.Accepted)
                 .Count();
             
             // Get ratings count (total number of items rated)
@@ -235,31 +235,41 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 .Count(r => r.User.Id == userId);
             
             // Get prestiges count (items with prestige level bronze or above)
-            // Use the prestige threshold configuration to support both dev and production modes
+            // The TotalTime in database is stored in MILLISECONDS
+            // The thresholds are in MINUTES, so convert to SECONDS for comparison
             var trackThresholds = Configuration.PrestigeThresholds.GetThresholds("track");
             var albumThresholds = Configuration.PrestigeThresholds.GetThresholds("album");
             var artistThresholds = Configuration.PrestigeThresholds.GetThresholds("artist");
             
             // Bronze is the first threshold (index 0) in MINUTES
-            // TotalTime in database is in MILLISECONDS, so we need to convert minutes to milliseconds
-            var trackBronzeMinutes = trackThresholds.Length > 0 ? trackThresholds[0] : 10; // Default 10 min for production
-            var albumBronzeMinutes = albumThresholds.Length > 0 ? albumThresholds[0] : 30; // Default 30 min for production
-            var artistBronzeMinutes = artistThresholds.Length > 0 ? artistThresholds[0] : 60; // Default 60 min for production
+            // Convert to SECONDS (not milliseconds) since CalculatePrestigeTier expects seconds
+            var trackBronzeMinutes = trackThresholds.Length > 0 ? trackThresholds[0] : 10;
+            var albumBronzeMinutes = albumThresholds.Length > 0 ? albumThresholds[0] : 30;
+            var artistBronzeMinutes = artistThresholds.Length > 0 ? artistThresholds[0] : 60;
             
-            // Convert minutes to milliseconds for comparison with database values
-            var trackBronzeMs = trackBronzeMinutes * 60 * 1000;
-            var albumBronzeMs = albumBronzeMinutes * 60 * 1000;
-            var artistBronzeMs = artistBronzeMinutes * 60 * 1000;
+            // Convert minutes to seconds for the threshold check
+            var trackBronzeSeconds = trackBronzeMinutes * 60;
+            var albumBronzeSeconds = albumBronzeMinutes * 60;
+            var artistBronzeSeconds = artistBronzeMinutes * 60;
             
             // Log thresholds for debugging
-            Logger.LogInformation($"Prestige thresholds for user {userId}: Track={trackBronzeMinutes}min ({trackBronzeMs}ms), Album={albumBronzeMinutes}min ({albumBronzeMs}ms), Artist={artistBronzeMinutes}min ({artistBronzeMs}ms), DevMode={Configuration.PrestigeThresholds.UseDevThresholds}");
+            Logger.LogInformation($"Prestige thresholds for user {userId}: Track={trackBronzeMinutes}min ({trackBronzeSeconds}s), Album={albumBronzeMinutes}min ({albumBronzeSeconds}s), Artist={artistBronzeMinutes}min ({artistBronzeSeconds}s), DevMode={Configuration.PrestigeThresholds.UseDevThresholds}");
             
+            // Count items where TotalTime (in milliseconds) / 1000 >= threshold in seconds
             var trackPrestigeCount = PrestigeDb.UserTracks
-                .Count(ut => ut.User.Id == userId && ut.TotalTime >= trackBronzeMs);
+                .Where(ut => ut.User.Id == userId)
+                .AsEnumerable() // Switch to client evaluation to do division
+                .Count(ut => (ut.TotalTime / 1000) >= trackBronzeSeconds);
+                
             var albumPrestigeCount = PrestigeDb.UserAlbums
-                .Count(ua => ua.User.Id == userId && ua.TotalTime >= albumBronzeMs);
+                .Where(ua => ua.User.Id == userId)
+                .AsEnumerable()
+                .Count(ua => (ua.TotalTime / 1000) >= albumBronzeSeconds);
+                
             var artistPrestigeCount = PrestigeDb.UserArtists
-                .Count(ua => ua.User.Id == userId && ua.TotalTime >= artistBronzeMs);
+                .Where(ua => ua.User.Id == userId)
+                .AsEnumerable()
+                .Count(ua => (ua.TotalTime / 1000) >= artistBronzeSeconds);
             
             var prestigesCount = trackPrestigeCount + albumPrestigeCount + artistPrestigeCount;
             
