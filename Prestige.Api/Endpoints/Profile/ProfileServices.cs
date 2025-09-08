@@ -24,7 +24,7 @@ namespace Prestige.Api.Endpoints.Profile
         {
         }
 
-        const int MAX_DISPLAYED = 100;
+        const int MAX_DISPLAYED = 99;
 
 
         public async Task<IEnumerable<UserTrackResponse>> GetTopTracksAsync(string userId)
