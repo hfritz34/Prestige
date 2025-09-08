@@ -30,23 +30,31 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         {
             try
             {
+                Console.WriteLine($"🔵 PrestigeProgress: Starting request for itemType={itemType}, itemId={itemId}");
+                
                 // Validate item type
                 if (!IsValidItemType(itemType))
                 {
+                    Console.WriteLine($"❌ PrestigeProgress: Invalid item type: {itemType}");
                     throw new Exception(40001, $"Invalid item type. Must be one of: tracks, albums, artists");
                 }
 
                 // Validate item ID
                 if (string.IsNullOrWhiteSpace(itemId))
                 {
+                    Console.WriteLine($"❌ PrestigeProgress: Missing item ID");
                     throw new Exception(40002, "Item ID is required");
                 }
 
+                Console.WriteLine($"🔵 PrestigeProgress: Calling service for itemType={itemType}, itemId={itemId}");
                 var progressResponse = await _prestigeProgressServices.GetPrestigeProgressAsync(itemType, itemId);
+                Console.WriteLine($"✅ PrestigeProgress: Service returned successfully");
                 return Ok(progressResponse);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"❌ PrestigeProgress: Exception caught: {ex.Message}");
+                Console.WriteLine($"❌ PrestigeProgress: Stack trace: {ex.StackTrace}");
                 return HandleException(ex);
             }
         }

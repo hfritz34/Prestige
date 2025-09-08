@@ -57,14 +57,19 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
         {
             try
             {
+                Logger.LogInformation($"Calculating prestige progress for user {userId}, itemType {itemType}, itemId {itemId}");
+                
                 var normalizedItemType = itemType.ToLower();
                 
                 // Get user's current stats for this item
                 var currentStats = await GetUserItemStatsAsync(userId, itemId, normalizedItemType);
                 if (currentStats == null)
                 {
+                    Logger.LogError($"Could not retrieve stats for user {userId}, item {itemId}");
                     throw new InvalidOperationException($"Could not retrieve stats for user {userId}, item {itemId}");
                 }
+                
+                Logger.LogInformation($"Retrieved stats - TotalMinutes: {currentStats.TotalMinutes}");
                 
                 // Get item name
                 var itemName = await GetItemNameAsync(itemId, normalizedItemType);
@@ -73,17 +78,30 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                     itemName = $"Unknown {normalizedItemType}";
                 }
 
-                // Get prestige tier thresholds
-                var thresholds = PrestigeThresholds.GetThresholds(normalizedItemType);
+                // Get prestige tier thresholds (convert plural to singular for config lookup)
+                var configItemType = normalizedItemType switch
+                {
+                    "tracks" => "track",
+                    "albums" => "album", 
+                    "artists" => "artist",
+                    _ => normalizedItemType
+                };
+                
+                Logger.LogInformation($"Getting thresholds for itemType: {normalizedItemType} (config key: {configItemType})");
+                var thresholds = PrestigeThresholds.GetThresholds(configItemType);
                 var tierNames = PrestigeThresholds.TierNames;
+                
+                Logger.LogInformation($"Retrieved {thresholds?.Length ?? 0} thresholds and {tierNames?.Length ?? 0} tier names");
 
                 if (thresholds == null || thresholds.Length == 0)
                 {
+                    Logger.LogError($"No thresholds found for item type: {itemType}");
                     throw new ArgumentException($"No thresholds found for item type: {itemType}");
                 }
 
                 if (tierNames == null || tierNames.Length == 0)
                 {
+                    Logger.LogError("Tier names configuration is missing");
                     throw new InvalidOperationException("Tier names configuration is missing");
                 }
 
@@ -91,13 +109,18 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 var currentMinutes = currentStats.TotalMinutes;
             
             // Find current tier
+            Logger.LogInformation($"Calculating tier for {currentMinutes} minutes");
             var currentTierIndex = GetCurrentTierIndex(currentMinutes, thresholds);
+            Logger.LogInformation($"Current tier index: {currentTierIndex}");
+            
             var currentThresholdIndex = Math.Max(0, currentTierIndex - 1);
             var currentTier = CreateTierInfo(tierNames[currentTierIndex], thresholds, currentThresholdIndex);
+            Logger.LogInformation($"Created current tier: {currentTier.DisplayName}");
 
             // Find next tier (if not at max level)
             PrestigeTierInfo? nextTier = null;
             var isMaxLevel = currentTierIndex >= tierNames.Length - 1;
+            Logger.LogInformation($"Is max level: {isMaxLevel}");
             
             if (!isMaxLevel)
             {

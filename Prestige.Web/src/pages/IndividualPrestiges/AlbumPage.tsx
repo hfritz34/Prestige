@@ -5,6 +5,7 @@ import useFriends from '@/hooks/useFriends';
 import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened } = useFriends();
@@ -110,6 +111,16 @@ const AlbumPage: React.FC = () => {
             <p className="text-gray-400">Prestige Level</p>
             <p className="text-2xl font-bold">{prestigeLevel}</p>
           </div>
+        </div>
+
+        {/* Prestige Progress Bar */}
+        <div className="w-full max-w-md mb-6 px-4">
+          <PrestigeProgressBar 
+            itemId={album.albumId}
+            itemType="albums"
+            itemName={album.albumName}
+            showDetails={true}
+          />
         </div>
       </div>
       <div className="flex gap-4 mb-4">
