@@ -358,6 +358,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<LibraryServices>();
             builder.Services.AddScoped<RatingBackgroundJobs>();
             builder.Services.AddScoped<RecentlyPlayedCosmosService>();
+            builder.Services.AddScoped<Endpoints.PrestigeProgress.PrestigeProgressServices>();
         }
 
         private static void AddControllers(WebApplicationBuilder builder)
