@@ -34,7 +34,7 @@ const LandingPage: React.FC = () => {
 					</nav>
 					
 					<div className="flex items-center gap-3 ml-auto">
-						<a href="#waitlist" className="rounded-xl px-4 py-2 text-sm font-medium bg-[#7C4DFF] hover:bg-[#6b3bff] transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg">Join Waitlist</a>
+						<a href="#waitlist" className="rounded-xl px-4 py-2 text-sm font-medium bg-[#7C4DFF] hover:bg-[#6b3bff] transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg">Join Beta</a>
 					</div>
 				</div>
 			</header>
@@ -55,10 +55,8 @@ const LandingPage: React.FC = () => {
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
 					</p>
 					<div className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
-						<a href="#waitlist" className="group w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-500 transform hover:scale-[1.02] backdrop-blur-xl border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
-							<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-							<div className="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-							<span className="relative z-10">Join the Beta</span>
+						<a href="#waitlist" className="w-full sm:w-auto rounded-2xl px-8 sm:px-12 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-[#7C4DFF] hover:bg-[#6b3bff] text-white transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg">
+							Join the Beta
 						</a>
 					</div>
 					<p className="mt-4 md:mt-6 text-sm text-zinc-400 px-4">Requires Spotify account. Private by default—share what you choose.</p>
@@ -157,7 +155,7 @@ const LandingPage: React.FC = () => {
 								type="submit"
 								className="px-8 py-3 bg-[#7C4DFF] hover:bg-[#6b3bff] text-white font-semibold rounded-lg transition-colors duration-300"
 							>
-								Join Waitlist
+								Join Beta
 							</button>
 						</form>
 						<p className="text-xs text-zinc-500 mt-4">
@@ -188,7 +186,7 @@ const LandingPage: React.FC = () => {
 						</div>
 						<div>
 							<p className="text-white mb-3">Get notified</p>
-							<a href="#waitlist" className="inline-block rounded-md px-4 py-2 bg-[#7C4DFF] hover:bg-[#6b3bff] transition-colors text-white">Join Waitlist</a>
+							<a href="#waitlist" className="inline-block rounded-md px-4 py-2 bg-[#7C4DFF] hover:bg-[#6b3bff] transition-colors text-white">Join Beta</a>
 						</div>
 					</div>
 				</div>
