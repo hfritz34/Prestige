@@ -71,7 +71,8 @@ const LandingPage: React.FC = () => {
 				<div className="max-w-7xl w-full">
 					<div className="grid md:grid-cols-2 gap-12 items-center">
 						<div>
-							<h2 className="text-2xl md:text-3xl font-semibold">Level up your Prestige. Collect 16+ tiers. Flex your dedication.</h2>
+							<h2 className="text-2xl md:text-3xl font-semibold">Level up your <strong className="text-[#7C4DFF] font-bold">Prestige</strong>. Collect 16+ tiers.<br /> Flex your dedication.</h2>
+							
 							<p className="mt-4 text-zinc-300">
 								Every minute you listen levels up your tracks, albums, and artists. Unlock and collect unique tier badges—from Bronze to Prestige—that showcase how devoted you are.
 							</p>
