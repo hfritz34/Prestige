@@ -55,12 +55,11 @@ const LandingPage: React.FC = () => {
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
 					</p>
 					<div className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
-						<button className="w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-[#9E7CFF] text-black hover:bg-[#8B5CFF] transition-all duration-500 transform hover:scale-[1.02] shadow-lg hover:shadow-xl">iOS App Coming Soon</button>
-						<button className="group w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-500 transform hover:scale-[1.02] backdrop-blur-xl border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
+						<a href="#waitlist" className="group w-full sm:w-auto rounded-2xl px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-500 transform hover:scale-[1.02] backdrop-blur-xl border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
 							<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 							<div className="absolute inset-0 bg-gradient-to-t from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-							<span className="relative z-10">Web App Coming Soon</span>
-						</button>
+							<span className="relative z-10">Join the Beta</span>
+						</a>
 					</div>
 					<p className="mt-4 md:mt-6 text-sm text-zinc-400 px-4">Requires Spotify account. Private by default—share what you choose.</p>
 				</div>
@@ -79,7 +78,7 @@ const LandingPage: React.FC = () => {
 								Prestige is earned by minutes listened per track, album, and artist. Hit thresholds to unlock tiers—from Bronze to Cosmic.
 							</p>
 							<ul className="mt-6 space-y-2 text-sm text-zinc-400 list-disc list-inside">
-								<li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … Cosmic ≥ 30,000m</li>
+								<li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … Prestige ≥ 30,000m</li>
 								<li>Albums and Artists: higher thresholds to reflect bigger commitments</li>
 							</ul>
 						</div>
@@ -129,23 +128,7 @@ const LandingPage: React.FC = () => {
 			</section>
 
 			{/* Community CTA */}
-			<section id="community" className="w-full px-4 pb-20 flex justify-center">
-				<div className="max-w-7xl w-full">
-					<div className="rounded-2xl border border-white/10 bg-gradient-to-br from-[#7C4DFF]/20 to-transparent p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
-						<div>
-							<h3 className="text-2xl font-semibold">Join the Prestige community</h3>
-							<p className="mt-2 text-zinc-300">Compete with friends. Discover new music through dedication and taste.</p>
-						</div>
-						<div className="flex items-center gap-3">
-							<a href="#waitlist" className="group rounded-xl px-5 py-3 text-sm font-semibold bg-white/5 hover:bg-white/10 text-white transition-all duration-300 transform hover:scale-[1.02] backdrop-blur-lg border border-white/20 hover:border-white/30 shadow-lg hover:shadow-xl relative overflow-hidden">
-								<div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-								<div className="absolute inset-0 bg-gradient-to-t from-[#7C4DFF]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-								<span className="relative z-10">Join Waitlist</span>
-							</a>
-						</div>
-					</div>
-				</div>
-			</section>
+
 
 			{/* Waitlist Section */}
 			<section id="waitlist" className="w-full px-4 py-16 bg-gradient-to-b from-[#0A0B0D] to-[#7C4DFF]/10 flex justify-center">
@@ -154,7 +137,7 @@ const LandingPage: React.FC = () => {
 						Be First to Experience <span className="text-[#7C4DFF]">Prestige</span>
 					</h2>
 					<p className="text-xl text-zinc-300 mb-8 leading-relaxed">
-						Join our waitlist to get early access when we launch. Limited spots available for beta testing.
+						Join our beta to get early access. Limited spots available for beta testing.
 					</p>
 					
 					<div className="max-w-md mx-auto">
