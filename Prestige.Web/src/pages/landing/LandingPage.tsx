@@ -71,13 +71,14 @@ const LandingPage: React.FC = () => {
 				<div className="max-w-7xl w-full">
 					<div className="grid md:grid-cols-2 gap-12 items-center">
 						<div>
-							<h2 className="text-2xl md:text-3xl font-semibold">Level up your Prestige with your listening time</h2>
+							<h2 className="text-2xl md:text-3xl font-semibold">Level up your Prestige. Collect 16+ tiers. Flex your dedication.</h2>
 							<p className="mt-4 text-zinc-300">
-								Prestige is earned by minutes listened per track, album, and artist. Hit thresholds to unlock tiers—from Bronze to Cosmic.
+								Every minute you listen levels up your tracks, albums, and artists. Unlock and collect unique tier badges—from Bronze to Prestige—that showcase how devoted you are.
 							</p>
 							<ul className="mt-6 space-y-2 text-sm text-zinc-400 list-disc list-inside">
-								<li>Tracks: Bronze ≥ 60m, Silver ≥ 150m, Gold ≥ 500m, … Prestige ≥ 30,000m</li>
-								<li>Albums and Artists: higher thresholds to reflect bigger commitments</li>
+								<li>Progress separately for tracks, albums, and artists—build complete sets across your library.</li>
+								<li>16 collectible tiers per item: Bronze → Silver → Gold → … → Prestige.</li>
+								<li>Show them off on your profile and compare with friends.</li>
 							</ul>
 						</div>
 						<div className="relative">
@@ -111,7 +112,7 @@ const LandingPage: React.FC = () => {
 					<div className="grid md:grid-cols-3 gap-6">
 						<div className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-all duration-300">
 							<h3 className="text-lg font-semibold">Earn Prestige Over Time</h3>
-							<p className="mt-2 text-sm text-zinc-300"><strong>Real-time tracking</strong> from 1 hour to 500+ hours per song. Unlock Bronze through Cosmic tiers as your dedication grows. Your listening creates lasting achievements.</p>
+							<p className="mt-2 text-sm text-zinc-300"><strong>Real-time tracking</strong> from 1 hour to 500+ hours per song. Unlock Bronze through Prestige tiers as your dedication grows. Your listening creates lasting achievements.</p>
 						</div>
 						<div className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-all duration-300">
 							<h3 className="text-lg font-semibold">Complete Listening History</h3>
