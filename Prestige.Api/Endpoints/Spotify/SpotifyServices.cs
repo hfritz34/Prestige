@@ -704,6 +704,56 @@ namespace Prestige.Api.Endpoints.Spotify
         }
 
         /// <summary>
+        /// Ensures Henry's Spotify token is valid and refreshes it if needed
+        /// </summary>
+        /// <returns>True if token is valid/refreshed successfully, false otherwise</returns>
+        private async Task<bool> EnsureHenryTokenIsValidAsync()
+        {
+            const string henryUserId = "qzi7c4c3aokmqtge8zmebup6u";
+            
+            try
+            {
+                var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == henryUserId);
+                if (user == null)
+                {
+                    Logger.LogWarning("Henry's user record not found in database");
+                    return false;
+                }
+
+                // Check if token is expired or will expire soon (within 5 minutes)
+                if (user.ExpiresAt > DateTime.UtcNow.AddMinutes(5))
+                {
+                    Logger.LogInformation("Henry's token is still valid until {ExpiresAt}", user.ExpiresAt);
+                    return true;
+                }
+
+                // Token needs refresh
+                if (string.IsNullOrEmpty(user.RefreshToken))
+                {
+                    Logger.LogError("Henry's refresh token is missing - manual re-authentication required");
+                    return false;
+                }
+
+                Logger.LogInformation("Refreshing Henry's Spotify token...");
+                
+                // Refresh the token using the base service method
+                var (newAccessToken, newRefreshToken) = await RefreshSpotifyTokensAsync(user.RefreshToken);
+                
+                // Update user with new tokens
+                user.UpdateTokens(newAccessToken, newRefreshToken ?? user.RefreshToken, DateTime.UtcNow.AddMinutes(55));
+                PrestigeDb.SaveChanges();
+                
+                Logger.LogInformation("Successfully refreshed Henry's Spotify token");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to refresh Henry's Spotify token");
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Gets Henry's 10 most recently liked tracks for display on personal website
         /// </summary>
         /// <returns>Array of Henry's 10 most recent liked tracks with metadata</returns>
@@ -713,13 +763,44 @@ namespace Prestige.Api.Endpoints.Spotify
             
             try
             {
+                // Ensure token is valid before making API call
+                if (!await EnsureHenryTokenIsValidAsync())
+                {
+                    Logger.LogWarning("Unable to ensure Henry's token is valid");
+                    return new List<TrackResponse>();
+                }
+
                 var spotify = await getUserSpotifyAuthorizedClientForUser(henryUserId);
                 var response = await spotify.GetAsync("me/tracks?limit=10");
                 
                 if (!response.IsSuccessStatusCode)
                 {
                     Logger.LogWarning("Failed to get Henry's liked tracks: {StatusCode}", response.StatusCode);
-                    return new List<TrackResponse>();
+                    
+                    // If we get 401 (unauthorized), try one more time after token refresh
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        Logger.LogInformation("Got 401, attempting token refresh and retry...");
+                        if (await EnsureHenryTokenIsValidAsync())
+                        {
+                            spotify = await getUserSpotifyAuthorizedClientForUser(henryUserId);
+                            response = await spotify.GetAsync("me/tracks?limit=10");
+                            
+                            if (!response.IsSuccessStatusCode)
+                            {
+                                Logger.LogWarning("Still failed after token refresh: {StatusCode}", response.StatusCode);
+                                return new List<TrackResponse>();
+                            }
+                        }
+                        else
+                        {
+                            return new List<TrackResponse>();
+                        }
+                    }
+                    else
+                    {
+                        return new List<TrackResponse>();
+                    }
                 }
 
                 var content = await response.Content.ReadAsStringAsync();
@@ -750,12 +831,40 @@ namespace Prestige.Api.Endpoints.Spotify
                 }
 
                 PrestigeDb.SaveChanges();
+                Logger.LogInformation("Successfully fetched {Count} liked tracks for Henry", tracks.Count);
                 return tracks;
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Error fetching Henry's recent liked tracks");
                 return new List<TrackResponse>();
+            }
+        }
+
+        /// <summary>
+        /// Background job to keep Henry's Spotify token fresh
+        /// Runs every hour to ensure the token doesn't expire
+        /// </summary>
+        public async Task RefreshHenryTokenBackgroundJobAsync()
+        {
+            try
+            {
+                Logger.LogInformation("Starting background job to refresh Henry's Spotify token");
+                
+                var success = await EnsureHenryTokenIsValidAsync();
+                
+                if (success)
+                {
+                    Logger.LogInformation("Henry's Spotify token is valid and refreshed if needed");
+                }
+                else
+                {
+                    Logger.LogWarning("Failed to ensure Henry's Spotify token is valid in background job");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error in Henry's token refresh background job");
             }
         }
     }

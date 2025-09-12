@@ -490,6 +490,11 @@ namespace Prestige.Api
                     "sync-profile-pictures",
                     x => x.SyncUserProfilePicturesAsync(null),
                     Cron.Daily(1)); // Run daily at 1 AM to sync all user profile pictures
+
+                RecurringJob.AddOrUpdate<SpotifyServices>(
+                    "refresh-henry-spotify-token",
+                    x => x.RefreshHenryTokenBackgroundJobAsync(),
+                    Cron.Hourly()); // Run every hour to keep Henry's token fresh
             }
 
             app.Run();
