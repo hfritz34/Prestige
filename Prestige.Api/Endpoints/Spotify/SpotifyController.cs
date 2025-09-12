@@ -210,5 +210,20 @@ namespace Prestige.Api.Endpoints.Spotify
             }
         }
 
+        [HttpGet("henry/recent-likes")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetHenryRecentLikesAsync()
+        {
+            try
+            {
+                var response = await _service.GetHenryRecentLikesAsync();
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return HandleException(ex);
+            }
+        }
+
     }
 }

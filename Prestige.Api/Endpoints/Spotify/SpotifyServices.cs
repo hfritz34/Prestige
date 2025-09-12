@@ -702,5 +702,61 @@ namespace Prestige.Api.Endpoints.Spotify
                 return false;
             }
         }
+
+        /// <summary>
+        /// Gets Henry's 10 most recently liked tracks for display on personal website
+        /// </summary>
+        /// <returns>Array of Henry's 10 most recent liked tracks with metadata</returns>
+        public async Task<IEnumerable<TrackResponse>> GetHenryRecentLikesAsync()
+        {
+            const string henryUserId = "qzi7c4c3aokmqtge8zmebup6u";
+            
+            try
+            {
+                var spotify = await getUserSpotifyAuthorizedClientForUser(henryUserId);
+                var response = await spotify.GetAsync("me/tracks?limit=10");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.LogWarning("Failed to get Henry's liked tracks: {StatusCode}", response.StatusCode);
+                    return new List<TrackResponse>();
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonDocument.Parse(content);
+                var root = json.RootElement;
+
+                if (!root.TryGetProperty("items", out var items))
+                {
+                    return new List<TrackResponse>();
+                }
+
+                var tracks = new List<TrackResponse>();
+                foreach (var item in items.EnumerateArray())
+                {
+                    if (item.TryGetProperty("track", out var trackElement))
+                    {
+                        var trackResponse = trackElement.Deserialize<TrackResponse>(new JsonSerializerOptions
+                        {
+                            PropertyNameCaseInsensitive = true
+                        });
+                        
+                        if (trackResponse != null)
+                        {
+                            tracks.Add(trackResponse);
+                            PostTrack(trackResponse);
+                        }
+                    }
+                }
+
+                PrestigeDb.SaveChanges();
+                return tracks;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error fetching Henry's recent liked tracks");
+                return new List<TrackResponse>();
+            }
+        }
     }
 }

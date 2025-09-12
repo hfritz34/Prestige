@@ -372,7 +372,7 @@ namespace Prestige.Api
             {
                 options.AddPolicy("AllowAll", policy =>
                     policy
-                        .WithOrigins("http://localhost:5173")
+                        .WithOrigins("http://localhost:5173", "https://henryfritz.com", "https://www.henryfritz.com")
                         .AllowAnyMethod()
                         .AllowAnyHeader()
                         .AllowCredentials());
