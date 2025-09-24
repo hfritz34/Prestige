@@ -9,7 +9,7 @@
 
 ## 🎯 What is Prestige?
 
-Prestige redefines how we experience, share, and connect over music. At its core, Prestige assigns levels of "prestige" based on the time you spend with your favorite albums, songs, and artists. Think of it as gamifying your music listening - compete with friends, share your unique music journey, and use your listening habits as the ultimate conversation starter.
+Prestige redefines how we experience, share, and connect over music. At its core, Prestige assigns levels of "prestige" based on the time you spend with your favorite albums, songs, and artists. Think of it as gamifying your music listening - compete with friends, rate your music, share your unique music journey, and use your listening habits as the ultimate conversation starter.
 
 ## 🌟 Key Features
 
