@@ -121,8 +121,7 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 - **Individual Items** - Deep dive into specific tracks, albums, or artists
 
 ## 🎨 Screenshots
-
-*Coming soon*
+![88E8952A-1D74-4DF5-B253-0FB5717E8D42_1_105_c](https://github.com/user-attachments/assets/76fc2dbf-a795-4462-b251-7154bb0cf437)
 
 ## 🤝 Contributing
 
@@ -153,4 +152,5 @@ Abraham Maslow, "Music, Education, and Peak Experiences," in *Documentary Report
 *Your music is more than background noise—it's your story, told in melodies and rhythms. Prestige is a platform where you're not defined by photos or followers, but by the beats that resonate with your soul.*
 
 **Let's make music more social, more meaningful, and more connected.**
+
 
