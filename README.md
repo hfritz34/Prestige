@@ -179,12 +179,6 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
         <p><em>View your ratings alongside prestige achievements</em></p>
       </td>
     </tr>
-  </table>
-</div>
-
-### 📊 Your Ratings Collection
-<div align="center">
-  <table>
     <tr>
       <td align="center">
         <img src="Prestige.Web/src/assets/demo_sc/yourratings_albums.jpeg" alt="Your Ratings - Albums" width="400">
@@ -195,23 +189,19 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
         <p><em>View your complete artist rating collection</em></p>
       </td>
     </tr>
+    <tr>
+      <td align="center" colspan="2">
+        <img src="Prestige.Web/src/assets/demo_sc/comparison_view.jpeg" alt="Comparison View" width="400">
+        <p><em>Compare your music taste and ratings with friends</em></p>
+      </td>
+    </tr>
   </table>
 </div>
 
 ### 🤝 Social Features
 <div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="Prestige.Web/src/assets/demo_sc/comparison_view.jpeg" alt="Comparison View" width="400">
-        <p><em>Compare your music taste with friends</em></p>
-      </td>
-      <td align="center">
-        <img src="Prestige.Web/src/assets/demo_sc/friend_compare.jpeg" alt="Friend Comparison" width="400">
-        <p><em>Discover shared musical interests and friendly competition</em></p>
-      </td>
-    </tr>
-  </table>
+  <img src="Prestige.Web/src/assets/demo_sc/friend_compare.jpeg" alt="Friend Comparison" width="400">
+  <p><em>Discover shared musical interests and friendly competition with your friends</em></p>
 </div>
 
 ## 🤝 Contributing
