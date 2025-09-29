@@ -123,7 +123,97 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 
 ## 🎨 Screenshots
 
-*Coming soon*
+### 🚀 Getting Started
+<div align="center">
+  <img src="Prestige.Web/src/assets/demo_sc/login_loading.png" alt="Login Screen" width="400">
+  <p><em>Secure authentication with Spotify integration</em></p>
+</div>
+
+### 🏠 Home Dashboard
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/home_tracks.jpeg" alt="Home - Tracks View" width="400">
+        <p><em>Track your favorite songs with prestige levels</em></p>
+      </td>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/home_albums.jpeg" alt="Home - Albums View" width="400">
+        <p><em>Browse your top albums with visual prestige badges</em></p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" colspan="2">
+        <img src="Prestige.Web/src/assets/demo_sc/home_artists.jpeg" alt="Home - Artists View" width="400">
+        <p><em>Discover your most listened artists and their prestige tiers</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+### 👤 Profile & Individual Views
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/profile_view.jpeg" alt="Profile View" width="400">
+        <p><em>Your personalized music profile showcasing top items</em></p>
+      </td>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/individual_view.jpeg" alt="Individual Item View" width="400">
+        <p><em>Deep dive into specific tracks with detailed statistics</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+### ⭐ Rating System
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/before_rate.jpeg" alt="Before Rating" width="400">
+        <p><em>Rate your favorite music on a personal scale</em></p>
+      </td>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/rated_album.jpeg" alt="Rated Album" width="400">
+        <p><em>View your ratings alongside prestige achievements</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+### 📊 Your Ratings Collection
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/yourratings_albums.jpeg" alt="Your Ratings - Albums" width="400">
+        <p><em>Browse all your rated albums in one place</em></p>
+      </td>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/yourratings_artists.jpeg" alt="Your Ratings - Artists" width="400">
+        <p><em>View your complete artist rating collection</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
+
+### 🤝 Social Features
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/comparison_view.jpeg" alt="Comparison View" width="400">
+        <p><em>Compare your music taste with friends</em></p>
+      </td>
+      <td align="center">
+        <img src="Prestige.Web/src/assets/demo_sc/friend_compare.jpeg" alt="Friend Comparison" width="400">
+        <p><em>Discover shared musical interests and friendly competition</em></p>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ## 🤝 Contributing
 
