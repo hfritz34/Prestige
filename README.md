@@ -120,7 +120,7 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 - **Friends** - Manage your friend list and browse their music tastes
 - **Individual Items** - Deep dive into specific tracks, albums, or artists
 
-## 🎨 Screenshots
+## 🎨 Screenshots (mobile only)
 
 ### 🚀 Getting Started
 <div align="center">
