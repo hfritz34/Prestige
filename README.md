@@ -11,7 +11,7 @@
 
 Prestige redefines how we experience, share, and connect over music. At its core, Prestige assigns levels of "prestige" based on the time you spend with your favorite albums, songs, and artists. Think of it as gamifying your music listening - compete with friends, rate your music, share your unique music journey, and use your listening habits as the ultimate conversation starter.
 
-🌟 Key Features
+## 🌟 Key Features
 
 ### 🏆 **Prestige System**
 - **7-Tier Achievement System**: Bronze → Silver → Gold → Platinum → Diamond → Iridium → Dark Matter
@@ -243,5 +243,6 @@ Abraham Maslow, "Music, Education, and Peak Experiences," in *Documentary Report
 *Your music is more than background noise—it's your story, told in melodies and rhythms. Prestige is a platform where you're not defined by photos or followers, but by the beats that resonate with your soul.*
 
 **Let's make music more social, more meaningful, and more connected.**
+
 
 
