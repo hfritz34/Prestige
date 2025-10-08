@@ -238,9 +238,7 @@ Abraham Maslow, "Music, Education, and Peak Experiences," in *Documentary Report
 
 ---
 
-**Built for Music Lovers, By Music Lovers** 🎧
-
-*Your music is more than background noise—it's your story, told in melodies and rhythms. Prestige is a platform where you're not defined by photos or followers, but by the beats that resonate with your soul.*
+*Your music is your story, told in melodies and rhythms. Prestige is a platform where you're not defined by photos or followers, but by the beats that resonate with your soul.*
 
 **Let's make music more social, more meaningful, and more connected.**
 
