@@ -14,7 +14,7 @@ Prestige redefines how we experience, share, and connect over music. At its core
 ## 🌟 Key Features
 
 ### 🏆 **Prestige System**
-- **7-Tier Achievement System**: Bronze → Silver → Gold → Platinum → Diamond → Iridium → Dark Matter
+- **16-Tier Achievement System**: Bronze → Silver → Gold → Platinum → Diamond → Iridium → Dark Matter
 - **Time-Based Progression**: Unlock higher tiers by demonstrating dedication to your favorite music
 - **Visual Badges**: Beautiful prestige indicators that showcase your musical commitment
 
