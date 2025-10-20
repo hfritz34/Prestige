@@ -4,6 +4,15 @@ import tierProgress from "@/assets/tierprog.png";
 import TierShowcase from "./components/tiers/TierShowcase";
 import InteractiveRankingDemo from "./components/InteractiveRankingDemo";
 
+// Import screenshots
+import homeTracks from "@/assets/demo_sc/home_tracks.jpeg";
+import homeAlbums from "@/assets/demo_sc/home_albums.jpeg";
+import homeArtists from "@/assets/demo_sc/home_artists.jpeg";
+import beforeRate from "@/assets/demo_sc/before_rate.jpeg";
+import ratingsAlbums from "@/assets/demo_sc/yourratings_albums.jpeg";
+import friendPage from "@/assets/demo_sc/friendpage_view.jpeg";
+import friendCompare from "@/assets/demo_sc/friend_compare.jpeg";
+
 const LandingPage: React.FC = () => {
 	// Landing page deployment test
 	return (
@@ -28,8 +37,8 @@ const LandingPage: React.FC = () => {
 					{/* Absolutely centered navigation */}
 					<nav className="hidden md:flex items-center gap-8 text-sm text-zinc-300 absolute left-1/2 transform -translate-x-1/2">
 						<a href="#tiers" className="hover:text-white">How it works</a>
+						<a href="#screenshots" className="hover:text-white">Screenshots</a>
 						<a href="#features" className="hover:text-white">Features</a>
-						<a href="#community" className="hover:text-white">Community</a>
 						<a href="#faq" className="hover:text-white">FAQ</a>
 					</nav>
 					
@@ -54,12 +63,16 @@ const LandingPage: React.FC = () => {
 					<p className="mt-12 sm:mt-6 md:mt-8 text-lg sm:text-xl md:text-2xl text-zinc-300 max-w-3xl mx-auto leading-relaxed px-2">
 						Earn time-based badges, rate your taste, and compare with friends. Your music life—measured, celebrated, and made social.
 					</p>
+
 					<div className="mt-8 md:mt-12 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto">
 						<a href="#waitlist" className="w-full sm:w-auto rounded-2xl px-8 sm:px-12 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-[#7C4DFF] hover:bg-[#6b3bff] text-white transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-lg">
-							Join the Beta
+							Join the Waitlist
+						</a>
+						<a href="#screenshots" className="w-full sm:w-auto rounded-2xl px-8 sm:px-12 py-3 sm:py-4 text-base sm:text-lg font-semibold bg-white/10 hover:bg-white/20 text-white transition-all duration-300 border border-white/20">
+							See Screenshots
 						</a>
 					</div>
-					<p className="mt-4 md:mt-6 text-sm text-zinc-400 px-4">Requires Spotify account. Private by default—share what you choose.</p>
+					<p className="mt-4 md:mt-6 text-sm text-zinc-400 px-4">iOS and Web versions in development. Private by default—share what you choose.</p>
 				</div>
 			</section>
 
@@ -122,6 +135,83 @@ const LandingPage: React.FC = () => {
 						<div className="rounded-xl bg-white/5 border border-white/10 p-6 hover:bg-white/10 transition-all duration-300">
 							<h3 className="text-lg font-semibold">Private by Default</h3>
 							<p className="mt-2 text-sm text-zinc-300"><strong>You control sharing</strong> - keep your data private or selectively share with friends. Compare prestige levels, discover music through others' dedication, all on your terms.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			{/* Screenshots Showcase */}
+			<section id="screenshots" className="w-full px-4 py-16 md:py-24 flex justify-center bg-gradient-to-b from-[#0A0B0D] to-[#7C4DFF]/5">
+				<div className="max-w-7xl w-full">
+					<div className="text-center mb-12">
+						<h2 className="text-3xl md:text-5xl font-bold text-white mb-4">
+							See <span className="text-[#7C4DFF]">Prestige</span> in Action
+						</h2>
+						<p className="text-xl text-zinc-300 max-w-2xl mx-auto">
+							Experience your music like never before. Coming soon to iOS and web.
+						</p>
+					</div>
+
+					{/* Home Dashboard Screens */}
+					<div className="mb-16">
+						<h3 className="text-2xl font-semibold text-white mb-6 text-center">Your Music Dashboard</h3>
+						<div className="grid md:grid-cols-3 gap-6">
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={homeTracks} alt="Track your favorite songs" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Track prestige levels for every song</p>
+							</div>
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={homeAlbums} alt="Browse your top albums" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">See your most played albums</p>
+							</div>
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={homeArtists} alt="Your favorite artists" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Discover artist dedication rankings</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Rating System */}
+					<div className="mb-16">
+						<h3 className="text-2xl font-semibold text-white mb-6 text-center">Rate & Rank Your Music</h3>
+						<div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={beforeRate} alt="Rate your music" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Intelligent comparison-based rating</p>
+							</div>
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={ratingsAlbums} alt="Your ratings collection" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Build your personal music rankings</p>
+							</div>
+						</div>
+					</div>
+
+					{/* Social Features */}
+					<div>
+						<h3 className="text-2xl font-semibold text-white mb-6 text-center">Connect with Friends</h3>
+						<div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={friendPage} alt="Friend profiles" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Explore friends' music profiles</p>
+							</div>
+							<div className="group">
+								<div className="rounded-2xl overflow-hidden border border-white/10 bg-white/5 p-4 hover:border-[#7C4DFF]/50 transition-all duration-300">
+									<img src={friendCompare} alt="Compare with friends" className="w-full rounded-xl shadow-lg" />
+								</div>
+								<p className="text-center mt-3 text-sm text-zinc-400">Compare tastes and discover together</p>
+							</div>
 						</div>
 					</div>
 				</div>

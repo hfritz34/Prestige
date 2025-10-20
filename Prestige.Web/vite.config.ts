@@ -11,9 +11,10 @@ export default defineConfig(({ mode }) => ({
       tailwindcss(),
       // Copy web.config for .NET deployment
       mode === 'landing' && {
-        name: 'copy-web-config',
+        name: 'copy-configs',
         writeBundle() {
           copyFileSync('web.config', 'dist/web.config')
+          copyFileSync('staticwebapp.config.json', 'dist/staticwebapp.config.json')
         }
       }
   ].filter(Boolean),

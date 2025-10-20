@@ -1,0 +1,57 @@
+name: Deploy Landing Page to Azure Static Web App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Prestige.Web/src/pages/landing/**'
+      - 'Prestige.Web/src/assets/**'
+      - 'Prestige.Web/src/landing.tsx'
+      - 'Prestige.Web/landing.html'
+      - 'Prestige.Web/package.json'
+      - 'Prestige.Web/vite.config.ts'
+      - 'Prestige.Web/staticwebapp.config.json'
+      - '.github/workflows/static-web-app.yml'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  NODE_VERSION: '20.14.0'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy Landing Page
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: ./Prestige.Web/yarn.lock
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+        working-directory: ./Prestige.Web
+
+      - name: Build landing page
+        run: yarn build:landing
+        working-directory: ./Prestige.Web
+
+      - name: Deploy to Azure Static Web Apps
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "./Prestige.Web"
+          output_location: "dist"
+          skip_app_build: true # We already built in previous step
