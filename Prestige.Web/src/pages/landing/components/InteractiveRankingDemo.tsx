@@ -76,6 +76,7 @@ const InteractiveRankingDemo: React.FC = () => {
   const [baseAlbum, setBaseAlbum] = useState<Album | null>(null);
   const [comparisonAlbums, setComparisonAlbums] = useState<Album[]>([]);
   const [albumScores, setAlbumScores] = useState<Record<string, number>>({});
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Score calculation based on position within "I really liked it" category (6.8-10.0)
   const calculateScore = (position: number, totalItems: number): number => {
@@ -137,12 +138,13 @@ const InteractiveRankingDemo: React.FC = () => {
   }, [isComplete, rankings, baseAlbum]);
 
   const handleSelect = (albumId: string) => {
-    if (!baseAlbum) return;
-    
+    if (!baseAlbum || isProcessing) return;
+
+    setIsProcessing(true);
     setSelectedItem(albumId);
     setTimeout(() => {
       const currentComparison = comparisonAlbums[currentStep];
-      
+
       if (albumId === baseAlbum.id) {
         // Base album is better - comparison goes to "lower"
         setRankings(prev => ({ ...prev, lower: [...prev.lower, currentComparison] }));
@@ -157,6 +159,7 @@ const InteractiveRankingDemo: React.FC = () => {
         setIsComplete(true);
       }
       setSelectedItem(null);
+      setIsProcessing(false);
     }, 500);
   };
 
@@ -169,7 +172,8 @@ const InteractiveRankingDemo: React.FC = () => {
     setAlbumScores({});
     setBaseAlbum(null);
     setComparisonAlbums([]);
-    
+    setIsProcessing(false);
+
     // Reinitialize after state is cleared
     setTimeout(() => {
       initializeDemo();

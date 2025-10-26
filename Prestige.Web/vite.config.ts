@@ -27,6 +27,11 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    headers: {
+      'Cache-Control': 'no-store',
+    },
+  },
   build: {
     outDir: './dist',
     emptyOutDir: true, // also necessary
