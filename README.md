@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Prestige.Web/src/assets/gitpreview.png" alt="Prestige preview">
+  <img src="Prestige.Web/src/assets/bannerimg_transparent.png" alt="Prestige banner">
 </p>
 
 # Prestige - Music Fandom🎵
