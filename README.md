@@ -6,6 +6,8 @@
 
 *Transform your Spotify listening habits into a competitive, achievement-based social experience*
 
+[Created and maintained by Henry Fritz.]
+
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite)](https://vitejs.dev/)
@@ -13,7 +15,7 @@
 
 ## 🎯 What is Prestige?
 
-Prestige redefines how we experience, share, and connect over music. At its core, Prestige assigns levels of "prestige" based on the time you spend with your favorite albums, songs, and artists. Think of it as gamifying your music listening; compete with friends, rate your music, share your unique music journey, and use your listening habits as the ultimate conversation starter.
+Prestige redefines how people experience, share, and connect over music. At its core, Prestige assigns levels of "prestige" based on the time you spend with your favorite albums, songs, and artists. Think of it as gamifying your music listening; compete with friends, rate your music, share your unique music journey, and use your listening habits as the ultimate conversation starter.
 
 ## 🌟 Key Features
 
@@ -220,7 +222,7 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+I welcome contributions! Please see my [Contributing Guidelines](CONTRIBUTING.md) for details.
 
 ### **Development Workflow**
 1. Fork the repository
@@ -234,7 +236,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 - **Abraham Maslow** - For the philosophical foundation of peak experiences through music
 - **Spotify** - For providing the incredible Web API that makes this possible
-- **The Music Community** - For inspiring us to create a platform that celebrates musical passion
+- **The Music Community** - For inspiring me to create a platform that celebrates musical passion
 
 ## 📚 Citations
 
@@ -244,7 +246,7 @@ Abraham Maslow, "Music, Education, and Peak Experiences," in *Documentary Report
 
 *Your music is your story, told in melodies and rhythms. Prestige is a platform where you're not defined by photos or followers, but by the beats that resonate with your soul.*
 
-**Let's make music more social, more meaningful, and more connected.**
+**I'm building Prestige to make music more social, more meaningful, and more connected.**
 
 
 
