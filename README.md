@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Prestige.Web/src/assets/gitpreview.png" alt="Prestige preview">
+</p>
+
 # Prestige - Music Fandom🎵
 
 *Transform your Spotify listening habits into a competitive, achievement-based social experience*
