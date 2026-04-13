@@ -48,6 +48,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             // Verification status will be set based on database field
 
             PrestigeDb.Users.Add(newUser);
+            PrestigeDb.UserConsents.Add(new UserConsent(newUser.Id, GetConsentVersion()));
             PrestigeDb.SaveChanges();
             return new UserResponse(newUser);
         }
@@ -73,6 +74,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             }
 
             // Verification status is managed through database field
+            await EnsureUserConsentAsync(user.Id);
 
             return (new UserResponse(user), false);
         }
@@ -214,6 +216,23 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         {
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId);
             return user?.IsVerified ?? false;
+        }
+
+        private async Task EnsureUserConsentAsync(string userId)
+        {
+            var hasConsent = await PrestigeDb.UserConsents.AnyAsync(consent => consent.UserId == userId);
+            if (hasConsent)
+            {
+                return;
+            }
+
+            PrestigeDb.UserConsents.Add(new UserConsent(userId, GetConsentVersion()));
+            await PrestigeDb.SaveChangesAsync();
+        }
+
+        private string GetConsentVersion()
+        {
+            return Config["Consent:Version"] ?? "v1";
         }
 
         /// <summary>

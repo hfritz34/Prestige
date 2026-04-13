@@ -16,6 +16,7 @@ using Prestige.Api.Endpoints.Profile;
 using Prestige.Api.Endpoints.Spotify;
 using Prestige.Api.Endpoints.Rating;
 using Prestige.Api.Endpoints.Library;
+using Prestige.Api.Endpoints.Consent;
 
 // using Prestige.Api.Endpoints.AlbumEndpoints;
 // using Prestige.Api.Endpoints.ArtistEndpoints;
@@ -356,6 +357,7 @@ namespace Prestige.Api
             builder.Services.AddScoped<RatingServices>();
             builder.Services.AddScoped<Endpoints.Search.SearchServices>();
             builder.Services.AddScoped<LibraryServices>();
+            builder.Services.AddScoped<UserConsentServices>();
             builder.Services.AddScoped<RatingBackgroundJobs>();
             builder.Services.AddScoped<RecentlyPlayedCosmosService>();
             builder.Services.AddScoped<Endpoints.PrestigeProgress.PrestigeProgressServices>();

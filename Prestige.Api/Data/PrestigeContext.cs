@@ -21,6 +21,8 @@ namespace Prestige.Api.Data
         public DbSet<Image> Images { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
         public DbSet<ImportHistory> ImportHistories { get; set; }
+        public DbSet<UserConsent> UserConsents { get; set; }
+        public DbSet<ConsentEvent> ConsentEvents { get; set; }
         public DbSet<Rating> Ratings { get; set; }
         public DbSet<RatingCategory> RatingCategories { get; set; }
         public DbSet<RatingComparison> RatingComparisons { get; set; }
@@ -37,6 +39,8 @@ namespace Prestige.Api.Data
             modelBuilder.ApplyConfiguration(new ImageConfiguration());
             modelBuilder.ApplyConfiguration(new FriendshipConfiguration());
             modelBuilder.ApplyConfiguration(new ImportHistoryConfiguration());
+            modelBuilder.ApplyConfiguration(new UserConsentConfiguration());
+            modelBuilder.ApplyConfiguration(new ConsentEventConfiguration());
             modelBuilder.ApplyConfiguration(new RatingConfiguration());
             modelBuilder.ApplyConfiguration(new RatingCategoryConfiguration());
             modelBuilder.ApplyConfiguration(new RatingComparisonConfiguration());
