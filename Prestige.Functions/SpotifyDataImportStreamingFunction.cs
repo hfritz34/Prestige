@@ -1,21 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
-using Microsoft.AspNetCore.WebUtilities;
 using Newtonsoft.Json;
-using System.Security.Cryptography;
-using System.Text;
-using System.Data.SqlClient;
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
 using Prestige.Functions.Helpers;
 
 namespace Prestige.Functions
@@ -27,27 +27,25 @@ namespace Prestige.Functions
         private readonly string _sqlConnectionString;
         private readonly BlobServiceClient _blobServiceClient;
         private readonly CosmosBulkImporter _bulkImporter;
-        private const int CHUNK_SIZE = 10000; // Increased chunk size for bulk operations
+        private const int CHUNK_SIZE = 10000;
         private const string CONTAINER_NAME = "spotify-imports";
 
         public SpotifyDataImportStreamingFunction(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger<SpotifyDataImportStreamingFunction>();
 
-            string connectionString = Environment.GetEnvironmentVariable("CosmosDBConnectionString");
-            string databaseId = "MusicDB";
-            string containerId = "RecentlyPlayed";
+            var connectionString = Environment.GetEnvironmentVariable("CosmosDBConnectionString");
+            const string databaseId = "MusicDB";
+            const string containerId = "RecentlyPlayed";
 
             var cosmosClient = new CosmosClient(connectionString);
             _container = cosmosClient.GetContainer(databaseId, containerId);
-            
+
             _sqlConnectionString = Environment.GetEnvironmentVariable("SqlConnectionString");
-            
-            // Initialize blob storage client
-            string blobConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+
+            var blobConnectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
             _blobServiceClient = new BlobServiceClient(blobConnectionString);
-            
-            // Initialize bulk importer
+
             _bulkImporter = new CosmosBulkImporter(connectionString, databaseId, containerId, _logger);
         }
 
@@ -55,38 +53,32 @@ namespace Prestige.Functions
         public async Task<HttpResponseData> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", "options")] HttpRequestData req)
         {
-            _logger.LogInformation($"Streaming import function triggered with method: {req.Method}");
+            _logger.LogInformation("Streaming import function triggered with method: {Method}", req.Method);
 
-            // Handle CORS preflight requests
             if (req.Method.Equals("OPTIONS", StringComparison.OrdinalIgnoreCase))
             {
                 var corsResponse = req.CreateResponse(HttpStatusCode.OK);
-                corsResponse.Headers.Add("Access-Control-Allow-Origin", "*");
-                corsResponse.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                corsResponse.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-                corsResponse.Headers.Add("Access-Control-Max-Age", "3600");
+                AddCorsHeaders(corsResponse);
                 return corsResponse;
             }
 
             try
             {
-                // Get userId from query parameter
                 var userId = req.Query["userId"];
-                
-                if (string.IsNullOrEmpty(userId))
+                var requestedSessionId = req.Query["sessionId"];
+
+                if (string.IsNullOrWhiteSpace(userId))
                 {
                     var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
-                    responseError.Headers.Add("Access-Control-Allow-Origin", "*");
+                    AddCorsHeaders(responseError);
                     await responseError.WriteStringAsync("Missing required query parameter: userId");
                     return responseError;
                 }
-                
-                _logger.LogInformation($"Processing streaming Spotify data import for user: {userId}");
 
-                // Check Content-Type header
                 if (!req.Headers.TryGetValues("Content-Type", out var contentTypeValues))
                 {
                     var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
+                    AddCorsHeaders(responseError);
                     await responseError.WriteStringAsync("Missing Content-Type header.");
                     return responseError;
                 }
@@ -97,401 +89,551 @@ namespace Prestige.Functions
                 if (!mediaTypeHeader.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
                     var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
+                    AddCorsHeaders(responseError);
                     await responseError.WriteStringAsync("Invalid Content-Type header. Expected 'multipart/form-data'.");
                     return responseError;
                 }
 
-                // Get boundary
                 var boundary = HeaderUtilities.RemoveQuotes(mediaTypeHeader.Boundary).Value;
-                if (string.IsNullOrEmpty(boundary))
+                if (string.IsNullOrWhiteSpace(boundary))
                 {
                     var responseError = req.CreateResponse(HttpStatusCode.BadRequest);
+                    AddCorsHeaders(responseError);
                     await responseError.WriteStringAsync("Could not determine boundary from Content-Type header.");
                     return responseError;
                 }
 
-                // Create blob container if it doesn't exist
                 var containerClient = _blobServiceClient.GetBlobContainerClient(CONTAINER_NAME);
                 await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
-                // Create a single batchId for this import session
-                var batchId = Guid.NewGuid().ToString();
+                var batchId = !string.IsNullOrWhiteSpace(requestedSessionId)
+                    ? requestedSessionId
+                    : Guid.NewGuid().ToString();
+
                 var importStats = new ImportStatistics();
                 var fileResults = new List<FileImportResult>();
 
-                // Read the multipart form data
                 var reader = new MultipartReader(boundary, req.Body);
                 MultipartSection section;
-                
+
                 while ((section = await reader.ReadNextSectionAsync()) != null)
                 {
                     var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition);
-                    if (!hasContentDispositionHeader)
-                        continue;
-
-                    if (contentDisposition.DispositionType.Equals("form-data") && contentDisposition.FileName.HasValue)
+                    if (!hasContentDispositionHeader || contentDisposition == null)
                     {
-                        var fileName = contentDisposition.FileName.Value;
-                        _logger.LogInformation($"Processing file: {fileName}");
+                        continue;
+                    }
 
-                        // Upload to blob storage first
+                    if (!contentDisposition.DispositionType.Equals("form-data") || !contentDisposition.FileName.HasValue)
+                    {
+                        continue;
+                    }
+
+                    var fileName = NormalizeUploadedFileName(contentDisposition.FileName.Value);
+                    _logger.LogInformation("Processing file {FileName} for user {UserId} in batch {BatchId}", fileName, userId, batchId);
+
+                    var tempFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}-{fileName}");
+                    try
+                    {
+                        await using (var tempFileStream = File.Create(tempFilePath))
+                        {
+                            await section.Body.CopyToAsync(tempFileStream);
+                        }
+
+                        var fileHash = await ComputeSha256Async(tempFilePath);
+                        if (await IsFileDuplicateAsync(userId, fileHash))
+                        {
+                            _logger.LogWarning("File {FileName} has already been imported for user {UserId}", fileName, userId);
+                            fileResults.Add(new FileImportResult
+                            {
+                                FileName = fileName,
+                                Status = "Skipped - Already Imported",
+                                RecordCount = 0,
+                                Overlaps = new List<ImportOverlap>(),
+                                SuspiciousDays = new List<string>()
+                            });
+                            continue;
+                        }
+
                         var blobName = $"{userId}/{batchId}/{fileName}";
                         var blobClient = containerClient.GetBlobClient(blobName);
-                        
-                        // Calculate hash while uploading
-                        string fileHash;
-                        using (var hashAlgorithm = SHA256.Create())
-                        using (var cryptoStream = new CryptoStream(Stream.Null, hashAlgorithm, CryptoStreamMode.Write))
+
+                        await using (var uploadStream = File.OpenRead(tempFilePath))
                         {
-                            // Create a forking stream to calculate hash while uploading
-                            using (var uploadStream = new MemoryStream())
-                            {
-                                await section.Body.CopyToAsync(uploadStream);
-                                uploadStream.Position = 0;
-                                
-                                // Calculate hash
-                                await uploadStream.CopyToAsync(cryptoStream);
-                                cryptoStream.FlushFinalBlock();
-                                fileHash = BitConverter.ToString(hashAlgorithm.Hash).Replace("-", "").ToLowerInvariant();
-                                
-                                // Check if file has been imported before
-                                if (await IsFileDuplicateAsync(userId, fileHash))
-                                {
-                                    _logger.LogWarning($"File {fileName} has already been imported for user {userId}");
-                                    fileResults.Add(new FileImportResult 
-                                    { 
-                                        FileName = fileName, 
-                                        Status = "Skipped - Already Imported",
-                                        RecordCount = 0
-                                    });
-                                    continue;
-                                }
-                                
-                                // Upload to blob storage
-                                uploadStream.Position = 0;
-                                await blobClient.UploadAsync(uploadStream, true);
-                                _logger.LogInformation($"File {fileName} uploaded to blob storage");
-                            }
+                            await blobClient.UploadAsync(uploadStream, overwrite: true);
                         }
-                        
-                        // Create import history record
+
                         var importHistoryId = await CreateImportHistoryAsync(userId, fileHash, fileName, batchId);
-                        
-                        // Process the file from blob storage in chunks
-                        var processResult = await ProcessBlobFileInChunksAsync(blobClient, userId, batchId, importHistoryId, fileName);
-                        
+
+                        var processResult = IsZipFile(fileName)
+                            ? await ProcessZipFileInChunksAsync(tempFilePath, userId, batchId, importHistoryId, fileName)
+                            : await ProcessBlobFileInChunksAsync(blobClient, userId, batchId, importHistoryId, fileName);
+
                         importStats.TotalItems += processResult.TotalItems;
                         importStats.ImportedItems += processResult.ImportedItems;
                         importStats.SkippedItems += processResult.SkippedItems;
-                        
+
                         fileResults.Add(processResult.FileResult);
-                        
-                        // Clean up blob after processing
+
                         await blobClient.DeleteIfExistsAsync();
-                        _logger.LogInformation($"Cleaned up blob for file {fileName}");
+                    }
+                    finally
+                    {
+                        TryDelete(tempFilePath);
                     }
                 }
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                response.Headers.Add("Access-Control-Allow-Origin", "*");
-                response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                response.Headers.Add("Access-Control-Allow-Headers", "Content-Type");
+                AddCorsHeaders(response);
+
                 var resultMessage = new
                 {
+                    BatchId = batchId,
                     Summary = $"Streaming import completed. Total items: {importStats.TotalItems}, Imported: {importStats.ImportedItems}, Skipped: {importStats.SkippedItems}",
+                    TotalItems = importStats.TotalItems,
+                    ImportedItems = importStats.ImportedItems,
+                    SkippedItems = importStats.SkippedItems,
                     Files = fileResults
                 };
-                _logger.LogInformation($"Streaming import completed: {JsonConvert.SerializeObject(resultMessage)}");
+
+                _logger.LogInformation("Streaming import completed: {Result}", JsonConvert.SerializeObject(resultMessage));
                 await response.WriteAsJsonAsync(resultMessage);
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Exception encountered: {ex.Message}");
-                _logger.LogError($"Stack trace: {ex.StackTrace}");
+                _logger.LogError(ex, "An error occurred while processing the streaming import request.");
 
                 var responseError = req.CreateResponse(HttpStatusCode.InternalServerError);
-                responseError.Headers.Add("Access-Control-Allow-Origin", "*");
+                AddCorsHeaders(responseError);
                 await responseError.WriteStringAsync($"An error occurred while processing your request: {ex.Message}");
                 return responseError;
             }
         }
-        
-        private async Task<ProcessingResult> ProcessBlobFileInChunksAsync(BlobClient blobClient, string userId, string batchId, int importHistoryId, string fileName)
+
+        private async Task<ProcessingResult> ProcessBlobFileInChunksAsync(
+            BlobClient blobClient,
+            string userId,
+            string batchId,
+            int importHistoryId,
+            string fileName)
         {
-            var result = new ProcessingResult { FileResult = new FileImportResult { FileName = fileName } };
-            var documentsToInsert = new List<Document>();
-            DateTime? minTimestamp = null;
-            DateTime? maxTimestamp = null;
-            var dailyListeningTime = new Dictionary<string, int>();
-            
+            var buffer = new ImportBuffer();
+
             try
             {
-                // Download blob as stream
                 var downloadResponse = await blobClient.DownloadStreamingAsync();
-                using (var stream = downloadResponse.Value.Content)
-                using (var reader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(reader))
+                await using (var stream = downloadResponse.Value.Content)
                 {
-                    var serializer = new JsonSerializer();
-                    
-                    // Expect array start
-                    await jsonReader.ReadAsync();
-                    if (jsonReader.TokenType != JsonToken.StartArray)
-                    {
-                        throw new InvalidOperationException("Expected JSON array");
-                    }
-                    
-                    // Process items in chunks
-                    while (await jsonReader.ReadAsync())
-                    {
-                        if (jsonReader.TokenType == JsonToken.EndArray)
-                            break;
-                            
-                        var item = serializer.Deserialize<SpotifyHistory>(jsonReader);
-                        if (item == null)
-                            continue;
-                            
-                        result.TotalItems++;
-                        
-                        // Skip if it's not a music track
-                        if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || 
-                            !string.IsNullOrEmpty(item.AudiobookUri))
-                        {
-                            result.SkippedItems++;
-                            continue;
-                        }
-                        
-                        // Skip if no track URI
-                        if (string.IsNullOrEmpty(item.SpotifyTrackUri))
-                        {
-                            result.SkippedItems++;
-                            continue;
-                        }
-                        
-                        // Validate track duration
-                        if (item.MsPlayed <= 0 || item.MsPlayed > 3600000)
-                        {
-                            result.SkippedItems++;
-                            continue;
-                        }
-                        
-                        // Extract track ID
-                        var trackId = ExtractTrackIdFromUri(item.SpotifyTrackUri);
-                        if (string.IsNullOrEmpty(trackId))
-                        {
-                            result.SkippedItems++;
-                            continue;
-                        }
-                        
-                        // Track timestamps and daily listening time
-                        if (DateTime.TryParse(item.Ts, out var timestamp))
-                        {
-                            if (minTimestamp == null || timestamp < minTimestamp)
-                                minTimestamp = timestamp;
-                            if (maxTimestamp == null || timestamp > maxTimestamp)
-                                maxTimestamp = timestamp;
-                                
-                            var dateKey = timestamp.Date.ToString("yyyy-MM-dd");
-                            if (!dailyListeningTime.ContainsKey(dateKey))
-                                dailyListeningTime[dateKey] = 0;
-                            dailyListeningTime[dateKey] += item.MsPlayed;
-                        }
-                        
-                        var document = new Document
-                        {
-                            id = $"{trackId}_{item.Ts}_{batchId}",
-                            batchId = batchId,
-                            userId = userId,
-                            trackId = trackId,
-                            duration_ms = item.MsPlayed,
-                            played_at = item.Ts
-                        };
-                        
-                        documentsToInsert.Add(document);
-                        result.ImportedItems++;
-                        
-                        // Process chunk when we reach the chunk size
-                        if (documentsToInsert.Count >= CHUNK_SIZE)
-                        {
-                            var bulkResult = await _bulkImporter.BulkImportAsync(documentsToInsert, doc => doc.userId);
-                            _logger.LogInformation($"Processed chunk of {documentsToInsert.Count} documents. Success: {bulkResult.SuccessCount}, Failed: {bulkResult.FailureCount}, RUs: {bulkResult.TotalRequestCharge:F2}");
-                            documentsToInsert.Clear();
-                        }
-                    }
-                    
-                    // Process remaining documents
-                    if (documentsToInsert.Count > 0)
-                    {
-                        var bulkResult = await _bulkImporter.BulkImportAsync(documentsToInsert, doc => doc.userId);
-                        _logger.LogInformation($"Processed final chunk of {documentsToInsert.Count} documents. Success: {bulkResult.SuccessCount}, Failed: {bulkResult.FailureCount}, RUs: {bulkResult.TotalRequestCharge:F2}");
-                    }
+                    await ProcessJsonStreamInChunksAsync(stream, userId, batchId, buffer);
                 }
-                
-                // Validate daily listening time
-                var suspiciousDays = new List<string>();
-                foreach (var day in dailyListeningTime)
-                {
-                    var hoursListened = day.Value / (1000.0 * 60 * 60);
-                    if (hoursListened > 18)
-                    {
-                        suspiciousDays.Add($"{day.Key}: {hoursListened:F1} hours");
-                        _logger.LogWarning($"Suspicious listening time on {day.Key}: {hoursListened:F1} hours");
-                    }
-                }
-                
-                // Check for overlapping imports
-                var overlaps = await CheckForOverlappingImportsAsync(userId, minTimestamp, maxTimestamp);
-                
-                // Update import history
-                string status = "Completed";
-                if (overlaps.Count > 0 || suspiciousDays.Count > 0)
-                {
-                    var warnings = new List<string>();
-                    if (overlaps.Count > 0)
-                        warnings.Add($"{overlaps.Count} overlap(s)");
-                    if (suspiciousDays.Count > 0)
-                        warnings.Add($"{suspiciousDays.Count} suspicious day(s)");
-                    status = $"Completed with warnings: {string.Join(" and ", warnings)}";
-                }
-                
-                await UpdateImportHistoryAsync(importHistoryId, result.ImportedItems, minTimestamp, maxTimestamp, status);
-                
-                result.FileResult.Status = status;
-                result.FileResult.RecordCount = result.ImportedItems;
-                result.FileResult.Overlaps = overlaps;
-                result.FileResult.SuspiciousDays = suspiciousDays;
+
+                await FlushPendingDocumentsAsync(buffer.DocumentsToInsert);
+                return await FinalizeProcessingAsync(userId, importHistoryId, fileName, buffer);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error processing file {fileName}: {ex.Message}");
-                await UpdateImportHistoryAsync(importHistoryId, result.ImportedItems, minTimestamp, maxTimestamp, $"Failed: {ex.Message}");
-                result.FileResult.Status = $"Failed: {ex.Message}";
-                result.FileResult.RecordCount = result.ImportedItems;
+                _logger.LogError(ex, "Error processing JSON file {FileName}", fileName);
+                await UpdateImportHistoryAsync(importHistoryId, buffer.ImportedItems, buffer.MinTimestamp, buffer.MaxTimestamp, $"Failed: {ex.Message}");
+
+                return new ProcessingResult
+                {
+                    TotalItems = buffer.TotalItems,
+                    ImportedItems = buffer.ImportedItems,
+                    SkippedItems = buffer.SkippedItems,
+                    FileResult = new FileImportResult
+                    {
+                        FileName = fileName,
+                        Status = $"Failed: {ex.Message}",
+                        RecordCount = buffer.ImportedItems,
+                        Overlaps = new List<ImportOverlap>(),
+                        SuspiciousDays = new List<string>()
+                    }
+                };
             }
-            
-            return result;
         }
-        
-        
-        private string ExtractTrackIdFromUri(string spotifyUri)
+
+        private async Task<ProcessingResult> ProcessZipFileInChunksAsync(
+            string zipFilePath,
+            string userId,
+            string batchId,
+            int importHistoryId,
+            string fileName)
+        {
+            var buffer = new ImportBuffer();
+
+            try
+            {
+                using var archive = ZipFile.OpenRead(zipFilePath);
+                var jsonEntries = archive.Entries
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Name) && entry.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (!jsonEntries.Any())
+                {
+                    throw new InvalidOperationException("The uploaded zip file did not contain any Spotify streaming history JSON files.");
+                }
+
+                foreach (var entry in jsonEntries)
+                {
+                    await using var entryStream = entry.Open();
+                    await ProcessJsonStreamInChunksAsync(entryStream, userId, batchId, buffer);
+                }
+
+                await FlushPendingDocumentsAsync(buffer.DocumentsToInsert);
+                return await FinalizeProcessingAsync(userId, importHistoryId, fileName, buffer);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing zip file {FileName}", fileName);
+                await UpdateImportHistoryAsync(importHistoryId, buffer.ImportedItems, buffer.MinTimestamp, buffer.MaxTimestamp, $"Failed: {ex.Message}");
+
+                return new ProcessingResult
+                {
+                    TotalItems = buffer.TotalItems,
+                    ImportedItems = buffer.ImportedItems,
+                    SkippedItems = buffer.SkippedItems,
+                    FileResult = new FileImportResult
+                    {
+                        FileName = fileName,
+                        Status = $"Failed: {ex.Message}",
+                        RecordCount = buffer.ImportedItems,
+                        Overlaps = new List<ImportOverlap>(),
+                        SuspiciousDays = new List<string>()
+                    }
+                };
+            }
+        }
+
+        private async Task ProcessJsonStreamInChunksAsync(Stream stream, string userId, string batchId, ImportBuffer buffer)
+        {
+            using var reader = new StreamReader(stream);
+            using var jsonReader = new JsonTextReader(reader);
+            var serializer = new JsonSerializer();
+
+            await jsonReader.ReadAsync();
+            if (jsonReader.TokenType != JsonToken.StartArray)
+            {
+                throw new InvalidOperationException("Expected JSON array");
+            }
+
+            while (await jsonReader.ReadAsync())
+            {
+                if (jsonReader.TokenType == JsonToken.EndArray)
+                {
+                    break;
+                }
+
+                var item = serializer.Deserialize<SpotifyHistory>(jsonReader);
+                if (item == null)
+                {
+                    continue;
+                }
+
+                buffer.TotalItems++;
+
+                if (!string.IsNullOrEmpty(item.SpotifyEpisodeUri) || !string.IsNullOrEmpty(item.AudiobookUri))
+                {
+                    buffer.SkippedItems++;
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(item.SpotifyTrackUri))
+                {
+                    buffer.SkippedItems++;
+                    continue;
+                }
+
+                if (item.MsPlayed <= 0 || item.MsPlayed > 3600000)
+                {
+                    buffer.SkippedItems++;
+                    continue;
+                }
+
+                var trackId = ExtractTrackIdFromUri(item.SpotifyTrackUri);
+                if (string.IsNullOrEmpty(trackId))
+                {
+                    buffer.SkippedItems++;
+                    continue;
+                }
+
+                if (DateTime.TryParse(item.Ts, out var timestamp))
+                {
+                    if (buffer.MinTimestamp == null || timestamp < buffer.MinTimestamp)
+                    {
+                        buffer.MinTimestamp = timestamp;
+                    }
+
+                    if (buffer.MaxTimestamp == null || timestamp > buffer.MaxTimestamp)
+                    {
+                        buffer.MaxTimestamp = timestamp;
+                    }
+
+                    var dateKey = timestamp.Date.ToString("yyyy-MM-dd");
+                    if (!buffer.DailyListeningTime.ContainsKey(dateKey))
+                    {
+                        buffer.DailyListeningTime[dateKey] = 0;
+                    }
+
+                    buffer.DailyListeningTime[dateKey] += item.MsPlayed;
+                }
+
+                buffer.DocumentsToInsert.Add(new Document
+                {
+                    id = $"{trackId}_{item.Ts}_{batchId}",
+                    batchId = batchId,
+                    userId = userId,
+                    trackId = trackId,
+                    duration_ms = item.MsPlayed,
+                    played_at = item.Ts
+                });
+
+                buffer.ImportedItems++;
+
+                if (buffer.DocumentsToInsert.Count >= CHUNK_SIZE)
+                {
+                    await FlushPendingDocumentsAsync(buffer.DocumentsToInsert);
+                }
+            }
+        }
+
+        private async Task FlushPendingDocumentsAsync(List<Document> documentsToInsert)
+        {
+            if (documentsToInsert.Count == 0)
+            {
+                return;
+            }
+
+            var bulkResult = await _bulkImporter.BulkImportAsync(documentsToInsert, doc => doc.userId);
+            _logger.LogInformation(
+                "Processed chunk of {Count} documents. Success: {SuccessCount}, Failed: {FailureCount}, RUs: {RequestCharge:F2}",
+                documentsToInsert.Count,
+                bulkResult.SuccessCount,
+                bulkResult.FailureCount,
+                bulkResult.TotalRequestCharge);
+
+            documentsToInsert.Clear();
+        }
+
+        private async Task<ProcessingResult> FinalizeProcessingAsync(
+            string userId,
+            int importHistoryId,
+            string fileName,
+            ImportBuffer buffer)
+        {
+            var suspiciousDays = new List<string>();
+            foreach (var day in buffer.DailyListeningTime)
+            {
+                var hoursListened = day.Value / (1000.0 * 60 * 60);
+                if (hoursListened > 18)
+                {
+                    suspiciousDays.Add($"{day.Key}: {hoursListened:F1} hours");
+                    _logger.LogWarning("Suspicious listening time on {Date}: {Hours:F1} hours", day.Key, hoursListened);
+                }
+            }
+
+            var overlaps = await CheckForOverlappingImportsAsync(userId, buffer.MinTimestamp, buffer.MaxTimestamp);
+
+            var status = "Completed";
+            if (overlaps.Count > 0 || suspiciousDays.Count > 0)
+            {
+                var warnings = new List<string>();
+                if (overlaps.Count > 0)
+                {
+                    warnings.Add($"{overlaps.Count} overlap(s)");
+                }
+
+                if (suspiciousDays.Count > 0)
+                {
+                    warnings.Add($"{suspiciousDays.Count} suspicious day(s)");
+                }
+
+                status = $"Completed with warnings: {string.Join(" and ", warnings)}";
+            }
+
+            await UpdateImportHistoryAsync(importHistoryId, buffer.ImportedItems, buffer.MinTimestamp, buffer.MaxTimestamp, status);
+
+            return new ProcessingResult
+            {
+                TotalItems = buffer.TotalItems,
+                ImportedItems = buffer.ImportedItems,
+                SkippedItems = buffer.SkippedItems,
+                FileResult = new FileImportResult
+                {
+                    FileName = fileName,
+                    Status = status,
+                    RecordCount = buffer.ImportedItems,
+                    Overlaps = overlaps,
+                    SuspiciousDays = suspiciousDays
+                }
+            };
+        }
+
+        private static void AddCorsHeaders(HttpResponseData response)
+        {
+            response.Headers.Add("Access-Control-Allow-Origin", "*");
+            response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization, x-functions-key");
+            response.Headers.Add("Access-Control-Max-Age", "3600");
+        }
+
+        private static string NormalizeUploadedFileName(string fileName)
+        {
+            return Path.GetFileName(fileName.Trim('"'));
+        }
+
+        private static bool IsZipFile(string fileName)
+        {
+            return fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private async Task<string> ComputeSha256Async(string filePath)
+        {
+            using var sha256 = SHA256.Create();
+            await using var fileStream = File.OpenRead(filePath);
+            var hash = await sha256.ComputeHashAsync(fileStream);
+            return Convert.ToHexString(hash).ToLowerInvariant();
+        }
+
+        private static string ExtractTrackIdFromUri(string spotifyUri)
         {
             if (string.IsNullOrEmpty(spotifyUri))
+            {
                 return null;
-                
+            }
+
             var parts = spotifyUri.Split(':');
             if (parts.Length == 3 && parts[0] == "spotify" && parts[1] == "track")
             {
                 return parts[2];
             }
-            
+
             return null;
         }
-        
-        // Reuse existing helper methods from SpotifyDataImportFunction
+
         private async Task<bool> IsFileDuplicateAsync(string userId, string fileHash)
         {
-            using (var connection = new SqlConnection(_sqlConnectionString))
-            {
-                await connection.OpenAsync();
-                var command = new SqlCommand(
-                    "SELECT COUNT(*) FROM ImportHistories WHERE UserId = @userId AND FileHash = @fileHash AND Status LIKE 'Completed%'",
-                    connection);
-                command.Parameters.AddWithValue("@userId", userId);
-                command.Parameters.AddWithValue("@fileHash", fileHash);
-                
-                var count = (int)await command.ExecuteScalarAsync();
-                return count > 0;
-            }
+            using var connection = new SqlConnection(_sqlConnectionString);
+            await connection.OpenAsync();
+
+            var command = new SqlCommand(
+                "SELECT COUNT(*) FROM ImportHistories WHERE UserId = @userId AND FileHash = @fileHash AND Status LIKE 'Completed%'",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@fileHash", fileHash);
+
+            var count = (int)await command.ExecuteScalarAsync();
+            return count > 0;
         }
-        
+
         private async Task<List<ImportOverlap>> CheckForOverlappingImportsAsync(string userId, DateTime? minTimestamp, DateTime? maxTimestamp)
         {
             var overlaps = new List<ImportOverlap>();
-            
+
             if (minTimestamp == null || maxTimestamp == null)
-                return overlaps;
-                
-            using (var connection = new SqlConnection(_sqlConnectionString))
             {
-                await connection.OpenAsync();
-                var command = new SqlCommand(
-                    @"SELECT FileName, MinTimestamp, MaxTimestamp, ImportDate 
-                      FROM ImportHistories 
-                      WHERE UserId = @userId 
-                      AND Status LIKE 'Completed%'
-                      AND MinTimestamp IS NOT NULL 
-                      AND MaxTimestamp IS NOT NULL
-                      AND (
-                        (MinTimestamp <= @maxTs AND MaxTimestamp >= @minTs) OR
-                        (MinTimestamp >= @minTs AND MinTimestamp <= @maxTs) OR
-                        (MaxTimestamp >= @minTs AND MaxTimestamp <= @maxTs)
-                      )",
-                    connection);
-                command.Parameters.AddWithValue("@userId", userId);
-                command.Parameters.AddWithValue("@minTs", minTimestamp);
-                command.Parameters.AddWithValue("@maxTs", maxTimestamp);
-                
-                using (var reader = await command.ExecuteReaderAsync())
-                {
-                    while (await reader.ReadAsync())
-                    {
-                        overlaps.Add(new ImportOverlap
-                        {
-                            FileName = reader.GetString(0),
-                            MinTimestamp = reader.GetDateTime(1),
-                            MaxTimestamp = reader.GetDateTime(2),
-                            ImportDate = reader.GetDateTime(3)
-                        });
-                    }
-                }
+                return overlaps;
             }
-            
+
+            using var connection = new SqlConnection(_sqlConnectionString);
+            await connection.OpenAsync();
+
+            var command = new SqlCommand(
+                @"SELECT FileName, MinTimestamp, MaxTimestamp, ImportDate
+                  FROM ImportHistories
+                  WHERE UserId = @userId
+                  AND Status LIKE 'Completed%'
+                  AND MinTimestamp IS NOT NULL
+                  AND MaxTimestamp IS NOT NULL
+                  AND (
+                    (MinTimestamp <= @maxTs AND MaxTimestamp >= @minTs) OR
+                    (MinTimestamp >= @minTs AND MinTimestamp <= @maxTs) OR
+                    (MaxTimestamp >= @minTs AND MaxTimestamp <= @maxTs)
+                  )",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@minTs", minTimestamp);
+            command.Parameters.AddWithValue("@maxTs", maxTimestamp);
+
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                overlaps.Add(new ImportOverlap
+                {
+                    FileName = reader.GetString(0),
+                    MinTimestamp = reader.GetDateTime(1),
+                    MaxTimestamp = reader.GetDateTime(2),
+                    ImportDate = reader.GetDateTime(3)
+                });
+            }
+
             return overlaps;
         }
-        
+
         private async Task<int> CreateImportHistoryAsync(string userId, string fileHash, string fileName, string batchId)
         {
-            using (var connection = new SqlConnection(_sqlConnectionString))
-            {
-                await connection.OpenAsync();
-                var command = new SqlCommand(
-                    @"INSERT INTO ImportHistories (UserId, FileHash, FileName, BatchId, ImportDate, Status, RecordCount) 
-                      VALUES (@userId, @fileHash, @fileName, @batchId, @importDate, @status, 0);
-                      SELECT CAST(SCOPE_IDENTITY() as int);",
-                    connection);
-                command.Parameters.AddWithValue("@userId", userId);
-                command.Parameters.AddWithValue("@fileHash", fileHash);
-                command.Parameters.AddWithValue("@fileName", fileName);
-                command.Parameters.AddWithValue("@batchId", batchId);
-                command.Parameters.AddWithValue("@importDate", DateTime.UtcNow);
-                command.Parameters.AddWithValue("@status", "Processing");
-                
-                return (int)await command.ExecuteScalarAsync();
-            }
+            using var connection = new SqlConnection(_sqlConnectionString);
+            await connection.OpenAsync();
+
+            var command = new SqlCommand(
+                @"INSERT INTO ImportHistories (UserId, FileHash, FileName, BatchId, ImportDate, Status, RecordCount)
+                  VALUES (@userId, @fileHash, @fileName, @batchId, @importDate, @status, 0);
+                  SELECT CAST(SCOPE_IDENTITY() as int);",
+                connection);
+            command.Parameters.AddWithValue("@userId", userId);
+            command.Parameters.AddWithValue("@fileHash", fileHash);
+            command.Parameters.AddWithValue("@fileName", fileName);
+            command.Parameters.AddWithValue("@batchId", batchId);
+            command.Parameters.AddWithValue("@importDate", DateTime.UtcNow);
+            command.Parameters.AddWithValue("@status", "Processing");
+
+            return (int)await command.ExecuteScalarAsync();
         }
-        
+
         private async Task UpdateImportHistoryAsync(int importHistoryId, int recordCount, DateTime? minTimestamp, DateTime? maxTimestamp, string status)
         {
-            using (var connection = new SqlConnection(_sqlConnectionString))
-            {
-                await connection.OpenAsync();
-                var command = new SqlCommand(
-                    @"UPDATE ImportHistories 
-                      SET RecordCount = @recordCount, MinTimestamp = @minTimestamp, MaxTimestamp = @maxTimestamp, Status = @status
-                      WHERE Id = @id",
-                    connection);
-                command.Parameters.AddWithValue("@id", importHistoryId);
-                command.Parameters.AddWithValue("@recordCount", recordCount);
-                command.Parameters.AddWithValue("@minTimestamp", (object)minTimestamp ?? DBNull.Value);
-                command.Parameters.AddWithValue("@maxTimestamp", (object)maxTimestamp ?? DBNull.Value);
-                command.Parameters.AddWithValue("@status", status);
-                
-                await command.ExecuteNonQueryAsync();
-            }
+            using var connection = new SqlConnection(_sqlConnectionString);
+            await connection.OpenAsync();
+
+            var command = new SqlCommand(
+                @"UPDATE ImportHistories
+                  SET RecordCount = @recordCount, MinTimestamp = @minTimestamp, MaxTimestamp = @maxTimestamp, Status = @status
+                  WHERE Id = @id",
+                connection);
+            command.Parameters.AddWithValue("@id", importHistoryId);
+            command.Parameters.AddWithValue("@recordCount", recordCount);
+            command.Parameters.AddWithValue("@minTimestamp", (object)minTimestamp ?? DBNull.Value);
+            command.Parameters.AddWithValue("@maxTimestamp", (object)maxTimestamp ?? DBNull.Value);
+            command.Parameters.AddWithValue("@status", status);
+
+            await command.ExecuteNonQueryAsync();
         }
-        
-        // Helper classes
+
+        private sealed class ImportBuffer
+        {
+            public int TotalItems { get; set; }
+            public int ImportedItems { get; set; }
+            public int SkippedItems { get; set; }
+            public List<Document> DocumentsToInsert { get; } = new();
+            public DateTime? MinTimestamp { get; set; }
+            public DateTime? MaxTimestamp { get; set; }
+            public Dictionary<string, int> DailyListeningTime { get; } = new();
+        }
+
         public class ProcessingResult
         {
             public int TotalItems { get; set; }
@@ -499,23 +641,23 @@ namespace Prestige.Functions
             public int SkippedItems { get; set; }
             public FileImportResult FileResult { get; set; }
         }
-        
+
         public class ImportStatistics
         {
             public int TotalItems { get; set; }
             public int ImportedItems { get; set; }
             public int SkippedItems { get; set; }
         }
-        
+
         public class FileImportResult
         {
             public string FileName { get; set; }
             public string Status { get; set; }
             public int RecordCount { get; set; }
-            public List<ImportOverlap> Overlaps { get; set; }
-            public List<string> SuspiciousDays { get; set; }
+            public List<ImportOverlap> Overlaps { get; set; } = new();
+            public List<string> SuspiciousDays { get; set; } = new();
         }
-        
+
         public class ImportOverlap
         {
             public string FileName { get; set; }
@@ -528,70 +670,70 @@ namespace Prestige.Functions
         {
             [JsonProperty("ts")]
             public string Ts { get; set; }
-            
+
             [JsonProperty("platform")]
             public string Platform { get; set; }
-            
+
             [JsonProperty("ms_played")]
             public int MsPlayed { get; set; }
-            
+
             [JsonProperty("conn_country")]
             public string ConnCountry { get; set; }
-            
+
             [JsonProperty("ip_addr")]
             public string IpAddr { get; set; }
-            
+
             [JsonProperty("master_metadata_track_name")]
             public string MasterMetadataTrackName { get; set; }
-            
+
             [JsonProperty("master_metadata_album_artist_name")]
             public string MasterMetadataAlbumArtistName { get; set; }
-            
+
             [JsonProperty("master_metadata_album_album_name")]
             public string MasterMetadataAlbumAlbumName { get; set; }
-            
+
             [JsonProperty("spotify_track_uri")]
             public string SpotifyTrackUri { get; set; }
-            
+
             [JsonProperty("episode_name")]
             public string EpisodeName { get; set; }
-            
+
             [JsonProperty("episode_show_name")]
             public string EpisodeShowName { get; set; }
-            
+
             [JsonProperty("spotify_episode_uri")]
             public string SpotifyEpisodeUri { get; set; }
-            
+
             [JsonProperty("audiobook_title")]
             public string AudiobookTitle { get; set; }
-            
+
             [JsonProperty("audiobook_uri")]
             public string AudiobookUri { get; set; }
-            
+
             [JsonProperty("audiobook_chapter_uri")]
             public string AudiobookChapterUri { get; set; }
-            
+
             [JsonProperty("audiobook_chapter_title")]
             public string AudiobookChapterTitle { get; set; }
-            
+
             [JsonProperty("reason_start")]
             public string ReasonStart { get; set; }
-            
+
             [JsonProperty("reason_end")]
             public string ReasonEnd { get; set; }
-            
+
             [JsonProperty("shuffle")]
             public bool Shuffle { get; set; }
-            
+
             [JsonProperty("skipped")]
             public bool? Skipped { get; set; }
-            
+
             [JsonProperty("offline")]
             public bool Offline { get; set; }
-            
+
             [JsonProperty("offline_timestamp")]
             public long? OfflineTimestamp { get; set; }
-            
+
             [JsonProperty("incognito_mode")]
             public bool IncognitoMode { get; set; }
         }
