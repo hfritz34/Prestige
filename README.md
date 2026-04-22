@@ -77,6 +77,26 @@ In 2025, music has become a lifestyle for millions globally. Despite the explosi
 - Node.js 18+ and npm/yarn
 - Spotify Premium account (for real-time features)
 
+### Backend Local Demo
+
+The API can run without Auth0, Azure SQL, Cosmos DB, Redis, Hangfire, or Azure Functions by using the `Local Demo` launch profile. It seeds a SQLite database with a demo user, friend, listening history, consent defaults, and prestige-ready music data.
+
+```bash
+dotnet run --project Prestige.Api/Prestige.Api.csproj --launch-profile "Local Demo"
+```
+
+Open Swagger at `http://localhost:5249/swagger`. The seeded user id is `demo-user`; local demo auth automatically authenticates requests as that user, so no Auth0 bearer token is required.
+
+The SQLite file is created at `Prestige.Api/prestige_demo.db`. Delete that file to reset and reseed the demo data on the next run.
+
+To run the React web app against the local demo API without Auth0:
+
+```bash
+npm --prefix Prestige.Web run dev:local-demo
+```
+
+Then open `http://localhost:5173`. The web app uses the same `demo-user` identity and sends a harmless local-demo token.
+
 ### Installation
 
 1. **Clone the repository**
