@@ -24,17 +24,37 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 throw new Exception("User authentication required for user creation");
             }
 
-            var auth0User = await GetAuth0UserAsync();
             if(request.Id != UserAuthId.Split("|").Last())
             {
                 throw Logger.UserUnauthorized(request.Id);
             }
+
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == request.Id);
             if (user != null)
             {
                 return new UserResponse(user);
             }
 
+            if (IsLocalDemoEnabled())
+            {
+                var localDemoUser = new User(
+                    request.Id,
+                    request.Name ?? Config["LocalDemo:Name"] ?? "Prestige Demo",
+                    request.NickName ?? Config["LocalDemo:NickName"] ?? "demo",
+                    request.Email ?? Config["LocalDemo:Email"] ?? "demo@prestige.local",
+                    request.ProfilePicUrl ?? "https://placehold.co/512x512/111827/f9fafb?text=PD",
+                    "local-demo-access-token",
+                    "local-demo-refresh-token");
+
+                localDemoUser.UpdateIsSetup(true);
+                PrestigeDb.Users.Add(localDemoUser);
+                PrestigeDb.UserConsents.Add(new UserConsent(localDemoUser.Id, GetConsentVersion()));
+                PrestigeDb.SaveChanges();
+
+                return new UserResponse(localDemoUser);
+            }
+
+            var auth0User = await GetAuth0UserAsync();
             var newUser = new User(
                 request.Id,
                 request.Name ?? auth0User.Name,
@@ -205,11 +225,32 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public IEnumerable<UserResponse> SearchUsers(string query)
         {
+            var normalizedQuery = (query ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(normalizedQuery))
+            {
+                return Enumerable.Empty<UserResponse>();
+            }
+
+            if (IsLocalDemoEnabled())
+            {
+                return PrestigeDb.Users
+                    .Where(u => u.Id.Contains(normalizedQuery) || u.Name.Contains(normalizedQuery) || u.NickName.Contains(normalizedQuery))
+                    .Take(10)
+                    .Select(u => new UserResponse(u))
+                    .ToList();
+            }
+
             return PrestigeDb.Users
-                .Where(u => EF.Functions.Contains(u.Id, query + "*") || EF.Functions.Contains(u.Name, query + "*") || EF.Functions.Contains(u.NickName, query + "*"))
+                .Where(u => EF.Functions.Contains(u.Id, normalizedQuery + "*") || EF.Functions.Contains(u.Name, normalizedQuery + "*") || EF.Functions.Contains(u.NickName, normalizedQuery + "*"))
                 .Take(10)
                 .Select(u => new UserResponse(u))
                 .ToList();
+        }
+
+        private bool IsLocalDemoEnabled()
+        {
+            return Config.GetValue<bool>("LocalDemo:Enabled")
+                || string.Equals(Config["PRESTIGE_LOCAL_DEMO"], "true", StringComparison.OrdinalIgnoreCase);
         }
 
         public bool IsUserVerified(string userId)

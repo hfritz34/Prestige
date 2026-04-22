@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.IO.Compression;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -91,6 +92,24 @@ namespace Prestige.Api
                 value = configuration["AZURE_SQL_CONNECTIONSTRING"];
             }
             return value ?? string.Empty;
+        }
+
+        private static bool IsLocalDemoEnabled(IConfiguration configuration)
+        {
+            return configuration.GetValue<bool>("LocalDemo:Enabled")
+                || string.Equals(configuration["PRESTIGE_LOCAL_DEMO"], "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsHangfireDisabled(IConfiguration configuration)
+        {
+            return IsLocalDemoEnabled(configuration)
+                || string.Equals(configuration["DisableHangfire"], "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool HasHangfireStorageConfigured(IConfiguration configuration)
+        {
+            return !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Redis"))
+                || !string.IsNullOrWhiteSpace(ResolveSqlConnectionString(configuration));
         }
 
         private static void AddCaching(WebApplicationBuilder builder)
@@ -205,9 +224,7 @@ namespace Prestige.Api
 
         private static void AddHangfire(WebApplicationBuilder builder)
         {
-            // Feature flag to disable Hangfire from configuration without code changes
-            var disableHangfire = builder.Configuration["DisableHangfire"];
-            if (!string.IsNullOrEmpty(disableHangfire) && disableHangfire.Equals("true", StringComparison.OrdinalIgnoreCase))
+            if (IsHangfireDisabled(builder.Configuration))
             {
                 return;
             }
@@ -298,7 +315,15 @@ namespace Prestige.Api
         {
             var connection = ResolveSqlConnectionString(builder.Configuration);
 
-            if (!string.IsNullOrWhiteSpace(connection))
+            if (IsLocalDemoEnabled(builder.Configuration))
+            {
+                var databasePath = builder.Configuration["LocalDemo:DatabasePath"] ?? "prestige_demo.db";
+                builder.Services.AddDbContextPool<PrestigeContext>(options =>
+                    options.UseSqlite($"Data Source={databasePath}")
+                           .EnableSensitiveDataLogging(true),
+                    poolSize: 32);
+            }
+            else if (!string.IsNullOrWhiteSpace(connection))
             {
                 // Use connection pooling for better performance (reduced from 128 to 32 to lower costs)
                 builder.Services.AddDbContextPool<PrestigeContext>(options =>
@@ -329,6 +354,12 @@ namespace Prestige.Api
 
         private static void AddCosmosDB(WebApplicationBuilder builder)
         {
+            if (IsLocalDemoEnabled(builder.Configuration))
+            {
+                builder.Services.AddSingleton<CosmosClient>(_ => null!);
+                return;
+            }
+
             var cosmosConnectionString = builder.Configuration.GetConnectionString("CosmosDB");
             if (string.IsNullOrWhiteSpace(cosmosConnectionString))
             {
@@ -383,6 +414,15 @@ namespace Prestige.Api
 
         private static void AddAuthentication(WebApplicationBuilder builder)
         {
+            if (IsLocalDemoEnabled(builder.Configuration))
+            {
+                builder.Services.AddAuthentication(LocalDemoAuthenticationHandler.SchemeName)
+                    .AddScheme<AuthenticationSchemeOptions, LocalDemoAuthenticationHandler>(
+                        LocalDemoAuthenticationHandler.SchemeName,
+                        _ => { });
+                return;
+            }
+
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
                 {
@@ -439,6 +479,7 @@ namespace Prestige.Api
         private static void RunApp(WebApplicationBuilder builder)
         {
             var app = builder.Build();
+            InitializeLocalDemoStore(app);
 
             // Add response compression middleware
             app.UseResponseCompression();
@@ -451,19 +492,22 @@ namespace Prestige.Api
                .AllowAnonymous()
                .WithName("HealthCheck");
 
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || IsLocalDemoEnabled(app.Configuration))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
                 app.UseCors("AllowAll");
-                
-                // Add Hangfire dashboard for development
-                app.UseHangfireDashboard("/hangfire", new DashboardOptions
+
+                if (!IsHangfireDisabled(app.Configuration) && HasHangfireStorageConfigured(app.Configuration))
                 {
-                    Authorization = new[] { new HangfireAuthorizationFilter() }
-                });
+                    // Add Hangfire dashboard for development when storage is available.
+                    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+                    {
+                        Authorization = new[] { new HangfireAuthorizationFilter() }
+                    });
+                }
             }
-            else 
+            else
             {
                 app.UseCors("AllowAll");
             }
@@ -473,10 +517,8 @@ namespace Prestige.Api
             app.UseAuthorization();
             app.MapControllers().RequireAuthorization();
 
-            // Schedule recurring background jobs only if Hangfire is configured (i.e., SQL connection exists)
-            var disableHangfire = app.Configuration["DisableHangfire"];
-            if ((string.IsNullOrEmpty(disableHangfire) || !disableHangfire.Equals("true", StringComparison.OrdinalIgnoreCase))
-                && !string.IsNullOrWhiteSpace(ResolveSqlConnectionString(app.Configuration)))
+            // Schedule recurring background jobs only if Hangfire is configured.
+            if (!IsHangfireDisabled(app.Configuration) && HasHangfireStorageConfigured(app.Configuration))
             {
                 RecurringJob.AddOrUpdate<RatingBackgroundJobs>(
                     "cleanup-old-comparisons",
@@ -500,6 +542,23 @@ namespace Prestige.Api
             }
 
             app.Run();
+        }
+
+        private static void InitializeLocalDemoStore(WebApplication app)
+        {
+            if (!IsLocalDemoEnabled(app.Configuration))
+            {
+                return;
+            }
+
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<PrestigeContext>();
+            var logger = scope.ServiceProvider
+                .GetRequiredService<ILoggerFactory>()
+                .CreateLogger("LocalDemoDataSeeder");
+
+            db.Database.EnsureCreated();
+            LocalDemoDataSeeder.Seed(db, app.Configuration, logger);
         }
     }
 }

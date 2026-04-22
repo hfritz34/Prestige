@@ -20,6 +20,17 @@
         "USE_DEV_PRESTIGE_THRESHOLDS": "true"
       }
     },
+    "Local Demo": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5249",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "LocalDemo",
+        "USE_DEV_PRESTIGE_THRESHOLDS": "true"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
@@ -28,6 +39,6 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "USE_DEV_PRESTIGE_THRESHOLDS": "true"
       }
-    },
+    }
   }
 }

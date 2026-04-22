@@ -17,6 +17,11 @@ AZURE_COST_REDUCTION.md
 *.zip
 prestige-api.zip
 
+# Local demo SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
 # User-specific files
 *.rsuser
 *.suo

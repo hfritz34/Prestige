@@ -147,6 +147,11 @@ namespace Prestige.Api.Endpoints.Profile
                 throw Logger.UserUnauthorized(userId);
             }
 
+            if (IsLocalDemoEnabled())
+            {
+                return await GetLocalDemoRecentlyPlayedAsync(userId);
+            }
+
             try
             {
                 _logger.LogInformation($"GetRecentlyPlayedAsync: Getting access token for user {userId}");
@@ -265,6 +270,11 @@ namespace Prestige.Api.Endpoints.Profile
                 throw Logger.UserUnauthorized(userId);
             }
 
+            if (IsLocalDemoEnabled())
+            {
+                return await GetLocalDemoRecentlyPlayedAlbumsAsync(userId);
+            }
+
             try
             {
                 _logger.LogInformation($"GetRecentlyPlayedAlbumsAsync: Getting access token for user {userId}");
@@ -336,6 +346,11 @@ namespace Prestige.Api.Endpoints.Profile
             {
                 _logger.LogWarning($"GetRecentlyPlayedArtistsAsync: Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
                 throw Logger.UserUnauthorized(userId);
+            }
+
+            if (IsLocalDemoEnabled())
+            {
+                return await GetLocalDemoRecentlyPlayedArtistsAsync(userId);
             }
 
             try
@@ -527,6 +542,74 @@ namespace Prestige.Api.Endpoints.Profile
                     IsFavorite = ua.IsFavorite,
                     IsPinned = ua.IsPinned
                 })
+                .ToList();
+        }
+
+        private bool IsLocalDemoEnabled()
+        {
+            return Config.GetValue<bool>("LocalDemo:Enabled")
+                || string.Equals(Config["PRESTIGE_LOCAL_DEMO"], "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<List<RecentlyPlayedResponse>> GetLocalDemoRecentlyPlayedAsync(string userId)
+        {
+            var userTracks = await PrestigeDb.UserTracks
+                .Include(userTrack => userTrack.Track)
+                    .ThenInclude(track => track.Album)
+                        .ThenInclude(album => album.Images)
+                .Include(userTrack => userTrack.Track.Artists)
+                .Where(userTrack => userTrack.User.Id == userId)
+                .OrderByDescending(userTrack => userTrack.LastUpdatedAt)
+                .ThenByDescending(userTrack => userTrack.TotalTime)
+                .Take(10)
+                .ToListAsync();
+
+            return userTracks
+                .Select(userTrack => new RecentlyPlayedResponse(
+                    userTrack.Track.Name,
+                    userTrack.Track.Artists.FirstOrDefault()?.Name ?? "Unknown Artist",
+                    userTrack.Track.Album.Images.OrderByDescending(image => image.Height).FirstOrDefault()?.Url ?? "No Image Available",
+                    userTrack.Track.Id))
+                .ToList();
+        }
+
+        private async Task<List<RecentlyPlayedAlbumResponse>> GetLocalDemoRecentlyPlayedAlbumsAsync(string userId)
+        {
+            var userAlbums = await PrestigeDb.UserAlbums
+                .Include(userAlbum => userAlbum.Album)
+                    .ThenInclude(album => album.Images)
+                .Include(userAlbum => userAlbum.Album.Artists)
+                .Where(userAlbum => userAlbum.User.Id == userId)
+                .OrderByDescending(userAlbum => userAlbum.LastUpdatedAt)
+                .ThenByDescending(userAlbum => userAlbum.TotalTime)
+                .Take(10)
+                .ToListAsync();
+
+            return userAlbums
+                .Select(userAlbum => new RecentlyPlayedAlbumResponse(
+                    userAlbum.Album.Name,
+                    userAlbum.Album.Artists.FirstOrDefault()?.Name ?? "Unknown Artist",
+                    userAlbum.Album.Images.OrderByDescending(image => image.Height).FirstOrDefault()?.Url ?? "No Image Available",
+                    userAlbum.Album.Id))
+                .ToList();
+        }
+
+        private async Task<List<RecentlyPlayedArtistResponse>> GetLocalDemoRecentlyPlayedArtistsAsync(string userId)
+        {
+            var userArtists = await PrestigeDb.UserArtists
+                .Include(userArtist => userArtist.Artist)
+                    .ThenInclude(artist => artist.Images)
+                .Where(userArtist => userArtist.User.Id == userId)
+                .OrderByDescending(userArtist => userArtist.LastUpdatedAt)
+                .ThenByDescending(userArtist => userArtist.TotalTime)
+                .Take(10)
+                .ToListAsync();
+
+            return userArtists
+                .Select(userArtist => new RecentlyPlayedArtistResponse(
+                    userArtist.Artist.Name,
+                    userArtist.Artist.Images.OrderByDescending(image => image.Height).FirstOrDefault()?.Url ?? "No Image Available",
+                    userArtist.Artist.Id))
                 .ToList();
         }
 
