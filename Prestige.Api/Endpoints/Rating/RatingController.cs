@@ -34,6 +34,10 @@ namespace Prestige.Api.Endpoints.Rating
                 var result = await _ratingServices.StartRatingAsync(itemType, itemId);
                 return Ok(result);
             }
+            catch (global::Prestige.Api.Exceptions.Exception ex)
+            {
+                return HandleException(ex);
+            }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Error starting rating for {ItemType} {ItemId}", itemType, itemId);
@@ -50,6 +54,10 @@ namespace Prestige.Api.Endpoints.Rating
                 var result = await _ratingServices.SubmitComparisonAsync(request);
                 return Ok(result);
             }
+            catch (global::Prestige.Api.Exceptions.Exception ex)
+            {
+                return HandleException(ex);
+            }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Error submitting comparison for {ItemType}", request.ItemType);
@@ -65,6 +73,10 @@ namespace Prestige.Api.Endpoints.Rating
                 _logger.LogInformation("Getting user ratings for {ItemType}", itemType);
                 var result = await _ratingServices.GetUserRatingsAsync(itemType);
                 return Ok(result);
+            }
+            catch (global::Prestige.Api.Exceptions.Exception ex)
+            {
+                return HandleException(ex);
             }
             catch (System.Exception ex)
             {
@@ -83,6 +95,10 @@ namespace Prestige.Api.Endpoints.Rating
                 var result = await _ratingServices.SaveRatingAsync(request.ItemType, request.ItemId, request.Position, request.CategoryId);
                 return Ok(result);
             }
+            catch (global::Prestige.Api.Exceptions.Exception ex)
+            {
+                return HandleException(ex);
+            }
             catch (System.Exception ex)
             {
                 _logger.LogError(ex, "Error saving rating for {ItemType} {ItemId}", request.ItemType, request.ItemId);
@@ -98,6 +114,10 @@ namespace Prestige.Api.Endpoints.Rating
                 _logger.LogInformation("Deleting rating for {ItemType} {ItemId}", itemType, itemId);
                 var result = await _ratingServices.DeleteRatingAsync(itemType, itemId);
                 return Ok(result);
+            }
+            catch (global::Prestige.Api.Exceptions.Exception ex)
+            {
+                return HandleException(ex);
             }
             catch (System.Exception ex)
             {

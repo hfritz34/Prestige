@@ -7,7 +7,7 @@ using Prestige.Api.Exceptions;
 
 namespace Prestige.Api.Endpoints.Rating
 {
-    public class RatingServices : BaseService
+    public partial class RatingServices : BaseService
     {
         public RatingServices(PrestigeContext db, ILogger<RatingServices> logger, ClaimsPrincipal principal, IConfiguration config) 
             : base(db, logger, principal, config)
@@ -66,7 +66,7 @@ namespace Prestige.Api.Endpoints.Rating
             };
         }
 
-        public async Task<ComparisonResultResponse> SubmitComparisonAsync(ComparisonRequest request)
+        private async Task<ComparisonResultResponse> SubmitComparisonCoreAsync(ComparisonRequest request)
         {
             var userId = GetUserId();
             var user = await GetUserAsync(userId);
@@ -113,7 +113,7 @@ namespace Prestige.Api.Endpoints.Rating
             return ratings;
         }
 
-        public async Task<RatingResponse> SaveRatingAsync(string itemType, string itemId, int desiredPosition, int categoryId)
+        private async Task<RatingResponse> SaveRatingCoreAsync(string itemType, string itemId, int desiredPosition, int categoryId)
         {
             var userId = GetUserId();
             var normalizedType = itemType.ToLowerInvariant();
@@ -146,8 +146,10 @@ namespace Prestige.Api.Endpoints.Rating
 
             // Check if rating already exists
             var existingRating = await PrestigeDb.Ratings
+                .Include(r => r.Category)
                 .FirstOrDefaultAsync(r => r.User.Id == userId && r.ItemId == itemId && r.ItemType.ToLower() == "track");
 
+            var previousCategoryId = existingRating?.Category.Id;
             bool isNewRating = existingRating == null;
 
             // For tracks, we use simple position-based logic (no scores)
@@ -171,6 +173,9 @@ namespace Prestige.Api.Endpoints.Rating
 
             // Recalculate positions within the category for this album, considering desired position
             await RecalculateTrackPositionsInCategory(userId, albumId, category.Id, itemId, desiredPosition);
+
+            if (previousCategoryId.HasValue && previousCategoryId.Value != category.Id)
+                await RecalculateTrackPositionsAfterDeletion(userId, albumId, previousCategoryId.Value);
 
             // Update album-wide rankings across all categories
             await UpdateAlbumRanksForTracks(userId, albumId);
@@ -570,7 +575,7 @@ namespace Prestige.Api.Endpoints.Rating
             return winGraph;
         }
 
-        public async Task<RatingResponse> DeleteRatingAsync(string itemType, string itemId)
+        private async Task<RatingResponse> DeleteRatingCoreAsync(string itemType, string itemId)
         {
             var userId = GetUserId();
             var normalizedType = itemType.ToLowerInvariant();

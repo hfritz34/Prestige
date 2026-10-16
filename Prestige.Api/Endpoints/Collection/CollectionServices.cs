@@ -90,6 +90,18 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
             throw new Exceptions.ArgumentException(400, "A catalog item ID of at most 50 characters is required.");
         var existing = await db.CollectionEntries.FindAsync([userId, type, itemId], cancellationToken);
         if (existing != null) return existing;
+        await RequireKnownItemAsync(db, type, itemId, cancellationToken);
+        var entry = new CollectionEntry(userId, type, itemId);
+        db.CollectionEntries.Add(entry);
+        return entry;
+    }
+
+    public static async Task RequireKnownItemAsync(PrestigeContext db, string itemType, string itemId,
+        CancellationToken cancellationToken = default)
+    {
+        var type = NormalizeType(itemType);
+        if (string.IsNullOrWhiteSpace(itemId) || itemId.Length > 50)
+            throw new Exceptions.ArgumentException(400, "A catalog item ID of at most 50 characters is required.");
         var exists = type switch
         {
             "track" => await db.Tracks.AnyAsync(item => item.Id == itemId, cancellationToken),
@@ -97,9 +109,6 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
             _ => await db.Artists.AnyAsync(item => item.Id == itemId, cancellationToken)
         };
         if (!exists) throw new NotFoundException(404, "Music must exist in the catalog before it can be saved.");
-        var entry = new CollectionEntry(userId, type, itemId);
-        db.CollectionEntries.Add(entry);
-        return entry;
     }
 
     private static IQueryable<CollectionEntry> WithMetadata(IQueryable<CollectionEntry> query) => query

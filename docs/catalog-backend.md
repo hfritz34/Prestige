@@ -14,6 +14,8 @@ Clients must bootstrap with `GET /users/me` and use its `id` for subsequent acco
 
 The old mobile client still assumes subject-derived IDs and needs this bootstrap change before targeting the catalog deployment. Legacy mode and Local Demo retain their existing IDs. Existing demo databases can continue using their seeded accounts without identity records. Apply the new `CatalogAccounts` PostgreSQL migration before serving catalog traffic; the baseline alone is insufficient for login.
 
+Apply all current migrations, including `PersonalCollections`, before using the catalog rating or collection endpoints. [The collection API](collections-api.md) separates saved music, favorites and pins from listening aggregates. Catalog rating writes now save collection membership atomically, without requiring Spotify credentials or listening totals. Existing favorites/pin screens still need to move to the new collection contract.
+
 ### Web authentication
 
 Copy `Prestige.Web/.env.example` to `.env.local` and supply the SPA's public Auth0 client ID, tenant domain, API URL and audience (matching the API configuration). Configure the SPA callback as `<web origin>/authorization` and allow that web origin and logout URL in Auth0. Enable an email/password or passwordless connection for the SPA in the Auth0 dashboard; frontend changes alone cannot enable a tenant connection. Browser environment variables are public: never add a client secret.

@@ -21,4 +21,8 @@ Omitted flags default to false. Repeated identical PUTs preserve timestamps and 
 
 Responses contain catalog names/artwork, flags, saved/updated timestamps and the current rating, if present. Ratings are read from `Rating` rather than copied into the collection. Track ratings expose category, category position and album rank, with `score: null`: the old track score is a category placeholder, not a global song score. Collection responses have no listening-time or prestige-tier fields.
 
+In catalog mode, saving a rating through `/api/rating/save` also saves the item to the collection, preserving existing favorite/pin flags. Membership, rating writes and rank changes commit together. Rating deletion keeps collection membership. Comparisons, rating saves/deletes and collection writes share the same account lock on PostgreSQL. Invalid types, positions and comparison winners return 400; unknown catalog items/categories return 404. Track comparisons are limited to one album. Track positions remain one-based within a category (zero uses the existing comparison-based placement); album/artist insertion positions retain their existing zero-based behavior.
+
+Regression tests cover concurrent writes, failure after an intermediate save, category moves, deletion, owner isolation and collection/rating independence. The existing category scoring and comparison algorithms remain in place; further algorithm and social-authorization review is still required before public release.
+
 This is the API foundation. The existing web/native favorites and pin screens still use legacy routes and storage; moving those consumers to this contract is a separate integration step. Catalog discovery and provider identity separation are also still outstanding.

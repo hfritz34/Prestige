@@ -117,8 +117,10 @@ public sealed partial class PostgresDatabaseTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("api/rating/categories")).StatusCode);
     }
 
-    private PostgresPrestigeContext CreateContext() => new(new DbContextOptionsBuilder<PostgresPrestigeContext>()
-        .UseNpgsql(connectionString, options => options.SetPostgresVersion(15, 0)).Options);
+    private PostgresPrestigeContext CreateContext(params Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor[] interceptors) =>
+        new(new DbContextOptionsBuilder<PostgresPrestigeContext>()
+            .UseNpgsql(connectionString, options => options.SetPostgresVersion(15, 0))
+            .AddInterceptors(interceptors).Options);
 
     [PostgresFact]
     public async Task UserSearchWorksOnPostgresAndReturnsOnlyPublicProfileFields()
