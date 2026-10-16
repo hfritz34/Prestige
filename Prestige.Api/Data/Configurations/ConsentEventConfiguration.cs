@@ -17,7 +17,6 @@ namespace Prestige.Api.Data.Configurations
                 .IsRequired();
 
             builder.Property(history => history.Timestamp)
-                .HasColumnType("datetime2")
                 .IsRequired();
 
             builder.Property(history => history.Field)

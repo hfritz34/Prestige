@@ -125,6 +125,17 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         [HttpPost("{id}/sync-profile-picture")]
         public IActionResult SyncUserProfilePicture(string id)
         {
+            if (!global::Prestige.Api.Configuration.RuntimeConfiguration.IsHangfireEnabled(_service.Config))
+            {
+                return Conflict(new { message = "Background profile-picture sync is disabled in this deployment." });
+            }
+
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Split('|').Last();
+            if (currentUserId != id)
+            {
+                return Forbid();
+            }
+
             try
             {
                 // Queue background job to sync profile picture

@@ -6,7 +6,6 @@ using Prestige.Api.Data;
 using Prestige.Api.Domain;
 using Prestige.Api.Endpoints.Spotify.RequestResponse;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Azure;
 using System.Text.Json;
 using Prestige.Api.Endpoints.UserEndpoints;
 
@@ -71,7 +70,7 @@ namespace Prestige.Api.Endpoints.Spotify
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == userId) ?? throw Logger.UserNotFound(userId);
             
             // Check if token is still valid
-            if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
+            if (user.ExpiresAt < DateTime.UtcNow.AddMinutes(-2))
             {
                 Logger.LogWarning("User {UserId} has expired token, cannot sync profile picture", userId);
                 throw new Exception($"User {userId} has expired Spotify token");

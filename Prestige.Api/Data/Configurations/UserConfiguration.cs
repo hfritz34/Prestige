@@ -33,8 +33,7 @@ namespace Prestige.Api.Data.Configurations
                 .IsRequired();
 
             builder.Property(u => u.ExpiresAt)
-                .IsRequired()
-                .HasColumnType("datetime2");
+                .IsRequired();
 
             builder.HasMany(u => u.UserTracks)
                 .WithOne(ut => ut.User)

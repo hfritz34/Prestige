@@ -11,6 +11,10 @@ namespace Prestige.Api.Data
         {
         }
 
+        protected PrestigeContext(DbContextOptions options) : base(options)
+        {
+        }
+
         public DbSet<User> Users { get; set; }
         public DbSet<Track> Tracks { get; set; }
         public DbSet<Album> Albums { get; set; }

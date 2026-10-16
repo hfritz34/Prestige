@@ -26,14 +26,14 @@ namespace Prestige.Api.Endpoints
         {
 
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
-            if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
+            if (user.ExpiresAt < DateTime.UtcNow.AddMinutes(-2))
             {
                 var auth0User = await GetAuth0UserAsync();
 
                 user.UpdateTokens(
                     auth0User.Identities.FirstOrDefault()?.AccessToken ?? throw Logger.ConfigurationMissing("Access Token"),
                     auth0User.Identities.FirstOrDefault()?.RefreshToken ?? throw Logger.ConfigurationMissing("Refresh Token"),
-                    DateTime.Now.AddMinutes(5)
+                    DateTime.UtcNow.AddMinutes(5)
                 );
             }
 
@@ -46,7 +46,7 @@ namespace Prestige.Api.Endpoints
         {
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
 
-            if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
+            if (user.ExpiresAt < DateTime.UtcNow.AddMinutes(-2))
             {
                 try
                 {
@@ -62,7 +62,7 @@ namespace Prestige.Api.Endpoints
                     user.UpdateTokens(
                         spotifyIdentity.AccessToken,
                         spotifyIdentity.RefreshToken,
-                        DateTime.Now.AddHours(1)
+                        DateTime.UtcNow.AddHours(1)
                     );
 
                     PrestigeDb.SaveChanges();

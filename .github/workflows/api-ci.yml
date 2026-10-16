@@ -5,16 +5,34 @@ on:
     branches: [ "*" ]
     paths:
       - 'Prestige.Api/**'
+      - 'Prestige.Api.Tests/**'
       - '.github/workflows/api-ci.yml'
   pull_request:
     branches: [ "*" ]
     paths:
       - 'Prestige.Api/**'
+      - 'Prestige.Api.Tests/**'
       - '.github/workflows/api-ci.yml'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: prestige_test
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prestige_test -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PRESTIGE_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=postgres;Username=prestige_test;Password=test-only-password'
     
     steps:
     - uses: actions/checkout@v4
@@ -25,10 +43,7 @@ jobs:
         dotnet-version: '9.0.x'
     
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore Prestige.Api.Tests/Prestige.Api.Tests.csproj
       
-    - name: Build API
-      run: dotnet build Prestige.Api/*.csproj --configuration Release --no-restore
-      
-    - name: Test API
-      run: dotnet test Prestige.Api/*.csproj --configuration Release --no-build --verbosity normal 
+    - name: Test API and PostgreSQL migrations
+      run: dotnet test Prestige.Api.Tests/Prestige.Api.Tests.csproj --configuration Release --no-restore --verbosity normal

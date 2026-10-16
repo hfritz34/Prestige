@@ -33,7 +33,6 @@ namespace Prestige.Api.Data.Configurations
                 .IsRequired();
 
             builder.Property(consent => consent.LastUpdatedAt)
-                .HasColumnType("datetime2")
                 .IsRequired();
 
             builder.Property(consent => consent.ConsentVersion)

@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: prestige
+      POSTGRES_USER: prestige
+      POSTGRES_PASSWORD: local-development-only
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - prestige-catalog-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prestige -d prestige"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  prestige-catalog-postgres:

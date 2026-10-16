@@ -102,7 +102,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         public new async Task<string> GetAccessToken(string id)
         {
             var user = PrestigeDb.Users.FirstOrDefault(u => u.Id == id) ?? throw Logger.UserNotFound(id);
-            if (user.ExpiresAt < DateTime.Now.AddMinutes(-2))
+            if (user.ExpiresAt < DateTime.UtcNow.AddMinutes(-2))
             {
                 // Only refresh token if it's the current user and we have authentication
                 if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
@@ -116,7 +116,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 user.UpdateTokens(
                     auth0User.Identities.FirstOrDefault()?.AccessToken ?? throw Logger.ConfigurationMissing("Access Token"),
                     auth0User.Identities.FirstOrDefault()?.RefreshToken ?? throw Logger.ConfigurationMissing("Refresh Token"),
-                    DateTime.Now.AddMinutes(5)
+                    DateTime.UtcNow.AddMinutes(5)
                 );
             }
 

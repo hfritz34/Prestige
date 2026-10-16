@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Prestige.Api.Configuration;
 using System.Security.Claims;
 using System.IO.Compression;
 using Microsoft.AspNetCore.Authentication;
@@ -36,7 +38,18 @@ namespace Prestige.Api
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            CreateApplication(args).Run();
+        }
+
+        public static WebApplication CreateApplication(string[] args, Action<WebApplicationBuilder>? configure = null)
+        {
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                Args = args,
+                ApplicationName = typeof(Program).Assembly.GetName().Name
+            });
+            configure?.Invoke(builder);
+            RuntimeConfiguration.Validate(builder.Configuration, builder.Environment);
 
             AddApiExplorer(builder);
             AddSwaggerGen(builder);
@@ -44,7 +57,8 @@ namespace Prestige.Api
             AddCaching(builder);
             AddRateLimiting(builder);
             AddHangfire(builder);
-            AddDbContext(builder);
+            builder.Services.AddPrestigeDatabase(builder.Configuration, builder.Environment);
+            builder.Services.AddHealthChecks().AddCheck<DatabaseReadinessCheck>("database", timeout: TimeSpan.FromSeconds(5));
             AddCosmosDB(builder);
             AddServices(builder);
             AddControllers(builder);
@@ -53,7 +67,7 @@ namespace Prestige.Api
             AddAuthorization(builder);
             AddCurrentUser(builder);
 
-            RunApp(builder);
+            return BuildApp(builder);
         }
 
         private static void AddApiExplorer(WebApplicationBuilder builder)
@@ -94,17 +108,9 @@ namespace Prestige.Api
             return value ?? string.Empty;
         }
 
-        private static bool IsLocalDemoEnabled(IConfiguration configuration)
-        {
-            return configuration.GetValue<bool>("LocalDemo:Enabled")
-                || string.Equals(configuration["PRESTIGE_LOCAL_DEMO"], "true", StringComparison.OrdinalIgnoreCase);
-        }
+        private static bool IsLocalDemoEnabled(IConfiguration configuration) => RuntimeConfiguration.IsLocalDemo(configuration);
 
-        private static bool IsHangfireDisabled(IConfiguration configuration)
-        {
-            return IsLocalDemoEnabled(configuration)
-                || string.Equals(configuration["DisableHangfire"], "true", StringComparison.OrdinalIgnoreCase);
-        }
+        private static bool IsHangfireDisabled(IConfiguration configuration) => !RuntimeConfiguration.IsHangfireEnabled(configuration);
 
         private static bool HasHangfireStorageConfigured(IConfiguration configuration)
         {
@@ -114,7 +120,8 @@ namespace Prestige.Api
 
         private static void AddCaching(WebApplicationBuilder builder)
         {
-            var redisConnection = builder.Configuration.GetConnectionString("Redis");
+            var redisConnection = RuntimeConfiguration.IsCatalog(builder.Configuration)
+                ? null : builder.Configuration.GetConnectionString("Redis");
             
             if (!string.IsNullOrEmpty(redisConnection))
             {
@@ -230,7 +237,8 @@ namespace Prestige.Api
             }
 
             // Try to use Redis first, fall back to SQL if Redis is not configured
-            var redisConnection = builder.Configuration.GetConnectionString("Redis");
+            var redisConnection = RuntimeConfiguration.IsCatalog(builder.Configuration)
+                ? null : builder.Configuration.GetConnectionString("Redis");
             
             if (!string.IsNullOrEmpty(redisConnection))
             {
@@ -311,50 +319,9 @@ namespace Prestige.Api
             });
         }
 
-        private static void AddDbContext(WebApplicationBuilder builder)
-        {
-            var connection = ResolveSqlConnectionString(builder.Configuration);
-
-            if (IsLocalDemoEnabled(builder.Configuration))
-            {
-                var databasePath = builder.Configuration["LocalDemo:DatabasePath"] ?? "prestige_demo.db";
-                builder.Services.AddDbContextPool<PrestigeContext>(options =>
-                    options.UseSqlite($"Data Source={databasePath}")
-                           .EnableSensitiveDataLogging(true),
-                    poolSize: 32);
-            }
-            else if (!string.IsNullOrWhiteSpace(connection))
-            {
-                // Use connection pooling for better performance (reduced from 128 to 32 to lower costs)
-                builder.Services.AddDbContextPool<PrestigeContext>(options =>
-                    options.UseSqlServer(connection, sqlOptions =>
-                    {
-                        sqlOptions.EnableRetryOnFailure(
-                            maxRetryCount: 3,
-                            maxRetryDelay: TimeSpan.FromSeconds(30),
-                            errorNumbersToAdd: null);
-                        sqlOptions.CommandTimeout(30);
-                    })
-                    .EnableSensitiveDataLogging(builder.Environment.IsDevelopment()),
-                    poolSize: 32);
-            }
-            else if (builder.Environment.IsDevelopment())
-            {
-                // Fallback to SQLite for local development when SQL connection is not configured
-                builder.Services.AddDbContextPool<PrestigeContext>(options =>
-                    options.UseSqlite("Data Source=prestige_dev.db")
-                           .EnableSensitiveDataLogging(true),
-                    poolSize: 32);
-            }
-            else
-            {
-                throw new InvalidOperationException("Database connection string is missing. Set 'ConnectionStrings:AZURE_SQL_CONNECTIONSTRING' or environment variable 'ConnectionStrings__AZURE_SQL_CONNECTIONSTRING' (or 'AZURE_SQL_CONNECTIONSTRING').");
-            }
-        }
-
         private static void AddCosmosDB(WebApplicationBuilder builder)
         {
-            if (IsLocalDemoEnabled(builder.Configuration))
+            if (RuntimeConfiguration.IsCatalog(builder.Configuration) || IsLocalDemoEnabled(builder.Configuration))
             {
                 builder.Services.AddSingleton<CosmosClient>(_ => null!);
                 return;
@@ -401,15 +368,11 @@ namespace Prestige.Api
 
         private static void AddCorsPolicy(WebApplicationBuilder builder)
         {
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowAll", policy =>
-                    policy
-                        .WithOrigins("http://localhost:5173", "https://henryfritz.com", "https://www.henryfritz.com")
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials());
-            });
+            var origins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+                ?? (builder.Environment.IsDevelopment() || IsLocalDemoEnabled(builder.Configuration)
+                    ? new[] { "http://localhost:5173" } : Array.Empty<string>());
+            builder.Services.AddCors(options => options.AddPolicy("WebClients", policy =>
+                policy.WithOrigins(origins).AllowAnyMethod().AllowAnyHeader()));
         }
 
         private static void AddAuthentication(WebApplicationBuilder builder)
@@ -476,7 +439,7 @@ namespace Prestige.Api
             });
         }
 
-        private static void RunApp(WebApplicationBuilder builder)
+        private static WebApplication BuildApp(WebApplicationBuilder builder)
         {
             var app = builder.Build();
             InitializeLocalDemoStore(app);
@@ -492,11 +455,13 @@ namespace Prestige.Api
                .AllowAnonymous()
                .WithName("HealthCheck");
 
+            app.MapHealthChecks("/api/ready", new HealthCheckOptions()).AllowAnonymous();
+
             if (app.Environment.IsDevelopment() || IsLocalDemoEnabled(app.Configuration))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
-                app.UseCors("AllowAll");
+                app.UseCors("WebClients");
 
                 if (!IsHangfireDisabled(app.Configuration) && HasHangfireStorageConfigured(app.Configuration))
                 {
@@ -509,7 +474,7 @@ namespace Prestige.Api
             }
             else
             {
-                app.UseCors("AllowAll");
+                app.UseCors("WebClients");
             }
 
             app.UseHttpsRedirection();
@@ -541,7 +506,7 @@ namespace Prestige.Api
                     Cron.Hourly()); // Run every hour to keep Henry's token fresh
             }
 
-            app.Run();
+            return app;
         }
 
         private static void InitializeLocalDemoStore(WebApplication app)

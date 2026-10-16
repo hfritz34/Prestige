@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Microsoft.Identity.Client;
 
 namespace Prestige.Api.Domain
 {
@@ -14,7 +13,7 @@ namespace Prestige.Api.Domain
                 public string? Bio { get; private set; }
                 public string AccessToken { get; private set; }
                 public string RefreshToken { get; private set; }
-                public DateTime ExpiresAt { get; private set; } = DateTime.Now;
+                public DateTime ExpiresAt { get; private set; } = DateTime.UtcNow;
                 public ICollection<UserTrack> UserTracks { get; private set; } = new List<UserTrack>();
                 public ICollection<UserAlbum> UserAlbums { get; private set; } = new List<UserAlbum>();
                 public ICollection<UserArtist> UserArtists { get; private set; } = new List<UserArtist>();
@@ -49,7 +48,7 @@ namespace Prestige.Api.Domain
                         ProfilePicURL = profilePicURL;
                         AccessToken = accessToken;
                         RefreshToken = refreshToken;
-                        ExpiresAt = DateTime.Now;
+                        ExpiresAt = DateTime.UtcNow;
                 }
 
                 public void UpdateNickName(string nickName)
