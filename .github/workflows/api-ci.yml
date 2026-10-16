@@ -2,13 +2,11 @@ name: API CI
 
 on:
   push:
-    branches: [ "*" ]
     paths:
       - 'Prestige.Api/**'
       - 'Prestige.Api.Tests/**'
       - '.github/workflows/api-ci.yml'
   pull_request:
-    branches: [ "*" ]
     paths:
       - 'Prestige.Api/**'
       - 'Prestige.Api.Tests/**'
