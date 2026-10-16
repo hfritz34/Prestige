@@ -28,7 +28,7 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 throw Logger.UserNotFound("Current user");
             }
 
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             return await CalculatePrestigeProgressAsync(currentUserId, itemType, itemId);
         }
 
@@ -42,7 +42,7 @@ namespace Prestige.Api.Endpoints.PrestigeProgress
                 throw Logger.UserNotFound("Current user");
             }
 
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             
             // Validate friendship
             await ValidateFriendshipAsync(currentUserId, friendId);

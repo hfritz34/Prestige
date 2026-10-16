@@ -34,7 +34,7 @@ namespace Prestige.Api.Endpoints.Profile
                 throw new Exception(10001, "User authentication required");
             }
             
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             if (userId != currentUserId)
             {
                 _logger.LogWarning($"Unauthorized access attempt. Requested user ID: {userId}, Current user ID: {currentUserId}");
@@ -71,7 +71,7 @@ namespace Prestige.Api.Endpoints.Profile
 
         public async Task<IEnumerable<UserAlbumResponse>> GetTopAlbumsAsync(string userId)
         {
-            if (string.IsNullOrEmpty(UserAuthId) || userId != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || userId != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(userId);
             }
@@ -104,7 +104,7 @@ namespace Prestige.Api.Endpoints.Profile
 
         public async Task<IEnumerable<UserArtistResponse>> GetTopArtistsAsync(string userId)
         {
-            if (string.IsNullOrEmpty(UserAuthId) || userId != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || userId != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(userId);
             }
@@ -138,7 +138,7 @@ namespace Prestige.Api.Endpoints.Profile
                 throw new Exception(10001, "User authentication required");
             }
             
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             _logger.LogInformation($"BEGIN GetRecentlyPlayedAsync: Current user ID: {currentUserId}, Requested user ID: {userId}");
 
             if (userId != currentUserId)
@@ -261,7 +261,7 @@ namespace Prestige.Api.Endpoints.Profile
                 throw new Exception(10001, "User authentication required");
             }
             
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             _logger.LogInformation($"BEGIN GetRecentlyPlayedAlbumsAsync: Current user ID: {currentUserId}, Requested user ID: {userId}");
 
             if (userId != currentUserId)
@@ -339,7 +339,7 @@ namespace Prestige.Api.Endpoints.Profile
                 throw new Exception(10001, "User authentication required");
             }
             
-            var currentUserId = UserAuthId.Split("|").Last();
+            var currentUserId = CurrentUserId;
             _logger.LogInformation($"BEGIN GetRecentlyPlayedArtistsAsync: Current user ID: {currentUserId}, Requested user ID: {userId}");
 
             if (userId != currentUserId)

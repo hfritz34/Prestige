@@ -590,6 +590,27 @@ namespace Prestige.Api.Migrations.Postgres
                     b.ToTable("UserConsents", (string)null);
                 });
 
+            modelBuilder.Entity("Prestige.Api.Domain.UserIdentity", b =>
+                {
+                    b.Property<string>("Issuer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Issuer", "Subject");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserIdentity", (string)null);
+                });
+
             modelBuilder.Entity("Prestige.Api.Domain.UserTrack", b =>
                 {
                     b.Property<string>("UserId")
@@ -774,6 +795,17 @@ namespace Prestige.Api.Migrations.Postgres
                         .IsRequired();
 
                     b.Navigation("Artist");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Prestige.Api.Domain.UserIdentity", b =>
+                {
+                    b.HasOne("Prestige.Api.Domain.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

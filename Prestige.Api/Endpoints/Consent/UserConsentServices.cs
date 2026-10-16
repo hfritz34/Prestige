@@ -43,7 +43,7 @@ namespace Prestige.Api.Endpoints.Consent
 
         private async Task EnsureAuthorizedAsync(string userId)
         {
-            if (string.IsNullOrWhiteSpace(UserAuthId) || userId != UserAuthId.Split("|").Last())
+            if (string.IsNullOrWhiteSpace(UserAuthId) || userId != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(userId);
             }

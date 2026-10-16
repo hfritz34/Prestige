@@ -54,7 +54,7 @@ namespace Prestige.Api.Endpoints.Spotify
 
         private async Task<HttpClient> getUserSpotifyAuthorizedClient()
         {
-            var userId = Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Split("|").Last() ?? throw Logger.UserNotFound("User ID");
+            var userId = CurrentUserId ?? throw Logger.UserNotFound("User ID");
             var accessToken = await _userServices.GetAccessToken(userId);
             
             var spotify = new HttpClient

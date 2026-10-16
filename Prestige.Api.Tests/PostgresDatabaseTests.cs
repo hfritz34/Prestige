@@ -119,6 +119,30 @@ public sealed class PostgresDatabaseTests : IAsyncLifetime
 
     private PostgresPrestigeContext CreateContext() => new(new DbContextOptionsBuilder<PostgresPrestigeContext>()
         .UseNpgsql(connectionString, options => options.SetPostgresVersion(15, 0)).Options);
+
+    [PostgresFact]
+    public async Task ConcurrentFirstLoginsCreateOneAccountAndConsentHistory()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+        var configuration = new ConfigurationBuilder().Build();
+        var ids = await Task.WhenAll(Enumerable.Range(0, 8).Select(async _ =>
+        {
+            await using var requestDb = CreateContext();
+            var principal = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
+                [new(System.Security.Claims.ClaimTypes.NameIdentifier, "auth0|new-listener"),
+                 new("iss", "https://accounts.example.com/")], "Test"));
+            var transformed = await new Auth.CatalogAccountTransformation(requestDb, configuration).TransformAsync(principal);
+            return Auth.CurrentAccount.GetUserId(transformed, configuration);
+        }));
+
+        Assert.NotNull(ids[0]);
+        Assert.Single(ids.Distinct());
+        Assert.Single(await db.Users.ToListAsync());
+        Assert.Single(await db.UserIdentities.ToListAsync());
+        Assert.Single(await db.UserConsents.ToListAsync());
+        Assert.Equal(4, await db.ConsentEvents.CountAsync());
+    }
 }
 
 public sealed class PostgresFactAttribute : FactAttribute

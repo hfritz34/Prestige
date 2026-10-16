@@ -845,7 +845,7 @@ namespace Prestige.Api.Endpoints.Rating
 
         private string GetUserId()
         {
-            return Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Split("|").Last() 
+            return CurrentUserId
                 ?? throw new UnauthorizedAccessException("User ID not found");
         }
 

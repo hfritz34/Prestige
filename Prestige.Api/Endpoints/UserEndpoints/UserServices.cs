@@ -24,7 +24,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 throw new Exception("User authentication required for user creation");
             }
 
-            if(request.Id != UserAuthId.Split("|").Last())
+            if(request.Id != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(request.Id);
             }
@@ -54,6 +54,9 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 return new UserResponse(localDemoUser);
             }
 
+            if (global::Prestige.Api.Configuration.RuntimeConfiguration.IsCatalog(Config))
+                throw Logger.UserNotFound(request.Id);
+
             var auth0User = await GetAuth0UserAsync();
             var newUser = new User(
                 request.Id,
@@ -80,7 +83,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 throw new Exception("User authentication required");
             }
             
-            if (id != UserAuthId.Split("|").Last())
+            if (id != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(id);
             }
@@ -105,7 +108,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             if (user.ExpiresAt < DateTime.UtcNow.AddMinutes(-2))
             {
                 // Only refresh token if it's the current user and we have authentication
-                if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
+                if (string.IsNullOrEmpty(UserAuthId) || id != CurrentUserId)
                 {
                     // For other users or background jobs, we can't refresh their token
                     throw Logger.UserUnauthorized(id);
@@ -189,7 +192,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 }
         public UserResponse UpdateNickName(string id, string nickName)
         {
-            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || id != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(id);
             }
@@ -201,7 +204,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public UserResponse UpdateProfile(string id, string? nickName, string? bio)
         {
-            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || id != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(id);
             }
@@ -213,7 +216,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
 
         public UserResponse UpdateIsSetup(string id, bool isSetup)
         {
-            if (string.IsNullOrEmpty(UserAuthId) || id != UserAuthId.Split("|").Last())
+            if (string.IsNullOrEmpty(UserAuthId) || id != CurrentUserId)
             {
                 throw Logger.UserUnauthorized(id);
             }

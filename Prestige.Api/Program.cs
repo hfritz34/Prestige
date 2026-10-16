@@ -347,6 +347,7 @@ namespace Prestige.Api
 
         private static void AddServices(WebApplicationBuilder builder)
         {
+            builder.Services.AddScoped<IClaimsTransformation, CatalogAccountTransformation>();
             builder.Services.AddScoped<UserServices>();
             builder.Services.AddScoped<SpotifyServices>();
             builder.Services.AddScoped<ProfileServices>();
@@ -419,6 +420,13 @@ namespace Prestige.Api
         private static void AddAuthorization(WebApplicationBuilder builder)
         {
             builder.Services.AddSingleton<IAuthorizationHandler, HasScopeHandler>();
+            builder.Services.AddAuthorization(options =>
+            {
+                options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .RequireAssertion(context => CurrentAccount.GetUserId(context.User, builder.Configuration) != null)
+                    .Build();
+            });
         }
 
         private static void AddCurrentUser(WebApplicationBuilder builder)

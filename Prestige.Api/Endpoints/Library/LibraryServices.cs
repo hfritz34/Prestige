@@ -69,7 +69,7 @@ namespace Prestige.Api.Endpoints.Library
 
         private string GetUserId()
         {
-            return Principal.FindFirst(ClaimTypes.NameIdentifier)?.Value?.Split("|").Last() 
+            return CurrentUserId
                 ?? throw new UnauthorizedAccessException("User ID not found");
         }
 

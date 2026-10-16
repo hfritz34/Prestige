@@ -16,6 +16,7 @@ namespace Prestige.Api.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<UserIdentity> UserIdentities { get; set; }
         public DbSet<Track> Tracks { get; set; }
         public DbSet<Album> Albums { get; set; }
         public DbSet<Artist> Artists { get; set; }
@@ -34,6 +35,7 @@ namespace Prestige.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new UserConfiguration());
+            modelBuilder.ApplyConfiguration(new UserIdentityConfiguration());
             modelBuilder.ApplyConfiguration(new UserTrackConfiguration());
             modelBuilder.ApplyConfiguration(new UserAlbumConfiguration());
             modelBuilder.ApplyConfiguration(new UserArtistConfiguration());

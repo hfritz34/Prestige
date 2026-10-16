@@ -18,6 +18,7 @@ namespace Prestige.Api.Endpoints
         public ILogger<BaseService> Logger => _logger;
         public IConfiguration Config => _config;
         public ClaimsPrincipal Principal => _principal;
+        protected string? CurrentUserId => global::Prestige.Api.Auth.CurrentAccount.GetUserId(Principal, Config);
 
 
 

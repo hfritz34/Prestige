@@ -20,6 +20,14 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         }
 
 
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUserAsync()
+        {
+            var id = global::Prestige.Api.Auth.CurrentAccount.GetUserId(User, _service.Config);
+            if (id == null) return Unauthorized();
+            return await GetUserAsync(id);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserAsync(string id)
         {
@@ -55,6 +63,9 @@ namespace Prestige.Api.Endpoints.UserEndpoints
         [HttpGet("{id}/tokens")]
         public async Task<IActionResult> GetAccessTokenAsync(string id)
         {
+            if (global::Prestige.Api.Auth.CurrentAccount.GetUserId(User, _service.Config) != id) return Forbid();
+            if (global::Prestige.Api.Configuration.RuntimeConfiguration.IsCatalog(_service.Config))
+                return Conflict(new { message = "Connect Spotify separately to use listening features." });
             try
             {
                 var accessToken = await _service.GetAccessTokenAsync(id);
@@ -130,7 +141,7 @@ namespace Prestige.Api.Endpoints.UserEndpoints
                 return Conflict(new { message = "Background profile-picture sync is disabled in this deployment." });
             }
 
-            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value?.Split('|').Last();
+            var currentUserId = global::Prestige.Api.Auth.CurrentAccount.GetUserId(User, _service.Config);
             if (currentUserId != id)
             {
                 return Forbid();

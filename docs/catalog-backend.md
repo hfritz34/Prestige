@@ -2,7 +2,15 @@
 
 The API now defaults to `Prestige:Mode=Catalog`. It uses PostgreSQL without registering a Hangfire server, Redis cache, or Cosmos client. Supplying old Redis/Cosmos connection strings does not enable those dependencies in catalog mode. Local Demo remains available with SQLite.
 
-This is the storage/runtime foundation for the [catalog pivot](catalog-pivot.md), not a finished public release. The core product is a social music rating/ranking platform positioned against Rate Your Music; Spotify-backed prestige is an optional layer, with more granular tracking planned after proof of concept. Signup still requires refactoring away from Spotify, imports still use the old Functions pipeline, and the catalog/collection model will evolve in later PostgreSQL migrations. Do not deploy the existing Functions app as part of a new catalog environment.
+This is the storage/runtime foundation for the [catalog pivot](catalog-pivot.md), not a finished public release. The core product is a social music rating/ranking platform positioned against Rate Your Music; Spotify-backed prestige is an optional layer, with more granular tracking planned after proof of concept. Catalog signup is independent of Spotify; imports still use the old Functions pipeline, and the catalog/collection model will evolve in later PostgreSQL migrations. Do not deploy the existing Functions app as part of a new catalog environment.
+
+## Catalog accounts
+
+An authenticated request resolves the full validated token issuer and subject through `UserIdentity` to a random, application-owned account ID. First use creates the account, identity and existing consent defaults in one transaction. Concurrent first requests resolve to the same account. Accounts start with an editable listener nickname and empty Spotify credentials; provisioning never calls Auth0 Management or Spotify.
+
+Clients must bootstrap with `GET /users/me` and use its `id` for subsequent account-specific requests. Do not derive account IDs by splitting the Auth0 subject. The API retains the original subject for legacy authentication operations, but authorization uses only the server-resolved account identity. Client-supplied account claims cannot select another account. `/users/{id}/tokens` is unavailable in catalog mode.
+
+The old mobile client still assumes subject-derived IDs and needs this bootstrap change before targeting the catalog deployment. Legacy mode and Local Demo retain their existing IDs. Existing demo databases can continue using their seeded accounts without identity records. Apply the new `CatalogAccounts` PostgreSQL migration before serving catalog traffic; the baseline alone is insufficient for login.
 
 ## Local PostgreSQL
 
@@ -80,6 +88,6 @@ dotnet test Prestige.Api.Tests/Prestige.Api.Tests.csproj
 
 The PostgreSQL test role must be able to create databases. Every integration test creates its own randomly named `prestige_test_*` database and drops only that database during cleanup. Use a dedicated local/CI server, not the production database role.
 
-CI supplies a PostgreSQL 15 service and runs the full suite. Tests cover fresh migrations, migration-history isolation, reapplying migrations without losing data, rating/consent persistence, UTC timestamps, production PostgreSQL service resolution, authenticated routes, and readiness before/after schema initialization. These are foundation tests, not yet full rating-flow or import correctness tests.
+CI supplies a PostgreSQL 15 service and runs the full suite. Tests cover fresh migrations, migration-history isolation, reapplying migrations without losing data, rating/consent persistence, UTC timestamps, production PostgreSQL service resolution, authenticated routes, readiness before/after schema initialization, provider/issuer identity isolation, account ownership, and concurrent account provisioning. These are foundation tests, not yet full rating-flow or import correctness tests.
 
 When the model changes, generate a new migration for `PostgresPrestigeContext` and rerun the real PostgreSQL tests. Do not suppress pending-model warnings or edit an already deployed baseline to avoid writing a migration.
