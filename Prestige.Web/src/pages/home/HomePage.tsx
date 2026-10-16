@@ -1,3 +1,4 @@
+import Pinned from "./components/Pinned";
 import React, { useState } from "react";
 import NavBar from "@/components/navigation/NavBar";
 import useProfile, { UserTrackResponse, UserAlbumResponse, UserArtistResponse } from "@/hooks/useProfile";
@@ -103,13 +104,7 @@ const HomePage: React.FC = () => {
     queryFn: async (): Promise<RecentlyUpdatedResponse> => {
       const userId = user.id;
       if (userId) {
-        try {
-          const items = await getPinnedItems(userId);
-          return items;
-        } catch (error) {
-          console.error("Error fetching pinned items:", error);
-          return { tracks: [], albums: [], artists: [] };
-        }
+        return getPinnedItems(userId);
       }
       return { tracks: [], albums: [], artists: [] };
     },
@@ -248,17 +243,11 @@ const HomePage: React.FC = () => {
               <p>Error loading pinned items. Please try again.</p>
             </div>
           ) : (
-            <>
-              {contentType === "Tracks" && (
-                <TopTracks topTracks={pinnedItems?.tracks || []} />
-              )}
-              {contentType === "Albums" && (
-                <TopAlbums topAlbums={pinnedItems?.albums || []} />
-              )}
-              {contentType === "Artists" && (
-                <TopArtists topArtists={pinnedItems?.artists || []} />
-              )}
-            </>
+            <Pinned pinnedItems={{
+              tracks: contentType === "Tracks" ? pinnedItems?.tracks || [] : [],
+              albums: contentType === "Albums" ? pinnedItems?.albums || [] : [],
+              artists: contentType === "Artists" ? pinnedItems?.artists || [] : [],
+            }} />
           )}
         </>
       )}

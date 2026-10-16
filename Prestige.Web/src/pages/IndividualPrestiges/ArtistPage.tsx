@@ -1,10 +1,11 @@
+import useCollectionPin from '@/hooks/useCollectionPin';
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige, { ArtistAlbumsWithRankingsResponse } from '@/hooks/usePrestige';
 import { useAccount } from '@/auth/AccountProvider';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 
@@ -12,7 +13,6 @@ const ArtistPage: React.FC = () => {
   const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened } = useFriends();
   const { togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
   const user = useAccount();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const artist = location.state;
@@ -34,7 +34,9 @@ const ArtistPage: React.FC = () => {
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
     });
   };
-  const [isPinned, setIsPinned] = useState(artist?.isPinned || false);
+  const pin = useCollectionPin('artist', artist?.artistId, artist?.isPinned || false,
+    () => togglePinArtist(user.id, artist.artistId));
+  const isPinned = pin.isPinned;
 
   const userId = user.id;
 
@@ -62,23 +64,6 @@ const ArtistPage: React.FC = () => {
     enabled: showAlbums && !!userId && !!artist?.artistId
   });
 
-  const pinMutation = useMutation({
-    mutationFn: async () => {
-      const userId = user.id;
-      if (userId) {
-        await togglePinArtist(userId, artist.artistId);
-      }
-    },
-    onSuccess: () => {
-      setIsPinned(!isPinned);
-      queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
-      queryClient.invalidateQueries({ queryKey: ['topTracks'] });
-      queryClient.invalidateQueries({ queryKey: ['topAlbums'] });
-      queryClient.invalidateQueries({ queryKey: ['topArtists'] });
-    }
-  });
-
-
   const handleShowFriends = () => {
     setShowFriends(!showFriends);
   };
@@ -92,7 +77,8 @@ const ArtistPage: React.FC = () => {
         albumName: album.albumName,
         artistName: album.artistName,
         imageUrl: album.albumImage,
-        totalTime: album.totalListeningTime
+        totalTime: album.totalListeningTime,
+        hasListeningHistory: artist.hasListeningHistory
       }
     });
   };
@@ -118,7 +104,7 @@ const ArtistPage: React.FC = () => {
         <div className="text-center z-10">
           <h2 className="text-xl font-bold mb-2">{artist.artistName}</h2>
         </div>
-        <div className="flex justify-between w-full max-w-xs mb-6 z-10">
+        {artist.hasListeningHistory !== false && (<div className="flex justify-between w-full max-w-xs mb-6 z-10">
           <div className="text-center">
             <p className="text-gray-400">Minutes</p>
             <p className="text-2xl font-bold">{(artist.totalTime / 60).toFixed(1)}</p>
@@ -127,21 +113,23 @@ const ArtistPage: React.FC = () => {
             <p className="text-gray-400">Prestige Level</p>
             <p className="text-2xl font-bold">{prestigeLevel}</p>
           </div>
-        </div>
+        </div>)}
 
         {/* Prestige Progress Bar */}
-        <div className="w-full max-w-md mb-6 px-4">
+        {artist.hasListeningHistory !== false && (<div className="w-full max-w-md mb-6 px-4">
           <PrestigeProgressBar 
             itemId={artist.artistId}
             itemType="artists"
             itemName={artist.artistName}
             showDetails={true}
           />
-        </div>
+        </div>)}
       </div>
+      {pin.error && <p role="alert">Couldn’t update pin status. <button onClick={pin.retry}>Try again</button></p>}
       <div className="flex gap-4 mb-4">
         <button
-          onClick={() => pinMutation.mutate()}
+          onClick={pin.toggle}
+          disabled={pin.pending}
           className={`${isPinned ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-600 hover:bg-gray-700'} text-white font-bold py-2 px-4 rounded`}
         >
           {isPinned ? '📌 Pinned' : '📌 Pin'}

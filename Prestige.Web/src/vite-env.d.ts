@@ -7,6 +7,7 @@ interface ImportMetaEnv {
     readonly VITE_API_AUDIENCE: string
     readonly VITE_WEB_ADDRESS: string
     readonly VITE_LOCAL_DEMO?: string
+    readonly VITE_PRESTIGE_MODE?: "Catalog" | "Legacy"
 }
   
 interface ImportMeta {

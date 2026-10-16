@@ -7,14 +7,14 @@ type ArtistCarouselItemProps = {
 }
 
 const ArtistCarouselItem: React.FC<ArtistCarouselItemProps> = ({ userArtist }) => {
-    const { redirectToAlbumPage } = useRedirectToPrestigePages();
+    const { redirectToArtistPage } = useRedirectToPrestigePages();
 
     const handleArtistClick = () => {
-        redirectToAlbumPage({
-            albumId: userArtist.artist.id,
-            albumName: userArtist.artist.name,
+        redirectToArtistPage({
+            artistId: userArtist.artist.id,
             artistName: userArtist.artist.name,
             totalTime: userArtist.totalTime,
+            hasListeningHistory: userArtist.hasListeningHistory,
             imageUrl: userArtist.artist.images[0]?.url,
         });
     };
@@ -24,7 +24,7 @@ const ArtistCarouselItem: React.FC<ArtistCarouselItemProps> = ({ userArtist }) =
             <div className="track-item" onClick={handleArtistClick}>
                 <img src={userArtist.artist.images[0]?.url} alt={userArtist.artist.name} />
                 <h3 className="text-lg font-bold">{userArtist.artist.name}</h3>
-                <p className="text-gray-600">{Math.floor(userArtist.totalTime / 60)} minutes</p>
+                {userArtist.hasListeningHistory !== false && (<p className="text-gray-600">{Math.floor(userArtist.totalTime / 60)} minutes</p>)}
             </div>
         </CarouselItem>
     );

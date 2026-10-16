@@ -1,17 +1,17 @@
+import useCollectionPin from '@/hooks/useCollectionPin';
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
 import { useAccount } from '@/auth/AccountProvider';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened } = useFriends();
   const { togglePinAlbum, getAlbumTracksWithRankings } = usePrestige();
   const user = useAccount();
-  const queryClient = useQueryClient();
   const location = useLocation();
   const album = location.state;
   
@@ -32,7 +32,9 @@ const AlbumPage: React.FC = () => {
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
     });
   };
-  const [isPinned, setIsPinned] = useState(album?.isPinned || false);
+  const pin = useCollectionPin('album', album?.albumId, album?.isPinned || false,
+    () => togglePinAlbum(user.id, album.albumId));
+  const isPinned = pin.isPinned;
 
   const userId = user.id;
 
@@ -56,23 +58,6 @@ const AlbumPage: React.FC = () => {
     queryFn: () => userId ? getAlbumTracksWithRankings(userId, album.albumId) : null,
     enabled: showTracks && !!userId && !!album?.albumId
   });
-
-  const pinMutation = useMutation({
-    mutationFn: async () => {
-      const userId = user.id;
-      if (userId) {
-        await togglePinAlbum(userId, album.albumId);
-      }
-    },
-    onSuccess: () => {
-      setIsPinned(!isPinned);
-      queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
-      queryClient.invalidateQueries({ queryKey: ['topTracks'] });
-      queryClient.invalidateQueries({ queryKey: ['topAlbums'] });
-      queryClient.invalidateQueries({ queryKey: ['topArtists'] });
-    }
-  });
-
 
   const handleShowFriends = () => {
     setShowFriends(!showFriends);
@@ -102,7 +87,7 @@ const AlbumPage: React.FC = () => {
           <h2 className="text-xl font-bold mb-2">{album.albumName}</h2>
           <p className="text-lg">{album.artistName}</p>
         </div>
-        <div className="flex justify-between w-full max-w-xs mb-6 z-10">
+        {album.hasListeningHistory !== false && (<div className="flex justify-between w-full max-w-xs mb-6 z-10">
           <div className="text-center">
             <p className="text-gray-400">Minutes</p>
             <p className="text-2xl font-bold">{(album.totalTime / 60).toFixed(1)}</p>
@@ -111,21 +96,23 @@ const AlbumPage: React.FC = () => {
             <p className="text-gray-400">Prestige Level</p>
             <p className="text-2xl font-bold">{prestigeLevel}</p>
           </div>
-        </div>
+        </div>)}
 
         {/* Prestige Progress Bar */}
-        <div className="w-full max-w-md mb-6 px-4">
+        {album.hasListeningHistory !== false && (<div className="w-full max-w-md mb-6 px-4">
           <PrestigeProgressBar 
             itemId={album.albumId}
             itemType="albums"
             itemName={album.albumName}
             showDetails={true}
           />
-        </div>
+        </div>)}
       </div>
+      {pin.error && <p role="alert">Couldn’t update pin status. <button onClick={pin.retry}>Try again</button></p>}
       <div className="flex gap-4 mb-4">
         <button
-          onClick={() => pinMutation.mutate()}
+          onClick={pin.toggle}
+          disabled={pin.pending}
           className={`${isPinned ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-600 hover:bg-gray-700'} text-white font-bold py-2 px-4 rounded`}
         >
           {isPinned ? '📌 Pinned' : '📌 Pin'}

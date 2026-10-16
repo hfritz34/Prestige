@@ -1,3 +1,4 @@
+import { usesCatalogCollections } from "@/config/catalog";
 import { useQuery } from "@tanstack/react-query";
 import useHttp from "./useHttp";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -67,9 +68,9 @@ const useCurrentlyPlaying = () => {
   const { data, error, isLoading, refetch } = useQuery({
     queryKey: ["currentlyPlaying", user?.sub],
     queryFn: getCurrentlyPlaying,
-    enabled: !!user?.sub,
+    enabled: !usesCatalogCollections && !!user?.sub,
     // Conservative refresh to manage token usage
-    refetchInterval: 120000, // 2 minutes
+    refetchInterval: usesCatalogCollections ? false : 120000, // 2 minutes
     retry: false,
   });
 

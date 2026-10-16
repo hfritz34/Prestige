@@ -1,3 +1,4 @@
+import useCollectionPin from '@/hooks/useCollectionPin';
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
@@ -6,7 +7,7 @@ import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestig
 import useCurrentlyPlaying from '@/hooks/useCurrentlyPlaying';
 import { motion } from 'framer-motion';
 import { useAccount } from '@/auth/AccountProvider';
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 
@@ -15,7 +16,6 @@ const SongPage: React.FC = () => {
   const { togglePinTrack, getAlbumTracksWithRankings } = usePrestige();
   const { currentlyPlaying } = useCurrentlyPlaying();
   const user = useAccount();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const track = location.state;
@@ -38,7 +38,9 @@ const SongPage: React.FC = () => {
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000)
     });
   };
-  const [isPinned, setIsPinned] = useState(track?.isPinned || false);
+  const pin = useCollectionPin('track', track?.trackId, track?.isPinned || false,
+    () => togglePinTrack(user.id, track.trackId));
+  const isPinned = pin.isPinned;
   
   const userId = user.id;
   const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
@@ -73,23 +75,6 @@ const SongPage: React.FC = () => {
   const albumRanking = trackInAlbum?.albumRanking;
   const totalTracks = albumTracks?.totalTracks;
 
-  const pinMutation = useMutation({
-    mutationFn: async () => {
-      const userId = user.id;
-      if (userId) {
-        await togglePinTrack(userId, track.trackId);
-      }
-    },
-    onSuccess: () => {
-      setIsPinned(!isPinned);
-      queryClient.invalidateQueries({ queryKey: ['pinnedItems'] });
-      queryClient.invalidateQueries({ queryKey: ['topTracks'] });
-      queryClient.invalidateQueries({ queryKey: ['topAlbums'] });
-      queryClient.invalidateQueries({ queryKey: ['topArtists'] });
-    }
-  });
-
-
   const handleShowFriends = () => {
     setShowFriends(!showFriends);
   };
@@ -104,7 +89,8 @@ const SongPage: React.FC = () => {
           albumName: track.albumName,
           artistName: track.artistName,
           imageUrl: track.imageUrl,
-          totalTime: 0 // Will be populated by album page
+          totalTime: 0,
+          hasListeningHistory: track.hasListeningHistory
         }
       });
     }
@@ -147,14 +133,14 @@ const SongPage: React.FC = () => {
           <p className="text-lg mb-4">{track.albumName}</p>
         </div>
         <div className="flex justify-between w-full max-w-sm mb-6 z-10">
-          <div className="text-center">
+          {track.hasListeningHistory !== false && (<><div className="text-center">
             <p className="text-gray-400">Minutes</p>
             <p className="text-2xl font-bold">{(track.totalTime / 60).toFixed(1)}</p>
           </div>
           <div className="text-center">
             <p className="text-gray-400">Prestige Level</p>
             <p className="text-2xl font-bold">{prestigeLevel}</p>
-          </div>
+          </div></>)}
           <div className="text-center">
             <p className="text-gray-400">Album Rank</p>
             <p className="text-2xl font-bold">
@@ -168,18 +154,20 @@ const SongPage: React.FC = () => {
         </div>
 
         {/* Prestige Progress Bar */}
-        <div className="w-full max-w-md mb-6 px-4">
+        {track.hasListeningHistory !== false && (<div className="w-full max-w-md mb-6 px-4">
           <PrestigeProgressBar 
             itemId={track.trackId}
             itemType="tracks"
             itemName={track.trackName}
             showDetails={true}
           />
-        </div>
+        </div>)}
       </div>
+      {pin.error && <p role="alert">Couldn’t update pin status. <button onClick={pin.retry}>Try again</button></p>}
       <div className="flex gap-4 mb-4">
         <button
-          onClick={() => pinMutation.mutate()}
+          onClick={pin.toggle}
+          disabled={pin.pending}
           className={`${isPinned ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-600 hover:bg-gray-700'} text-white font-bold py-2 px-4 rounded`}
         >
           {isPinned ? '📌 Pinned' : '📌 Pin'}

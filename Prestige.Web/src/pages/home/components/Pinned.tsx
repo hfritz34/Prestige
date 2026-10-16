@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import useRedirectToPrestigePages from "@/hooks/useRedirectToPrestigePages";
 import PrestigeGridCard from "./PrestigeGridCard";
 import { UserTrackResponse, UserAlbumResponse, UserArtistResponse } from "@/hooks/useProfile";
 
@@ -12,11 +12,7 @@ type PinnedProps = {
 };
 
 const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
-  const navigate = useNavigate();
-
-  const handleCardClick = (id: string, type: "track" | "album" | "artist") => {
-    navigate(`/${type}/${id}`);
-  };
+  const { redirectToSongPage, redirectToAlbumPage, redirectToArtistPage } = useRedirectToPrestigePages();
 
   const allItems = [
     ...pinnedItems.tracks.map(track => ({ ...track, type: "track" as const })),
@@ -47,11 +43,14 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 key={`track-${item.track.id}`}
                 id={item.track.id}
                 totalTime={item.totalTime}
+                hasListeningHistory={item.hasListeningHistory}
                 name={item.track.name}
                 images={item.track.album.images}
                 artists={item.track.artists}
                 prestigeTier={item.prestigeTier}
-                onClick={() => handleCardClick(item.track.id, "track")}
+                albumPosition={item.rating?.rankWithinAlbum ?? undefined}
+                type="track"
+                onClick={() => redirectToSongPage({ trackId: item.track.id, trackName: item.track.name, totalTime: item.totalTime, hasListeningHistory: item.hasListeningHistory, isPinned: true, prestigeTier: item.prestigeTier, artistName: item.track.artists.map(artist => artist.name).join(', '), imageUrl: item.track.album.images[0]?.url || '', albumId: item.track.album.id, albumName: item.track.album.name })}
                 isPinned={true}
               />
             );
@@ -61,11 +60,14 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 key={`album-${item.album.id}`}
                 id={item.album.id}
                 totalTime={item.totalTime}
+                hasListeningHistory={item.hasListeningHistory}
                 name={item.album.name}
                 images={item.album.images}
                 artists={item.album.artists}
                 prestigeTier={item.prestigeTier}
-                onClick={() => handleCardClick(item.album.id, "album")}
+                ratingScore={item.rating?.score ?? undefined}
+                type="album"
+                onClick={() => redirectToAlbumPage({ albumId: item.album.id, albumName: item.album.name, totalTime: item.totalTime, hasListeningHistory: item.hasListeningHistory, isPinned: true, prestigeTier: item.prestigeTier, artistName: item.album.artists.map(artist => artist.name).join(', '), imageUrl: item.album.images[0]?.url || '' })}
                 isPinned={true}
               />
             );
@@ -75,10 +77,13 @@ const Pinned: React.FC<PinnedProps> = ({ pinnedItems }) => {
                 key={`artist-${item.artist.id}`}
                 id={item.artist.id}
                 totalTime={item.totalTime}
+                hasListeningHistory={item.hasListeningHistory}
                 name={item.artist.name}
                 images={item.artist.images}
                 prestigeTier={item.prestigeTier}
-                onClick={() => handleCardClick(item.artist.id, "artist")}
+                ratingScore={item.rating?.score ?? undefined}
+                type="artist"
+                onClick={() => redirectToArtistPage({ artistId: item.artist.id, artistName: item.artist.name, totalTime: item.totalTime, hasListeningHistory: item.hasListeningHistory, isPinned: true, prestigeTier: item.prestigeTier, imageUrl: item.artist.images[0]?.url || '' })}
                 isPinned={true}
               />
             );

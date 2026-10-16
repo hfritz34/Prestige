@@ -6,15 +6,15 @@ import { useDebounce } from 'use-debounce';
 import { UseMutationResult, useQuery } from "@tanstack/react-query";
 import ArtistSearchCard from "@/components/search/ArtistSearchCard";
 import AlbumSearchCard from "@/components/search/AlbumSearchCard";
-import { FavoritesResponse } from "@/hooks/useProfile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 type SearchBarProps = {
-  onClickQuery: UseMutationResult<FavoritesResponse, Error, string, unknown>;
+  onClickQuery: UseMutationResult<void, Error, string, unknown>;
   searchType: SearchType;
+  disabled?: boolean;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ searchType, onClickQuery }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ searchType, onClickQuery, disabled }) => {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [debouncedSearch] = useDebounce(searchTerm.trim(), 1000);
   const spotify = useSpotify();
@@ -43,20 +43,21 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchType, onClickQuery }) => {
         placeholder={`Search for ${searchType}...`}
         className="mb-2 w-3/4"
       />
+      {query.isError && <p role="alert">Couldn’t search for music. <button onClick={() => void query.refetch()}>Try again</button></p>}
       <ScrollArea id="SearchResults" className="w-screen p-4 min-h-0 grow">
         {
           data?.tracks?.map((track) => (
-            <TrackSearchCard key={track.id} track={track} onClick={() => onClickQuery.mutate(track.id)}/>
+            <TrackSearchCard key={track.id} track={track} onClick={() => !disabled && onClickQuery.mutate(track.id)}/>
           ))
         }
         {
           data?.albums?.map((album) => (
-            <AlbumSearchCard key={album.id} album={album} onClick={() => onClickQuery.mutate(album.id)}/>
+            <AlbumSearchCard key={album.id} album={album} onClick={() => !disabled && onClickQuery.mutate(album.id)}/>
           ))
         }
         {
           data?.artists?.map((artist) => (
-            <ArtistSearchCard key={artist.id} artist={artist} onClick={() => onClickQuery.mutate(artist.id)}/>
+            <ArtistSearchCard key={artist.id} artist={artist} onClick={() => !disabled && onClickQuery.mutate(artist.id)}/>
           ))
         }
       </ScrollArea>

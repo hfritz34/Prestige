@@ -1,4 +1,6 @@
 import { useAccount } from '@/auth/AccountProvider';
+import useCollection, { collectionType } from './useCollection';
+import { usesCatalogCollections } from '@/config/catalog';
 import useHttp from "./useHttp";
 import { AlbumResponse, ArtistResponse, TrackResponse } from "./useSpotify";
 
@@ -49,10 +51,17 @@ export type RecentlyPlayedArtistResponse = {
     id: string;
 };
 
+export type CollectionRating = {
+    score: number | null;
+    rankWithinAlbum: number | null;
+};
+
 export type UserTrackResponse = {
     track: TrackResponse,
     userId: string,
     totalTime: number,
+    hasListeningHistory?: boolean,
+    rating?: CollectionRating | null,
     isFavorite?: boolean,
     isPinned?: boolean,
     prestigeTier?: string
@@ -62,6 +71,8 @@ export type UserAlbumResponse = {
     album: AlbumResponse,
     userId: string,
     totalTime: number,
+    hasListeningHistory?: boolean,
+    rating?: CollectionRating | null,
     isFavorite?: boolean,
     isPinned?: boolean,
     prestigeTier?: string
@@ -71,20 +82,17 @@ export type UserArtistResponse = {
     artist: ArtistResponse,
     userId: string,
     totalTime: number,
+    hasListeningHistory?: boolean,
+    rating?: CollectionRating | null,
     isFavorite?: boolean,
     isPinned?: boolean,
     prestigeTier?: string
 }
   
-export type FavoritesResponse = {
-    Tracks: UserTrackResponse[], Albums: never, Artists: never
-} | {
-    Tracks: never, Albums: UserAlbumResponse[], Artists: never
-} | {
-    Tracks: never, Albums: never, Artists: UserArtistResponse[]
-};
+export type FavoritesResponse = UserTrackResponse[] | UserAlbumResponse[] | UserArtistResponse[];
 
 const useProfile = () => {
+    const collection = useCollection();
     const { getMany, patch, getOne } = useHttp();
     const baseEndpoint = "profiles";
 
@@ -116,9 +124,21 @@ const useProfile = () => {
         return await getMany<RecentlyPlayedArtistResponse>(`${baseEndpoint}/${userId}/recently-played-artists`);
     };
 
-    const patchFavorites = async (type : string, trackId : string) : Promise<FavoritesResponse> => patch<FavoritesResponse, Record<string, never>>({}, `profiles/${userId}/favorites/${type}/${trackId}`);
+    const patchFavorites = async (type: string, itemId: string): Promise<void> => {
+        if (!usesCatalogCollections) {
+            await patch<FavoritesResponse, Record<string, never>>({}, `profiles/${userId}/favorites/${type}/${itemId}`);
+            return;
+        }
+        const itemType = collectionType(type);
+        const current = await collection.get(itemType, itemId);
+        await collection.update(itemType, itemId, { isFavorite: !current?.isFavorite });
+    };
 
-    const getFavorites = async (type : string) : Promise<FavoritesResponse> => getOne<FavoritesResponse>(`profiles/${userId}/favorites/${type}`);
+    const getFavorites = async (type: string): Promise<FavoritesResponse> => {
+        if (!usesCatalogCollections) return getOne<FavoritesResponse>(`profiles/${userId}/favorites/${type}`);
+        const cards = collection.asCards(await collection.list({ itemType: collectionType(type), favoritesOnly: true }));
+        return cards[`${collectionType(type)}s`];
+    };
 
     return { getTopTracks, getTopAlbums, getTopArtists, patchFavorites, getFavorites , getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists };
 };

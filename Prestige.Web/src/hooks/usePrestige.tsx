@@ -1,3 +1,5 @@
+import useCollection from './useCollection';
+import { usesCatalogCollections } from '@/config/catalog';
 import useHttp from "./useHttp";
 
 export type AlbumTrackResponse = {
@@ -41,9 +43,11 @@ export type ArtistAlbumsWithRankingsResponse = {
 }
 
 const usePrestige = () => {
+    const collection = useCollection();
     const http = useHttp();
 
     const postUserTrack = async (userId: string, trackId: string, totalTime: number) => {
+      if (usesCatalogCollections) return collection.update("track", trackId, {});
       return await http.post(
         { trackId, totalTime },
         `prestige/${userId}/tracks`
@@ -66,6 +70,7 @@ const usePrestige = () => {
     };
 
     const getPinnedItems = async (userId: string): Promise<{tracks: any[], albums: any[], artists: any[]}> => {
+      if (usesCatalogCollections) return collection.asCards(await collection.list({ pinnedOnly: true }));
       const result = await http.getOne<{tracks: any[], albums: any[], artists: any[]}>(`prestige/${userId}/pinned`);
       console.log("Pinned items from API:", result);
       return result;

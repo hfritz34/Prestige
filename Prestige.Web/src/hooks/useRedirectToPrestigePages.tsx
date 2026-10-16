@@ -4,8 +4,10 @@ interface Track {
   trackId: string;
   trackName: string;
   albumName?: string;
+  albumId?: string;
   artistName: string;
   totalTime: number;
+  hasListeningHistory?: boolean;
   imageUrl: string;
   isPinned?: boolean;
   prestigeTier?: string;
@@ -16,6 +18,7 @@ interface Album {
   albumName: string;
   artistName: string;
   totalTime: number;
+  hasListeningHistory?: boolean;
   imageUrl: string;
   isPinned?: boolean;
   prestigeTier?: string;
@@ -25,6 +28,7 @@ interface Artist {
   artistId: string;
   artistName: string;
   totalTime: number;
+  hasListeningHistory?: boolean;
   imageUrl: string;
   isPinned?: boolean;
   prestigeTier?: string;

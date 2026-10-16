@@ -1,3 +1,4 @@
+import placeholderImage from "@/assets/music.jpg";
 import React, { useState } from "react";
 import useFriends, { ItemComparisonResponse, Friend } from "@/hooks/useFriends";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ type PrestigeGridCardProps = {
   name: string;
   subtitle?: string;
   totalTime: number;
+  hasListeningHistory?: boolean;
   rank?: number;
   onClick: () => void;
   type?: 'track' | 'album' | 'artist';
@@ -33,6 +35,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
   name,
   subtitle,
   totalTime,
+  hasListeningHistory = true,
   rank,
   onClick,
   type = 'track',
@@ -77,7 +80,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
         return [];
       }
     },
-    enabled: !!_id,
+    enabled: hasListeningHistory && !!_id,
     staleTime: 10 * 60 * 1000, // Data stays fresh for 10 minutes
     gcTime: 30 * 60 * 1000, // Cached for 30 minutes
     refetchOnWindowFocus: false,
@@ -150,9 +153,9 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
           <div className="relative z-10 h-full flex flex-col">
             {/* Rank badge, Compare button, and Rating */}
             <div className="flex justify-between items-start mb-2">
-              <div className="w-5 h-5 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
+              {rank !== undefined && (<div className="w-5 h-5 bg-black bg-opacity-70 rounded-full flex items-center justify-center">
                 <span className="text-white text-xs font-bold">{rank}</span>
-              </div>
+              </div>)}
               
               {/* Compare Button */}
               {_id && friendsQuery.data && friendsQuery.data.length > 0 && (
@@ -211,12 +214,13 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
             <div className="flex-1 flex items-center justify-center px-1">
               <div className="w-full max-w-[85%] aspect-square rounded-lg overflow-hidden shadow-lg">
                 <img
-                  src={imageUrl || (images && images.length > 0 ? images[0].url : "/placeholder-album.png")}
+                  src={imageUrl || (images && images.length > 0 ? images[0].url : placeholderImage)}
                   alt={name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder-album.png";
+                    target.onerror = null;
+                    target.src = placeholderImage;
                   }}
                 />
               </div>
@@ -245,7 +249,7 @@ const PrestigeGridCard: React.FC<PrestigeGridCardProps> = ({
           {subtitle || (artists && artists.length > 0 ? artists.map(a => a.name).join(', ') : '')}
         </p>
         <p className="text-xs font-medium line-clamp-1 text-gray-300">
-          {Math.floor(totalTime / 60)} min
+          {hasListeningHistory ? `${Math.floor(totalTime / 60)} min` : 'Saved'}
         </p>
       </div>
 

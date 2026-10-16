@@ -15,7 +15,8 @@ const AlbumCarouselItem: React.FC<AlbumCarouselItemProps> = ({ userAlbum }) => {
             albumName: userAlbum.album.name,
             artistName: userAlbum.album.artists.map(artist => artist.name).join(", "),
             totalTime: userAlbum.totalTime,
-            imageUrl: userAlbum.album.images[0].url,
+            hasListeningHistory: userAlbum.hasListeningHistory,
+            imageUrl: userAlbum.album.images[0]?.url || '',
         });
     };
 
@@ -27,7 +28,7 @@ const AlbumCarouselItem: React.FC<AlbumCarouselItemProps> = ({ userAlbum }) => {
                 <div id="artists_list" className="text-gray-600 overflow-hidden text-ellipsis whitespace-nowrap">
                     {userAlbum.album.artists.map(artist => artist.name).join(", ")}
                 </div>
-                <p className="text-gray-600">{Math.floor(userAlbum.totalTime / 60)} minutes</p>
+                {userAlbum.hasListeningHistory !== false && (<p className="text-gray-600">{Math.floor(userAlbum.totalTime / 60)} minutes</p>)}
             </div>
         </CarouselItem>
     );
