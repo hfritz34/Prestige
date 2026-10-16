@@ -6,14 +6,14 @@ import { UserSearch } from './components/UserSearch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 
 const FriendsPage: React.FC = () => {
     const { getAllFriends, getFriendRequests, acceptFriendRequest, declineFriendRequest } = useFriends();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const { user } = useAuth0();
-    const userId = user?.sub?.split("|").pop();
+    const user = useAccount();
+    const userId = user.id;
 
     const handleFriendClick = (friendId: string) => {
         navigate(`/friends/${friendId}`);

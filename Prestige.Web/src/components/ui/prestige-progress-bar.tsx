@@ -69,7 +69,7 @@ const PrestigeProgressBar: React.FC<PrestigeProgressBarProps> = ({
         // Get auth token using Auth0
         const token = await getAccessTokenSilently({
           authorizationParams: {
-            audience: 'https://prestige-auth0-resource',
+            audience: import.meta.env.VITE_API_AUDIENCE,
           },
           cacheMode: "on"
         });

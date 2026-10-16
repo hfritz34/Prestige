@@ -9,7 +9,7 @@ import AlbumSearchCard from "@/components/search/AlbumSearchCard";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNavigate } from "react-router-dom";
 import usePrestige from "@/hooks/usePrestige";
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAccount } from '@/auth/AccountProvider';
 
 type HomeSearchBarProps = {
   contentType: "Tracks" | "Albums" | "Artists";
@@ -21,7 +21,7 @@ const HomeSearchBar: React.FC<HomeSearchBarProps> = ({ contentType }) => {
   const spotify = useSpotify();
   const navigate = useNavigate();
   const prestige = usePrestige();
-  const { user } = useAuth0();
+  const user = useAccount();
 
   const searchQuery = useQuery({
     queryKey: ['search', 'all', debouncedSearch],
@@ -34,7 +34,7 @@ const HomeSearchBar: React.FC<HomeSearchBarProps> = ({ contentType }) => {
   });
 
   const handleTrackClick = async (trackId: string) => {
-    const userId = user?.sub?.split("|").pop();
+    const userId = user.id;
     if (userId) {
       // Try to add the track with 0 time if it doesn't exist
       try {

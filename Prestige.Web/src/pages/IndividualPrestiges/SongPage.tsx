@@ -5,7 +5,7 @@ import useFriends from '@/hooks/useFriends';
 import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
 import useCurrentlyPlaying from '@/hooks/useCurrentlyPlaying';
 import { motion } from 'framer-motion';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
@@ -14,7 +14,7 @@ const SongPage: React.FC = () => {
   const { getFriendsWhoListenedToTrack, getFriendTrackTimeListened } = useFriends();
   const { togglePinTrack, getAlbumTracksWithRankings } = usePrestige();
   const { currentlyPlaying } = useCurrentlyPlaying();
-  const { user } = useAuth0();
+  const user = useAccount();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,7 +40,7 @@ const SongPage: React.FC = () => {
   };
   const [isPinned, setIsPinned] = useState(track?.isPinned || false);
   
-  const userId = user?.sub?.split('|').pop();
+  const userId = user.id;
   const isNowPlaying = currentlyPlaying?.track?.id === track?.trackId;
 
   // React Query for friends who listened to this track
@@ -75,7 +75,7 @@ const SongPage: React.FC = () => {
 
   const pinMutation = useMutation({
     mutationFn: async () => {
-      const userId = user?.sub?.split('|').pop();
+      const userId = user.id;
       if (userId) {
         await togglePinTrack(userId, track.trackId);
       }

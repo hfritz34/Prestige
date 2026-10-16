@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige, { ArtistAlbumsWithRankingsResponse } from '@/hooks/usePrestige';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
@@ -11,7 +11,7 @@ import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 const ArtistPage: React.FC = () => {
   const { getFriendsWhoListenedToArtist, getFriendArtistTimeListened } = useFriends();
   const { togglePinArtist, getArtistAlbumsWithUserActivity } = usePrestige();
-  const { user } = useAuth0();
+  const user = useAccount();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,7 +36,7 @@ const ArtistPage: React.FC = () => {
   };
   const [isPinned, setIsPinned] = useState(artist?.isPinned || false);
 
-  const userId = user?.sub?.split('|').pop();
+  const userId = user.id;
 
   // React Query for friends who listened to this artist
   const friendsQuery = useQuery({
@@ -64,7 +64,7 @@ const ArtistPage: React.FC = () => {
 
   const pinMutation = useMutation({
     mutationFn: async () => {
-      const userId = user?.sub?.split('|').pop();
+      const userId = user.id;
       if (userId) {
         await togglePinArtist(userId, artist.artistId);
       }

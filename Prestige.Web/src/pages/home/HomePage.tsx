@@ -7,7 +7,7 @@ type RecentlyUpdatedResponse = {
   albums: UserAlbumResponse[];
   artists: UserArtistResponse[];
 };
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAccount } from '@/auth/AccountProvider';
 import TopTracks from "./components/TopTracks";
 import TopAlbums from "./components/TopAlbums";
 import TopArtists from "./components/TopArtists";
@@ -28,55 +28,55 @@ const HomePage: React.FC = () => {
   const [contentType, setContentType] = useState<"Tracks" | "Albums" | "Artists">("Tracks");
   const [timeFilter, setTimeFilter] = useState<"AllTime" | "Recent" | "Pinned">("AllTime");
   const { getTopTracks, getTopAlbums, getTopArtists } = useProfile();
-  const { user } = useAuth0();
+  const user = useAccount();
   const { currentlyPlaying, totalTime } = useCurrentlyPlaying();
   const { getPinnedItems } = usePrestige();
   const http = useHttp();
   const TOP_LIMIT = 60;
 
   const { data: topTracks, error: tracksError, isLoading: tracksLoading } = useQuery<UserTrackResponse[]>({
-    queryKey: ["topTracks", user?.sub],
+    queryKey: ["topTracks", user.id],
     queryFn: async () => {
-      const userId = user?.sub?.split("|").pop();
+      const userId = user.id;
       if (userId) {
         const tracks = await getTopTracks();
         return tracks.slice(0, TOP_LIMIT);
       }
       return [];
     },
-    enabled: !!user?.sub && contentType === "Tracks" && timeFilter === "AllTime",
+    enabled: !!user.id && contentType === "Tracks" && timeFilter === "AllTime",
   });
 
   const { data: topAlbums, error: albumsError, isLoading: albumsLoading } = useQuery<UserAlbumResponse[]>({
-    queryKey: ["topAlbums", user?.sub],
+    queryKey: ["topAlbums", user.id],
     queryFn: async () => {
-      const userId = user?.sub?.split("|").pop();
+      const userId = user.id;
       if (userId) {
         const albums = await getTopAlbums();
         return albums.slice(0, TOP_LIMIT);
       }
       return [];
     },
-    enabled: !!user?.sub && contentType === "Albums" && timeFilter === "AllTime",
+    enabled: !!user.id && contentType === "Albums" && timeFilter === "AllTime",
   });
 
   const { data: topArtists, error: artistsError, isLoading: artistsLoading } = useQuery<UserArtistResponse[]>({
-    queryKey: ["topArtists", user?.sub],
+    queryKey: ["topArtists", user.id],
     queryFn: async () => {
-      const userId = user?.sub?.split("|").pop();
+      const userId = user.id;
       if (userId) {
         const artists = await getTopArtists();
         return artists.slice(0, TOP_LIMIT);
       }
       return [];
     },
-    enabled: !!user?.sub && contentType === "Artists" && timeFilter === "AllTime",
+    enabled: !!user.id && contentType === "Artists" && timeFilter === "AllTime",
   });
 
   const { data: recentItems, isLoading: recentLoading } = useQuery<RecentlyUpdatedResponse>({
-    queryKey: ["recentlyPlayed", user?.sub],
+    queryKey: ["recentlyPlayed", user.id],
     queryFn: async (): Promise<RecentlyUpdatedResponse> => {
-      const userId = user?.sub?.split("|").pop();
+      const userId = user.id;
       if (userId) {
         // Get items updated in the last 24 hours
         const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -93,15 +93,15 @@ const HomePage: React.FC = () => {
       }
       return { tracks: [], albums: [], artists: [] };
     },
-    enabled: !!user?.sub && timeFilter === "Recent",
+    enabled: !!user.id && timeFilter === "Recent",
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
     gcTime: 60 * 60 * 1000, // Keep cached data for 1 hour
   });
 
   const { data: pinnedItems, isLoading: pinnedLoading, error: pinnedError } = useQuery<RecentlyUpdatedResponse>({
-    queryKey: ["pinnedItems", user?.sub],
+    queryKey: ["pinnedItems", user.id],
     queryFn: async (): Promise<RecentlyUpdatedResponse> => {
-      const userId = user?.sub?.split("|").pop();
+      const userId = user.id;
       if (userId) {
         try {
           const items = await getPinnedItems(userId);
@@ -113,7 +113,7 @@ const HomePage: React.FC = () => {
       }
       return { tracks: [], albums: [], artists: [] };
     },
-    enabled: !!user?.sub && timeFilter === "Pinned",
+    enabled: !!user.id && timeFilter === "Pinned",
     retry: false,
     refetchOnWindowFocus: false,
   });

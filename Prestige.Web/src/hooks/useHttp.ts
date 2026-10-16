@@ -32,21 +32,14 @@ const useHttp = () => {
 	const getOne = async <T>(relativeUri: string): Promise<T> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
-			console.log("API URL:", apiUri);
-			console.log("Endpoint:", relativeUri);
-			console.log("Token (first 50 chars):", token?.substring(0, 50) + "...");
 			
 			const response = await axios.get<T>(`${apiUri}/${relativeUri}`, {
 				headers: {
 					Authorization: "Bearer " + token,
 				},
 			})
-			console.log("Response status:", response.status);
 			return response.data as T
 		});
 	}
@@ -54,9 +47,6 @@ const useHttp = () => {
 	const getMany = async <T>(relativeUri: string): Promise<T[]> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
 
@@ -72,9 +62,6 @@ const useHttp = () => {
 	const post = async <T, S>(rq: S, relativeUri: string): Promise<T> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
 			const response = await axios.post<T>(`${apiUri}/${relativeUri}`, rq, {
@@ -89,9 +76,6 @@ const useHttp = () => {
 	const patch = async <T, S>(rq: S, relativeUri: string): Promise<T> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
 			const response = await axios.patch<T>(`${apiUri}/${relativeUri}`, rq, {
@@ -106,9 +90,6 @@ const useHttp = () => {
 	const put = async <T, S>(rq: S, relativeUri: string): Promise<T> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
 			const response = await axios.put<T>(`${apiUri}/${relativeUri}`, rq, {
@@ -123,9 +104,6 @@ const useHttp = () => {
 	const deleteOne = async <T>(relativeUri: string): Promise<T> => {
 		return retryRequest(async () => {
 			const token = await getAccessTokenSilently({
-				authorizationParams: {
-					audience: 'https://prestige-auth0-resource',
-				},
 				cacheMode: "on"
 			})
 			const response = await axios.delete<T>(`${apiUri}/${relativeUri}`, {

@@ -3,14 +3,14 @@ import { useLocation } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
 import useFriends from '@/hooks/useFriends';
 import usePrestige, { AlbumTracksWithRankingsResponse } from '@/hooks/usePrestige';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import PrestigeProgressBar from '@/components/ui/prestige-progress-bar';
 
 const AlbumPage: React.FC = () => {
   const { getFriendsWhoListenedToAlbum, getFriendAlbumTimeListened } = useFriends();
   const { togglePinAlbum, getAlbumTracksWithRankings } = usePrestige();
-  const { user } = useAuth0();
+  const user = useAccount();
   const queryClient = useQueryClient();
   const location = useLocation();
   const album = location.state;
@@ -34,7 +34,7 @@ const AlbumPage: React.FC = () => {
   };
   const [isPinned, setIsPinned] = useState(album?.isPinned || false);
 
-  const userId = user?.sub?.split('|').pop();
+  const userId = user.id;
 
   // React Query for friends who listened to this album
   const friendsQuery = useQuery({
@@ -59,7 +59,7 @@ const AlbumPage: React.FC = () => {
 
   const pinMutation = useMutation({
     mutationFn: async () => {
-      const userId = user?.sub?.split('|').pop();
+      const userId = user.id;
       if (userId) {
         await togglePinAlbum(userId, album.albumId);
       }

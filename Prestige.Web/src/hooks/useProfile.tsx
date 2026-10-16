@@ -1,4 +1,4 @@
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAccount } from '@/auth/AccountProvider';
 import useHttp from "./useHttp";
 import { AlbumResponse, ArtistResponse, TrackResponse } from "./useSpotify";
 
@@ -88,8 +88,8 @@ const useProfile = () => {
     const { getMany, patch, getOne } = useHttp();
     const baseEndpoint = "profiles";
 
-    const { user } = useAuth0();
-    const userId = user?.sub?.split("|").pop();
+    const user = useAccount();
+    const userId = user.id;
 
     const getTopTracks = async (): Promise<UserTrackResponse[]> => {
         return await getMany<UserTrackResponse>(`${baseEndpoint}/${userId}/top/tracks`);

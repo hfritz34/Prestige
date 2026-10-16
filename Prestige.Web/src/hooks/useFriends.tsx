@@ -1,4 +1,4 @@
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 import useHttp from './useHttp';
 import { UserAlbumResponse, UserArtistResponse, UserTrackResponse } from './useProfile';
 
@@ -38,8 +38,8 @@ export type UserStats = {
 
 const useFriends = () => {
   const { getMany, getOne, post, deleteOne } = useHttp();
-  const { user } = useAuth0();
-  const userId = user?.sub?.split("|").pop();
+  const user = useAccount();
+  const userId = user.id;
 
   const baseEndpoint = `api/Friendships/${userId}`;
 

@@ -12,6 +12,12 @@ Clients must bootstrap with `GET /users/me` and use its `id` for subsequent acco
 
 The old mobile client still assumes subject-derived IDs and needs this bootstrap change before targeting the catalog deployment. Legacy mode and Local Demo retain their existing IDs. Existing demo databases can continue using their seeded accounts without identity records. Apply the new `CatalogAccounts` PostgreSQL migration before serving catalog traffic; the baseline alone is insufficient for login.
 
+### Web authentication
+
+Copy `Prestige.Web/.env.example` to `.env.local` and supply the SPA's public Auth0 client ID, tenant domain, API URL and audience (matching the API configuration). Configure the SPA callback as `<web origin>/authorization` and allow that web origin and logout URL in Auth0. Enable an email/password or passwordless connection for the SPA in the Auth0 dashboard; frontend changes alone cannot enable a tenant connection. Browser environment variables are public: never add a client secret.
+
+The web app requests only `openid profile email`. It loads `/users/me` before rendering authenticated routes, uses the returned account ID throughout, and isolates query caches when the login changes. A failed bootstrap shows a retry state without making account-specific requests. Completing profile edits refreshes the shared account cache. Local Demo continues to use the same bootstrap endpoint with its seeded account.
+
 ## Local PostgreSQL
 
 Use a PostgreSQL 15+ server, or start the optional local database:

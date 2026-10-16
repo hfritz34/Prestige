@@ -27,12 +27,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </LocalDemoAuthProvider>
   ) : (
     <Auth0Provider
-    domain="dev-tfgyd3i2jqk0igxv.us.auth0.com"
-    clientId="NZ5N1xnHOdgdVuXNPoBuNydMhg83Oe0p"
+    domain={import.meta.env.VITE_AUTH0_DOMAIN}
+    clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
     authorizationParams={{
-      redirect_uri: `${import.meta.env.VITE_WEB_ADDRESS}/authorization`,
-      audience: "https://prestige-auth0-resource",
-      scope: "openid profile email user-read-email user-read-private user-read-recently-played user-top-read user-read-currently-playing app-remote-control"
+      redirect_uri: `${window.location.origin}/authorization`,
+      audience: import.meta.env.VITE_API_AUDIENCE,
+      scope: "openid profile email"
     }}
     >
       {app}

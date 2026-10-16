@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAccount } from '@/auth/AccountProvider';
 
 interface ImportStatus {
   batchId?: string;
@@ -26,7 +26,7 @@ const SpotifyDataImportPage = () => {
   const [loading, setLoading] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const { user } = useAuth0();
+  const user = useAccount();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setFiles(event.target.files);
@@ -38,7 +38,7 @@ const SpotifyDataImportPage = () => {
       return;
     }
 
-    if (!user?.sub) {
+    if (!user.id) {
       setMessage('User not authenticated. Please log in again.');
       return;
     }
@@ -47,8 +47,8 @@ const SpotifyDataImportPage = () => {
     setMessage('');
 
     try {
-      // Extract userId from Auth0 user.sub (format: oauth2|Spotify|userId)
-      const userId = user.sub.split('|').pop();
+      // Use the account ID resolved by Prestige.
+      const userId = user.id;
       
       if (!userId) {
         setMessage('Unable to determine user ID.');
