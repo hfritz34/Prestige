@@ -4,6 +4,8 @@
 
 # Prestige - Music Fandom🎵
 
+> Prestige is being refactored into a personal music catalog centered on ratings, rankings, curated profiles, and sharing. See the [current product direction](docs/catalog-pivot.md) and [PostgreSQL backend setup](docs/catalog-backend.md). The historical description below includes features and infrastructure that are being retired.
+
 *Transform your Spotify listening habits into a competitive, achievement-based social experience*
 
 [Created and maintained by Henry Fritz.]
