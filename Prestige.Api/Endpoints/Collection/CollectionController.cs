@@ -50,4 +50,12 @@ public sealed class CollectionController(CollectionServices service, IConfigurat
         }
         catch (Exceptions.Exception exception) { return HandleException(exception); }
     }
+
+    [HttpPatch("{itemType}/{itemId}")]
+    public async Task<IActionResult> Patch(string itemType, string itemId, CollectionPatchRequest request,
+        CancellationToken cancellationToken)
+    {
+        try { return Ok(await service.PatchAsync(itemType, itemId, request, cancellationToken)); }
+        catch (Exceptions.Exception exception) { return HandleException(exception); }
+    }
 }

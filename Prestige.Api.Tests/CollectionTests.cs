@@ -29,6 +29,9 @@ public sealed partial class CatalogAccountTests
         Assert.True(entry.IsPinned);
         Assert.Null(entry.Rating);
         Assert.Equal("album-1", entry.AlbumId);
+        Assert.Equal("song-1", entry.Track!.Id);
+        Assert.Equal("album-1", entry.Track.Album.Id);
+        Assert.Equal("artist-1", Assert.Single(entry.Track.Artists).Id);
         Assert.True(entry.UpdatedAt >= entry.SavedAt);
 
         response = await client.PutAsJsonAsync("/api/collection/track/song-1", new { isFavorite = true, isPinned = true });

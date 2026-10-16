@@ -59,4 +59,25 @@ public sealed partial class PostgresDatabaseTests
         db.ChangeTracker.Clear();
         Assert.Empty(await db.CollectionEntries.ToListAsync());
     }
+
+    [PostgresFact]
+    public async Task ConcurrentPartialUpdatesPreserveIndependentFlags()
+    {
+        var principal = await SeedRatingCatalogAsync();
+        var configuration = new ConfigurationBuilder().Build();
+        await Task.WhenAll(new[] { new CollectionPatchRequest(IsFavorite: true), new CollectionPatchRequest(IsPinned: true) }
+            .Select(async patch =>
+            {
+                await using var db = CreateContext();
+                return await new CollectionServices(db, principal, configuration).PatchAsync("track", "song-1", patch);
+            }));
+        await using var verification = CreateContext();
+        var service = new CollectionServices(verification, principal, configuration);
+        var entry = await service.GetAsync("track", "song-1");
+        Assert.True(entry.IsFavorite && entry.IsPinned);
+        entry = await service.PatchAsync("track", "song-1", new CollectionPatchRequest(IsPinned: false));
+        Assert.True(entry.IsFavorite);
+        Assert.False(entry.IsPinned);
+        Assert.Single(await verification.CollectionEntries.ToListAsync());
+    }
 }

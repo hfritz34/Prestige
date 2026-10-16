@@ -4,14 +4,21 @@ using Prestige.Api.Auth;
 using Prestige.Api.Data;
 using Prestige.Api.Domain;
 using Prestige.Api.Exceptions;
+using Prestige.Api.Endpoints.Spotify.RequestResponse;
 
 namespace Prestige.Api.Endpoints.Collection;
 
 public sealed record CollectionUpdateRequest(bool IsFavorite = false, bool IsPinned = false);
+public sealed record CollectionPatchRequest(bool? IsFavorite = null, bool? IsPinned = null);
 public sealed record CollectionRating(int CategoryId, decimal? Score, int Position, int? RankWithinAlbum);
 public sealed record CollectionResponse(string ItemType, string ItemId, string Name, string? ImageUrl,
     List<string> Artists, string? AlbumId, bool IsFavorite, bool IsPinned, DateTime SavedAt,
-    DateTime UpdatedAt, CollectionRating? Rating);
+    DateTime UpdatedAt, CollectionRating? Rating)
+{
+    public TrackResponse? Track { get; init; }
+    public AlbumResponse? Album { get; init; }
+    public ArtistResponse? Artist { get; init; }
+}
 
 public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal principal, IConfiguration configuration)
 {
@@ -59,15 +66,20 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
 
     public async Task<CollectionResponse> SaveAsync(string itemType, string itemId, CollectionUpdateRequest request,
         CancellationToken cancellationToken = default)
+        => await PatchAsync(itemType, itemId, new CollectionPatchRequest(request.IsFavorite, request.IsPinned), cancellationToken);
+
+    public async Task<CollectionResponse> PatchAsync(string itemType, string itemId, CollectionPatchRequest request,
+        CancellationToken cancellationToken = default)
     {
         var type = NormalizeType(itemType);
         var userId = UserId;
         await using var transaction = await AccountWriteTransaction.BeginAsync(db, userId, cancellationToken);
         var entry = await EnsureSavedAsync(db, userId, type, itemId, cancellationToken);
-        entry.Update(request.IsFavorite, request.IsPinned);
+        entry.Update(request.IsFavorite ?? entry.IsFavorite, request.IsPinned ?? entry.IsPinned);
         await db.SaveChangesAsync(cancellationToken);
+        var response = await GetAsync(type, itemId, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        return await GetAsync(type, itemId, cancellationToken);
+        return response;
     }
 
     public async Task RemoveAsync(string itemType, string itemId, CancellationToken cancellationToken = default)
@@ -113,9 +125,10 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
 
     private static IQueryable<CollectionEntry> WithMetadata(IQueryable<CollectionEntry> query) => query
         .Include(entry => entry.Track!).ThenInclude(track => track.Album).ThenInclude(album => album.Images)
-        .Include(entry => entry.Track!).ThenInclude(track => track.Artists)
+        .Include(entry => entry.Track!).ThenInclude(track => track.Album).ThenInclude(album => album.Artists).ThenInclude(artist => artist.Images)
+        .Include(entry => entry.Track!).ThenInclude(track => track.Artists).ThenInclude(artist => artist.Images)
         .Include(entry => entry.Album!).ThenInclude(album => album.Images)
-        .Include(entry => entry.Album!).ThenInclude(album => album.Artists)
+        .Include(entry => entry.Album!).ThenInclude(album => album.Artists).ThenInclude(artist => artist.Images)
         .Include(entry => entry.Artist!).ThenInclude(artist => artist.Images)
         .AsSplitQuery();
 
@@ -137,7 +150,12 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
                 (entry.Track?.Artists ?? entry.Album?.Artists)?.Select(artist => artist.Name).ToList() ?? [],
                 entry.Track?.Album.Id, entry.IsFavorite, entry.IsPinned, entry.SavedAt, entry.UpdatedAt,
                 rating == null ? null : new CollectionRating(rating.Category.Id,
-                    entry.ItemType == "track" ? null : rating.PersonalScore, rating.Position, rating.RankWithinAlbum));
+                    entry.ItemType == "track" ? null : rating.PersonalScore, rating.Position, rating.RankWithinAlbum))
+            {
+                Track = entry.Track == null ? null : new TrackResponse(entry.Track),
+                Album = entry.Album == null ? null : new AlbumResponse(entry.Album),
+                Artist = entry.Artist == null ? null : new ArtistResponse(entry.Artist)
+            };
         }).ToList();
     }
 }
