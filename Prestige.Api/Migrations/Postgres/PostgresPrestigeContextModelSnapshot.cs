@@ -82,6 +82,56 @@ namespace Prestige.Api.Migrations.Postgres
                     b.ToTable("Artist", (string)null);
                 });
 
+            modelBuilder.Entity("Prestige.Api.Domain.CollectionEntry", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ItemType")
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
+                    b.Property<string>("ItemId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("AlbumId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ArtistId")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsFavorite")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("TrackId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "ItemType", "ItemId");
+
+                    b.HasIndex("AlbumId");
+
+                    b.HasIndex("ArtistId");
+
+                    b.HasIndex("TrackId");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("CollectionEntry", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_CollectionEntry_Item", "(\"ItemType\" = 'track' AND \"TrackId\" IS NOT NULL AND \"TrackId\" = \"ItemId\" AND \"AlbumId\" IS NULL AND \"ArtistId\" IS NULL) OR\n(\"ItemType\" = 'album' AND \"AlbumId\" IS NOT NULL AND \"AlbumId\" = \"ItemId\" AND \"TrackId\" IS NULL AND \"ArtistId\" IS NULL) OR\n(\"ItemType\" = 'artist' AND \"ArtistId\" IS NOT NULL AND \"ArtistId\" = \"ItemId\" AND \"TrackId\" IS NULL AND \"AlbumId\" IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("Prestige.Api.Domain.ConsentEvent", b =>
                 {
                     b.Property<int>("Id")
@@ -679,6 +729,36 @@ namespace Prestige.Api.Migrations.Postgres
                         .HasForeignKey("TrackId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Prestige.Api.Domain.CollectionEntry", b =>
+                {
+                    b.HasOne("Prestige.Api.Domain.Album", "Album")
+                        .WithMany()
+                        .HasForeignKey("AlbumId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Prestige.Api.Domain.Artist", "Artist")
+                        .WithMany()
+                        .HasForeignKey("ArtistId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Prestige.Api.Domain.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Prestige.Api.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Album");
+
+                    b.Navigation("Artist");
+
+                    b.Navigation("Track");
                 });
 
             modelBuilder.Entity("Prestige.Api.Domain.ConsentEvent", b =>

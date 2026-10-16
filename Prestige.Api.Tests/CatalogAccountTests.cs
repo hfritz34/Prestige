@@ -17,7 +17,7 @@ using Prestige.Api.Data;
 
 namespace Prestige.Api.Tests;
 
-public sealed class CatalogAccountTests : IAsyncLifetime
+public sealed partial class CatalogAccountTests : IAsyncLifetime
 {
     private readonly SqliteConnection connection = new($"Data Source=account-{Guid.NewGuid():N};Mode=Memory;Cache=Shared");
     private WebApplication app = null!;

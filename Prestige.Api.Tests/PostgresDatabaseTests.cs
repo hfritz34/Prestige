@@ -12,7 +12,7 @@ using Prestige.Api.Endpoints.Spotify.RequestResponse;
 namespace Prestige.Api.Tests;
 
 /// <summary>Each test owns a disposable database on the configured PostgreSQL test server.</summary>
-public sealed class PostgresDatabaseTests : IAsyncLifetime
+public sealed partial class PostgresDatabaseTests : IAsyncLifetime
 {
     private readonly string databaseName = $"prestige_test_{Guid.NewGuid():N}";
     private string adminConnection = "";
