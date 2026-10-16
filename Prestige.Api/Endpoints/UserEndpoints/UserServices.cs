@@ -226,27 +226,18 @@ namespace Prestige.Api.Endpoints.UserEndpoints
             return new UserResponse(user);
         }
 
-        public IEnumerable<UserResponse> SearchUsers(string query)
+        public IEnumerable<UserSearchResponse> SearchUsers(string query)
         {
-            var normalizedQuery = (query ?? string.Empty).Trim();
-            if (string.IsNullOrWhiteSpace(normalizedQuery))
-            {
-                return Enumerable.Empty<UserResponse>();
-            }
+            var normalizedQuery = (query ?? string.Empty).Trim().ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(normalizedQuery)) return [];
 
-            if (IsLocalDemoEnabled())
-            {
-                return PrestigeDb.Users
-                    .Where(u => u.Id.Contains(normalizedQuery) || u.Name.Contains(normalizedQuery) || u.NickName.Contains(normalizedQuery))
-                    .Take(10)
-                    .Select(u => new UserResponse(u))
-                    .ToList();
-            }
-
-            return PrestigeDb.Users
-                .Where(u => EF.Functions.Contains(u.Id, normalizedQuery + "*") || EF.Functions.Contains(u.Name, normalizedQuery + "*") || EF.Functions.Contains(u.NickName, normalizedQuery + "*"))
+            return PrestigeDb.Users.AsNoTracking()
+                .Where(user => user.Name.ToLower().Contains(normalizedQuery) ||
+                    user.NickName.ToLower().Contains(normalizedQuery))
+                .OrderBy(user => user.NickName).ThenBy(user => user.Id)
                 .Take(10)
-                .Select(u => new UserResponse(u))
+                .Select(user => new UserSearchResponse(user.Id, user.Name, user.NickName,
+                    user.ProfilePicURL, user.Bio, user.IsVerified))
                 .ToList();
         }
 

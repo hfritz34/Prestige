@@ -10,6 +10,8 @@ An authenticated request resolves the full validated token issuer and subject th
 
 Clients must bootstrap with `GET /users/me` and use its `id` for subsequent account-specific requests. Do not derive account IDs by splitting the Auth0 subject. The API retains the original subject for legacy authentication operations, but authorization uses only the server-resolved account identity. Client-supplied account claims cannot select another account. `/users/{id}/tokens` is unavailable in catalog mode.
 
+`GET /users/search?query=...` searches public names and nicknames case-insensitively, with at most ten deterministically ordered results. It uses provider-compatible EF queries rather than SQL Server full-text functions. Search results contain only public profile fields; emails, setup state and credentials are excluded. This bounded substring search is intended for the initial small catalog audience; add indexed search when measured usage warrants it.
+
 The old mobile client still assumes subject-derived IDs and needs this bootstrap change before targeting the catalog deployment. Legacy mode and Local Demo retain their existing IDs. Existing demo databases can continue using their seeded accounts without identity records. Apply the new `CatalogAccounts` PostgreSQL migration before serving catalog traffic; the baseline alone is insufficient for login.
 
 ### Web authentication

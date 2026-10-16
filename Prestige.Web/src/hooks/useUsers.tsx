@@ -11,6 +11,11 @@ export type UserResponse = {
   isSetup: boolean;
 };
 
+export type UserSearchResult = Omit<UserResponse, 'email' | 'isSetup'> & {
+  bio: string | null;
+  isVerified: boolean;
+};
+
 const useUser = () => {
   const { getOne, patch, getMany } = useHttp();
   const account = useAccount();
@@ -32,8 +37,8 @@ const useUser = () => {
     patch<UserResponse, { isSetup: boolean }>({ isSetup }, `users/${account.id}/is-setup?isSetup=${isSetup}`)
   );
 
-  const searchUsers = (query: string): Promise<UserResponse[]> =>
-    getMany<UserResponse>(`users/search?query=${encodeURIComponent(query)}`);
+  const searchUsers = (query: string): Promise<UserSearchResult[]> =>
+    getMany<UserSearchResult>(`users/search?query=${encodeURIComponent(query)}`);
 
   return { getUser, patchNickName, patchIsSetup, searchUsers };
 };

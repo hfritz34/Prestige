@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { useDebounce } from 'use-debounce';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import useUsers, { UserResponse } from "@/hooks/useUsers";
+import useUsers, { UserSearchResult } from "@/hooks/useUsers";
 import useFriends from "@/hooks/useFriends";
 import { Label } from "@/components/ui/label";
 
@@ -67,7 +67,7 @@ const UserSearch: React.FC= () => {
             className="mb-2 w-3/4"
         />
         <ScrollArea id="SearchResults" className="w-screen p-4 min-h-0 grow flex flex-col items-center text-background">
-            {data?.map((user: UserResponse) => (
+            {data?.map((user: UserSearchResult) => (
             <li
                 key={user.id}
                  className="flex items-center p-4 border-b border-gray-700 cursor-pointer"

@@ -121,6 +121,34 @@ public sealed class PostgresDatabaseTests : IAsyncLifetime
         .UseNpgsql(connectionString, options => options.SetPostgresVersion(15, 0)).Options);
 
     [PostgresFact]
+    public async Task UserSearchWorksOnPostgresAndReturnsOnlyPublicProfileFields()
+    {
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync();
+        db.Users.AddRange(Enumerable.Range(0, 12).Select(index => new User(
+            $"listener-{index:00}", "Jazz Listener", $"jazz{index:00}", "private@example.com", "", "secret", "secret")));
+        db.Users.Add(new User("percent", "100% Music", "percent", "other@example.com", "", "", ""));
+        await db.SaveChangesAsync();
+
+        var service = new Endpoints.UserEndpoints.UserServices(db,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<Endpoints.UserEndpoints.UserServices>.Instance,
+            new System.Security.Claims.ClaimsPrincipal(), new ConfigurationBuilder().Build());
+        var results = service.SearchUsers("  JAZZ  ").ToList();
+        Assert.Equal(10, results.Count);
+        Assert.Equal(Enumerable.Range(0, 10).Select(index => $"listener-{index:00}"), results.Select(user => user.Id));
+        Assert.Empty(service.SearchUsers("  "));
+        Assert.Empty(service.SearchUsers("private@example.com"));
+        Assert.Equal("percent", Assert.Single(service.SearchUsers("%")).Id);
+        Assert.Empty(service.SearchUsers("' OR 1=1 --"));
+
+        var json = System.Text.Json.JsonSerializer.Serialize(results);
+        Assert.DoesNotContain("Email", json);
+        Assert.DoesNotContain("Token", json);
+        Assert.DoesNotContain("IsSetup", json);
+        Assert.DoesNotContain("private@example.com", json);
+    }
+
+    [PostgresFact]
     public async Task ConcurrentFirstLoginsCreateOneAccountAndConsentHistory()
     {
         await using var db = CreateContext();
