@@ -49,7 +49,7 @@ const useSpotify = () => {
     const { getOne, getMany } = useHttp();
 
     const search = async (query: string, searchType: SearchType): Promise<SearchResponse> => {
-        return getOne<TrackResponse[] | AlbumResponse[] | ArtistResponse[]>(`spotify/${searchType}s/search?Query=${query}`)
+        return getOne<TrackResponse[] | AlbumResponse[] | ArtistResponse[]>(`spotify/${searchType}s/search?Query=${encodeURIComponent(query)}`)
         .then((response) => {
             return pure(response, searchType);
         });

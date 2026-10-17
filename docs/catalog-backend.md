@@ -14,7 +14,7 @@ Clients must bootstrap with `GET /users/me` and use its `id` for subsequent acco
 
 The old mobile client still assumes subject-derived IDs and needs this bootstrap change before targeting the catalog deployment. Legacy mode and Local Demo retain their existing IDs. Existing demo databases can continue using their seeded accounts without identity records. Apply the new `CatalogAccounts` PostgreSQL migration before serving catalog traffic; the baseline alone is insufficient for login.
 
-Apply all current migrations, including `PersonalCollections`, before using the catalog rating or collection endpoints. [The collection API](collections-api.md) separates saved music, favorites and pins from listening aggregates. Catalog rating writes now save collection membership atomically, without requiring Spotify credentials or listening totals. Web favorites and pins use the new collection contract in Catalog mode; native migration and provider-independent music discovery remain outstanding.
+Apply all current migrations, including `PersonalCollections`, before using the catalog rating or collection endpoints. [The collection API](collections-api.md) separates saved music, favorites and pins from listening aggregates. Catalog rating writes now save collection membership atomically, without requiring Spotify credentials or listening totals. Web favorites and pins use the new collection contract in Catalog mode; native migration and catalog population remain outstanding. [Stored catalog search](catalog-search.md) lets the web find known music without Spotify; it does not fetch missing releases.
 
 ### Web authentication
 

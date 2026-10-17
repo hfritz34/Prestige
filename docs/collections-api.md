@@ -30,6 +30,6 @@ The web now uses this contract for favorites, pinned lists and detail-page pin s
 
 Set `VITE_PRESTIGE_MODE=Catalog` (the normal web default) to match the migrated API. Use `Legacy` only against a legacy deployment. Local Demo defaults to Legacy unless explicitly overridden for fixture-based integration tests; its collection API remains disabled.
 
-The native client still uses legacy favorites/pin routes. Web music search, listening-based home/profile sections, album/artist context, and friend comparisons still need further catalog work. In particular, finding new music still depends on the old Spotify search path; migrating curation does not solve catalog discovery or provider identity separation.
+The native client still uses legacy favorites/pin routes. Web home/favorite searches now use [stored catalog search](catalog-search.md). Listening-based home/profile sections, album/artist context, and friend comparisons still need further catalog work. Catalog population and provider identity separation remain outstanding; an empty catalog has no music to find.
 
 Validation: API tests cover independent/concurrent PATCH updates and nested card metadata. Browser checks with fixture API responses cover favorite/pin independence, state after reload, read/write failure recovery, album/artist navigation, pagination beyond 100 favorites, setup failures, and absence of playback polling. These checks are not evidence of a live Auth0/Spotify production deployment.
