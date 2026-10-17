@@ -428,7 +428,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 });
             }
             
-            // Always fetch from Spotify to get complete track listing, regardless of database track count
+            // Only legacy deployments enrich detail reads from Spotify. Catalog browsing uses stored metadata.
+            if (!RuntimeConfiguration.IsCatalog(Config))
             {
                 try
                 {
@@ -591,8 +592,8 @@ namespace Prestige.Api.Endpoints.Prestige
                 var totalTracks = await PrestigeDb.Tracks
                     .CountAsync(t => t.Album.Id == albumId);
 
-                // If no tracks in database, try to get from Spotify
-                if (totalTracks == 0)
+                // Provider enrichment remains a legacy-only behavior.
+                if (totalTracks == 0 && !RuntimeConfiguration.IsCatalog(Config))
                 {
                     try
                     {

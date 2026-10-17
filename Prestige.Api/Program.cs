@@ -349,6 +349,7 @@ namespace Prestige.Api
         {
             builder.Services.AddScoped<IClaimsTransformation, CatalogAccountTransformation>();
             builder.Services.AddScoped<UserServices>();
+            builder.Services.AddScoped<Endpoints.Catalog.CatalogSearchServices>();
             builder.Services.AddScoped<Endpoints.Collection.CollectionServices>();
             builder.Services.AddScoped<SpotifyServices>();
             builder.Services.AddScoped<ProfileServices>();
