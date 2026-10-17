@@ -17,4 +17,13 @@ public sealed class CatalogController(CatalogSearchServices service, IConfigurat
         try { return Ok(await service.SearchAsync(query, itemType, take, cancellationToken)); }
         catch (Exceptions.Exception exception) { return HandleException(exception); }
     }
+    [HttpGet("ratings/{itemType}")]
+    public async Task<IActionResult> Ratings(string itemType, [FromServices] CatalogRatingsServices ratings,
+        int skip = 0, int take = 50, CancellationToken cancellationToken = default)
+    {
+        if (!RuntimeConfiguration.IsCatalog(configuration) || RuntimeConfiguration.IsLocalDemo(configuration))
+            return Conflict(new { message = "This endpoint requires a migrated catalog deployment." });
+        try { return Ok(await ratings.ListAsync(itemType, skip, take, cancellationToken)); }
+        catch (Exceptions.Exception exception) { return HandleException(exception); }
+    }
 }

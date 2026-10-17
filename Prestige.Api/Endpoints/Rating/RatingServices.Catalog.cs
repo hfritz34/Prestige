@@ -18,7 +18,9 @@ public partial class RatingServices
         return CatalogMutationAsync(async () =>
         {
             await CollectionServices.EnsureSavedAsync(PrestigeDb, GetUserId(), type, itemId);
-            return await SaveRatingCoreAsync(type, itemId, desiredPosition, categoryId);
+            return type == "track"
+                ? await SaveRatingCoreAsync(type, itemId, desiredPosition, categoryId)
+                : await SaveCatalogScoreAsync(type, itemId, desiredPosition, categoryId);
         });
     }
 
@@ -49,6 +51,46 @@ public partial class RatingServices
                 ItemType = type, ItemId1 = request.ItemId1, ItemId2 = request.ItemId2, WinnerId = request.WinnerId
             });
         });
+    }
+
+    private async Task<RatingResponse> SaveCatalogScoreAsync(string type, string itemId, int position, int categoryId)
+    {
+        var userId = GetUserId();
+        var category = await PrestigeDb.RatingCategories.FindAsync(categoryId)
+            ?? throw new Exceptions.NotFoundException(404, "Rating category not found.");
+        var ratings = await PrestigeDb.Ratings.Include(r => r.Category)
+            .Where(r => r.User.Id == userId && r.ItemType == type).ToListAsync();
+        var existing = ratings.SingleOrDefault(r => r.ItemId == itemId);
+        var previousCategory = existing?.Category.Id;
+        // Re-rating must not compare an item with itself or count its old score in its new position.
+        var peers = ratings.Where(r => r.ItemId != itemId && r.Category.Id == categoryId)
+            .OrderBy(r => r.Position).ThenBy(r => r.ItemId).ToList();
+        var insertion = Math.Min(position, peers.Count);
+        decimal score;
+        if (peers.Count == 0) score = category.MaxScore;
+        else if (insertion == 0)
+        {
+            score = category.MaxScore;
+            await RedistributeScoresAfterNewTop(peers, category);
+        }
+        else if (insertion == peers.Count)
+            score = Math.Max(peers[^1].PersonalScore - (peers[^1].PersonalScore - category.MinScore) / 2m,
+                category.MinScore + 0.1m);
+        else score = (peers[insertion - 1].PersonalScore + peers[insertion].PersonalScore) / 2m;
+
+        var rating = existing ?? new Domain.Rating(await GetUserAsync(userId), itemId, type, category, insertion + 1, score);
+        if (existing == null) PrestigeDb.Ratings.Add(rating);
+        else rating.UpdateRating(score, category, insertion + 1);
+        peers.Insert(insertion, rating);
+        for (var index = 0; index < peers.Count; index++) peers[index].UpdatePosition(index + 1);
+        if (previousCategory.HasValue && previousCategory != categoryId)
+        {
+            var previous = ratings.Where(r => r.ItemId != itemId && r.Category.Id == previousCategory)
+                .OrderBy(r => r.Position).ThenBy(r => r.ItemId).ToList();
+            for (var index = 0; index < previous.Count; index++) previous[index].UpdatePosition(index + 1);
+        }
+        return new RatingResponse { ItemId = itemId, ItemType = type, CategoryId = categoryId,
+            PersonalScore = score, Position = insertion + 1, IsNewRating = existing == null };
     }
 
     private async Task<T> CatalogMutationAsync<T>(Func<Task<T>> mutation)
