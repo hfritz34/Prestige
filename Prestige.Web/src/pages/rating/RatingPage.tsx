@@ -1,3 +1,5 @@
+import { usesCatalogCollections } from '@/config/catalog';
+import CatalogRatingPage from './CatalogRatingPage';
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -17,7 +19,7 @@ interface RatingItem {
   albumId?: string;
 }
 
-const RatingPage: React.FC = () => {
+const LegacyRatingPage: React.FC = () => {
   const { getTopTracks, getTopAlbums, getTopArtists, getRecentlyPlayed, getRecentlyPlayedAlbums, getRecentlyPlayedArtists } = useProfile();
   const { getUserRatings, saveRating, deleteRating } = useRating();
   const queryClient = useQueryClient();
@@ -410,4 +412,5 @@ const RatingPage: React.FC = () => {
   );
 };
 
+const RatingPage = () => usesCatalogCollections ? <CatalogRatingPage /> : <LegacyRatingPage />;
 export default RatingPage;

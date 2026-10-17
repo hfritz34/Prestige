@@ -1,3 +1,4 @@
+import placeholderImage from '@/assets/music.jpg';
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ const RatingItemCard: React.FC<RatingItemCardProps> = ({
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = "/placeholder-album.png";
+                  if (target.getAttribute('src') !== placeholderImage) target.src = placeholderImage;
                 }}
               />
             ) : (
