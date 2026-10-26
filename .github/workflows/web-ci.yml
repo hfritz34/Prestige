@@ -2,12 +2,10 @@ name: Web CI
 
 on:
   push:
-    branches: [ "*" ]
     paths:
       - 'Prestige.Web/**'
       - '.github/workflows/web-ci.yml'
   pull_request:
-    branches: [ "*" ]
     paths:
       - 'Prestige.Web/**'
       - '.github/workflows/web-ci.yml'
@@ -15,22 +13,25 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20.14.0'
-        
+
     - name: Enable Corepack
       run: corepack enable
-        
+
     - name: Install dependencies
-      run: yarn install
+      run: yarn install --frozen-lockfile
       working-directory: ./Prestige.Web
-      
-    - name: Build application
+
+    - name: Build catalog application
+      env:
+        VITE_PRESTIGE_MODE: Catalog
+        VITE_LOCAL_DEMO: 'false'
       run: yarn build
-      working-directory: ./Prestige.Web 
+      working-directory: ./Prestige.Web

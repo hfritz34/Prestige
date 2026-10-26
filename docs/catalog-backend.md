@@ -101,3 +101,9 @@ The PostgreSQL test role must be able to create databases. Every integration tes
 CI supplies a PostgreSQL 15 service and runs the full suite. Tests cover fresh migrations, migration-history isolation, reapplying migrations without losing data, rating/consent persistence, UTC timestamps, production PostgreSQL service resolution, authenticated routes, readiness before/after schema initialization, provider/issuer identity isolation, account ownership, and concurrent account provisioning. These are foundation tests, not yet full rating-flow or import correctness tests.
 
 When the model changes, generate a new migration for `PostgresPrestigeContext` and rerun the real PostgreSQL tests. Do not suppress pending-model warnings or edit an already deployed baseline to avoid writing a migration.
+
+## Merge and deployment boundary
+
+Catalog work can merge into `main` independently of hosting setup. The Azure App Service workflow deploys the API only through `workflow_dispatch` with `deploy_api=true`; ordinary pushes no longer replace the old API automatically. Configure a compatible database, apply migrations, and set production authentication/CORS before explicitly deploying. The landing-page deployment triggers remain in place. This repository change does not stop existing Azure Functions or remove billed resources.
+
+Web CI now covers nested branch names and explicitly builds Catalog mode with demo authentication disabled. API CI runs its PostgreSQL integration suite. Local merge verification uses a clean checkout of the committed source so unrelated working-tree edits are excluded.
