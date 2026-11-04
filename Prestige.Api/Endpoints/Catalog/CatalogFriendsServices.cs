@@ -15,6 +15,16 @@ public sealed class CatalogFriendsServices(PrestigeContext db, ClaimsPrincipal p
     private string UserId => CurrentAccount.GetUserId(principal, configuration)
         ?? throw new Exceptions.UnauthorizedException(401, "An authenticated account is required.");
 
+    public async Task<CatalogFriendResponse> GetAsync(string otherId, CancellationToken cancellationToken = default)
+    {
+        var userId = UserId;
+        var friendship = await db.Friendships.AsNoTracking().Include(f => f.Friend)
+            .SingleOrDefaultAsync(f => f.UserId == userId && f.FriendId == otherId
+                && f.Status == FriendRequestStatus.Accepted, cancellationToken)
+            ?? throw new Exceptions.NotFoundException(404, "Accepted friend not found.");
+        return Response(friendship.Friend, friendship);
+    }
+
     public async Task<List<CatalogFriendResponse>> ListAsync(string kind, int skip, int take,
         CancellationToken cancellationToken = default)
     {

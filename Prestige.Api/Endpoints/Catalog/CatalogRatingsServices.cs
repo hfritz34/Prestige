@@ -16,11 +16,18 @@ public sealed class CatalogRatingsServices(PrestigeContext db, ClaimsPrincipal p
     public async Task<List<CatalogRatingResponse>> ListAsync(string itemType, int skip = 0, int take = 50,
         CancellationToken cancellationToken = default)
     {
+        var userId = CurrentAccount.GetUserId(principal, configuration)
+            ?? throw new Exceptions.UnauthorizedException(401, "An authenticated account is required.");
+        return await ListForUserAsync(userId, itemType, skip, take, cancellationToken);
+    }
+
+    // Call only after authorizing the viewer. The public ratings endpoint remains owner-only.
+    internal async Task<List<CatalogRatingResponse>> ListForUserAsync(string userId, string itemType, int skip, int take,
+        CancellationToken cancellationToken = default)
+    {
         var type = CollectionServices.NormalizeType(itemType);
         if (skip < 0 || take is < 1 or > 100)
             throw new Exceptions.ArgumentException(400, "skip must be nonnegative and take must be between 1 and 100.");
-        var userId = CurrentAccount.GetUserId(principal, configuration)
-            ?? throw new Exceptions.UnauthorizedException(401, "An authenticated account is required.");
         var ratings = await db.Ratings.AsNoTracking()
             .Where(r => r.User.Id == userId && r.ItemType == type)
             .OrderBy(r => r.Category.DisplayOrder).ThenBy(r => r.Position).ThenBy(r => r.ItemId)

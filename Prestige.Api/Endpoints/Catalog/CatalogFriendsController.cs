@@ -23,6 +23,26 @@ public sealed class CatalogFriendsController(CatalogFriendsServices service, ICo
     public Task<IActionResult> Send(string otherId, CancellationToken cancellationToken) =>
         Run(async () => Ok(await service.ChangeAsync(otherId, "send", cancellationToken)));
 
+    [HttpGet("{otherId}")]
+    public Task<IActionResult> Profile(string otherId, CancellationToken cancellationToken) =>
+        Run(async () => Ok(await service.GetAsync(otherId, cancellationToken)));
+
+    [HttpGet("{otherId}/ratings/{itemType}")]
+    public Task<IActionResult> Ratings(string otherId, string itemType, [FromServices] CatalogRatingsServices ratings,
+        int skip = 0, int take = 50, CancellationToken cancellationToken = default) => Run(async () =>
+        {
+            await service.GetAsync(otherId, cancellationToken);
+            return Ok(await ratings.ListForUserAsync(otherId, itemType, skip, take, cancellationToken));
+        });
+
+    [HttpGet("{otherId}/showcase")]
+    public Task<IActionResult> Showcase(string otherId, [FromServices] Collection.CollectionServices collections,
+        int skip = 0, int take = 50, CancellationToken cancellationToken = default) => Run(async () =>
+        {
+            await service.GetAsync(otherId, cancellationToken);
+            return Ok(await collections.ListShowcaseAsync(otherId, skip, take, cancellationToken));
+        });
+
     [HttpPost("requests/{otherId}/accept")]
     public Task<IActionResult> Accept(string otherId, CancellationToken cancellationToken) =>
         Run(async () => Ok(await service.ChangeAsync(otherId, "accept", cancellationToken)));

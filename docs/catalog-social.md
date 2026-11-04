@@ -23,3 +23,11 @@ Self-requests and invalid pagination/direction return 400. Unknown accounts or m
 Accepted relationships retain the existing two-row representation, committed atomically. PostgreSQL mutations lock both account rows in ordinal ID order to serialize actions from either direction and avoid opposite-order deadlocks. No migration is needed. Concurrent sends, acceptances, removals, and crossed requests are covered against PostgreSQL; consent, isolation, validation, pagination, and legacy bypass rejection are exercised through HTTP integration tests.
 
 This is the foundation for friends-only catalog sharing. Public profile visibility, blocking/reporting, notification delivery, and request abuse limits remain separate launch decisions/work; the legacy social endpoints are not a compatibility fallback in Catalog mode.
+
+## Friends-only music views
+
+`GET /api/catalog/friends/{otherId}` returns the accepted friend's public profile summary. `/showcase` returns only collection entries marked favorite or pinned, with stored music metadata. `/ratings/{itemType}` returns authoritative ratings and metadata independently of collection membership, using the same shape as `/api/catalog/ratings/{itemType}`. Both music lists accept `skip` and `take` (maximum 100).
+
+Every read checks the current viewer's accepted friendship first. Unknown people, strangers, pending/declined requests, and removed friends receive 404; anonymous callers receive 401. There is no anonymous/public sharing in this slice. Removal revokes subsequent server reads immediately; a response already displayed in another browser is not remotely erased. No provider request or listening history is involved.
+
+Track opinions retain album context and `rankWithinAlbum`, with null personal scores. Album/artist ratings retain derived scores and category positions. Sharing does not change, copy, or create the viewer's ratings or collection. Private account `/api/catalog/ratings` and `/api/collection` ownership remain unchanged.

@@ -35,10 +35,18 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
 
     public async Task<List<CollectionResponse>> ListAsync(string? itemType, bool favoritesOnly,
         bool pinnedOnly, int skip, int take, CancellationToken cancellationToken = default)
+        => await ListCoreAsync(UserId, itemType, favoritesOnly, pinnedOnly, false, skip, take, cancellationToken);
+
+    // Friends see only deliberately showcased entries, never the rest of the saved collection.
+    internal async Task<List<CollectionResponse>> ListShowcaseAsync(string userId, int skip, int take,
+        CancellationToken cancellationToken = default)
+        => await ListCoreAsync(userId, null, false, false, true, skip, take, cancellationToken);
+
+    private async Task<List<CollectionResponse>> ListCoreAsync(string userId, string? itemType, bool favoritesOnly,
+        bool pinnedOnly, bool showcaseOnly, int skip, int take, CancellationToken cancellationToken)
     {
         if (skip < 0 || take is < 1 or > 100)
             throw new Exceptions.ArgumentException(400, "Use skip >= 0 and take between 1 and 100.");
-        var userId = UserId;
         var query = db.CollectionEntries.AsNoTracking().Where(entry => entry.UserId == userId);
         if (itemType != null)
         {
@@ -47,6 +55,7 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
         }
         if (favoritesOnly) query = query.Where(entry => entry.IsFavorite);
         if (pinnedOnly) query = query.Where(entry => entry.IsPinned);
+        if (showcaseOnly) query = query.Where(entry => entry.IsFavorite || entry.IsPinned);
         var entries = await WithMetadata(query.OrderByDescending(entry => entry.UpdatedAt)
             .ThenBy(entry => entry.ItemType).ThenBy(entry => entry.ItemId).Skip(skip).Take(take))
             .ToListAsync(cancellationToken);
