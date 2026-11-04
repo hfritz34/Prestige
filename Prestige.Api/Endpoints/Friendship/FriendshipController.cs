@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Prestige.Api.Endpoints.FriendshipEndpoints
 {
+    [LegacyFriendshipOnly]
     [ApiController]
     [Authorize]
     [Route("/api/[controller]")]
