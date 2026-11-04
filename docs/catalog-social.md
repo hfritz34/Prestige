@@ -31,3 +31,11 @@ This is the foundation for friends-only catalog sharing. Public profile visibili
 Every read checks the current viewer's accepted friendship first. Unknown people, strangers, pending/declined requests, and removed friends receive 404; anonymous callers receive 401. There is no anonymous/public sharing in this slice. Removal revokes subsequent server reads immediately; a response already displayed in another browser is not remotely erased. No provider request or listening history is involved.
 
 Track opinions retain album context and `rankWithinAlbum`, with null personal scores. Album/artist ratings retain derived scores and category positions. Sharing does not change, copy, or create the viewer's ratings or collection. Private account `/api/catalog/ratings` and `/api/collection` ownership remain unchanged.
+
+## Web integration
+
+Catalog `/friends` loads accepted, incoming, and outgoing lists with pagination and shows explicit send/accept/decline/cancel/remove actions. Incoming IDs identify the sender; search omits the current account. Failed reads are not treated as empty relationships, and failed writes keep the current row available for retry. The page explains that accepting friendship shares ratings, favorites, and pins.
+
+Catalog `/friends/:friendId` shows the accepted friend's showcase and track/album/artist ratings. Track cards include their album and album rank, never a fabricated song score or listening total. Profile and music reads have loading, empty, retry, and unavailable states. No playback polling, Spotify lookup, legacy friends request, or rating/collection write occurs while viewing a friend. Removed friendships clear the local friend's cached music. The existing Legacy/demo pages remain selected outside Catalog mode.
+
+Validation on November 4, 2026: all 44 API tests passed with PostgreSQL 15 enabled, zero skips; Catalog production web build passed. Chrome checks with fixture responses covered the social action lifecycle, failed reads/writes and recovery, disabled sends when relationship status is unknown, all music types, 101-rating pagination, revoked access, and absence of legacy/provider requests or browser exceptions. Live Auth0, hosted API, and deployed browser verification remain launch work.

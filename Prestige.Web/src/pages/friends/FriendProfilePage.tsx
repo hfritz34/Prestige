@@ -1,3 +1,5 @@
+import { usesCatalogCollections } from '@/config/catalog';
+import CatalogFriendProfilePage from './CatalogFriendProfilePage';
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import NavBar from "@/components/navigation/NavBar";
@@ -15,7 +17,9 @@ import FriendTopCarousel from "./components/FriendTopCarousel";
 import CurrentlyPlaying from "@/components/CurrentlyPlaying/CurrentlyPlaying";
 import useFriendCurrentlyPlaying from "@/hooks/useFriendCurrentlyPlaying";
 
-const FriendProfilePage: React.FC = () => {
+const FriendProfilePage: React.FC = () => usesCatalogCollections ? <CatalogFriendProfilePage /> : <LegacyFriendProfilePage />;
+
+const LegacyFriendProfilePage: React.FC = () => {
   const { friendId } = useParams<{ friendId: string }>();
   const [viewTypeTop, setViewTypeTop] = useState<"TopTracks" | "TopAlbums" | "TopArtists">("TopTracks");
   const [viewTypeFavorite, setViewTypeFavorite] = useState<"FavoriteTracks" | "FavoriteAlbums" | "FavoriteArtists">("FavoriteTracks");

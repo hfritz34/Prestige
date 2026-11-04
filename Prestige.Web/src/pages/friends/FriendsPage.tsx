@@ -1,3 +1,5 @@
+import { usesCatalogCollections } from '@/config/catalog';
+import CatalogFriendsPage from './CatalogFriendsPage';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/navigation/NavBar';
@@ -8,7 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAccount } from '@/auth/AccountProvider';
 
-const FriendsPage: React.FC = () => {
+const FriendsPage: React.FC = () => usesCatalogCollections ? <CatalogFriendsPage /> : <LegacyFriendsPage />;
+
+const LegacyFriendsPage: React.FC = () => {
     const { getAllFriends, getFriendRequests, acceptFriendRequest, declineFriendRequest } = useFriends();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
