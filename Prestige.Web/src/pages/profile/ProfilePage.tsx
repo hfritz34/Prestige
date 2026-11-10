@@ -1,3 +1,5 @@
+import { usesCatalogCollections } from '@/config/catalog';
+import CatalogProfilePage from './CatalogProfilePage';
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -16,7 +18,9 @@ import RecentlyPlayed from "./components/RecentlyPlayed";
 import CurrentlyPlaying from "@/components/CurrentlyPlaying/CurrentlyPlaying";
 import useCurrentlyPlaying from "@/hooks/useCurrentlyPlaying";
 
-const ProfilePage: React.FC = () => {
+const ProfilePage: React.FC = () => usesCatalogCollections ? <CatalogProfilePage /> : <LegacyProfilePage />;
+
+const LegacyProfilePage: React.FC = () => {
 
   const [viewTypeTop, setViewTypeTop] = useState<"TopTracks" | "TopAlbums" | "TopArtists">("TopTracks");
   const [viewTypeFavorite, setViewTypeFavorite] = useState<"FavoriteTracks" | "FavoriteAlbums" | "FavoriteArtists">("FavoriteTracks");

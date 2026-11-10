@@ -46,6 +46,7 @@ export default function useCollection() {
     client.setQueryData(collectionKey(type, id), entry);
     await Promise.all([
       client.invalidateQueries({ queryKey: ['favorite'] }),
+      client.invalidateQueries({ queryKey: ['collection', 'lists'] }),
       client.invalidateQueries({ queryKey: ['users', 'favorites'] }),
       client.invalidateQueries({ queryKey: ['pinnedItems'] }),
       client.invalidateQueries({ queryKey: ['albumTracks'] }),
@@ -66,6 +67,15 @@ export default function useCollection() {
     }
   };
 
+  const showcase = async () => {
+    const entries: CollectionEntry[] = [];
+    for (let skip = 0; ; skip += 100) {
+      const page = await http.getMany<CollectionEntry>(`api/collection/showcase?skip=${skip}&take=100`);
+      entries.push(...page);
+      if (page.length < 100) return entries;
+    }
+  };
+
   const asCards = (entries: CollectionEntry[]) => {
     const tracks: UserTrackResponse[] = [];
     const albums: UserAlbumResponse[] = [];
@@ -80,5 +90,5 @@ export default function useCollection() {
     }
     return { tracks, albums, artists };
   };
-  return { get, update, list, asCards };
+  return { get, update, list, showcase, asCards };
 }

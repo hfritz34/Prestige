@@ -9,6 +9,7 @@ export type UserResponse = {
   nickName: string;
   profilePicURL: string;
   isSetup: boolean;
+  bio?: string | null;
 };
 
 export type UserSearchResult = Omit<UserResponse, 'email' | 'isSetup'> & {
