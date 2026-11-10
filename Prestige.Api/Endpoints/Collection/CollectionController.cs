@@ -25,6 +25,13 @@ public sealed class CollectionController(CollectionServices service, IConfigurat
         catch (Exceptions.Exception exception) { return HandleException(exception); }
     }
 
+    [HttpGet("showcase")]
+    public async Task<IActionResult> Showcase(int skip = 0, int take = 50, CancellationToken cancellationToken = default)
+    {
+        try { return Ok(await service.ListOwnShowcaseAsync(skip, take, cancellationToken)); }
+        catch (Exceptions.Exception exception) { return HandleException(exception); }
+    }
+
     [HttpGet("{itemType}/{itemId}")]
     public async Task<IActionResult> Get(string itemType, string itemId, CancellationToken cancellationToken)
     {

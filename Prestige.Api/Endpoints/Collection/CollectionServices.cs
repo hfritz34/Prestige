@@ -38,6 +38,10 @@ public sealed class CollectionServices(PrestigeContext db, ClaimsPrincipal princ
         => await ListCoreAsync(UserId, itemType, favoritesOnly, pinnedOnly, false, skip, take, cancellationToken);
 
     // Friends see only deliberately showcased entries, never the rest of the saved collection.
+    public Task<List<CollectionResponse>> ListOwnShowcaseAsync(int skip, int take,
+        CancellationToken cancellationToken = default)
+        => ListShowcaseAsync(UserId, skip, take, cancellationToken);
+
     internal async Task<List<CollectionResponse>> ListShowcaseAsync(string userId, int skip, int take,
         CancellationToken cancellationToken = default)
         => await ListCoreAsync(userId, null, false, false, true, skip, take, cancellationToken);

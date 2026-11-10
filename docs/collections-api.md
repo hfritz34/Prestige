@@ -33,3 +33,9 @@ Set `VITE_PRESTIGE_MODE=Catalog` (the normal web default) to match the migrated 
 The native client still uses legacy favorites/pin routes. Web home/favorite searches now use [stored catalog search](catalog-search.md). Listening-based home/profile sections, album/artist context, and friend comparisons still need further catalog work. Catalog population and provider identity separation remain outstanding; an empty catalog has no music to find.
 
 Validation: API tests cover independent/concurrent PATCH updates and nested card metadata. Browser checks with fixture API responses cover favorite/pin independence, state after reload, read/write failure recovery, album/artist navigation, pagination beyond 100 favorites, setup failures, and absence of playback polling. These checks are not evidence of a live Auth0/Spotify production deployment.
+
+## Owner showcase
+
+`GET /api/collection/showcase?skip=0&take=50` returns the signed-in account's favorite **or** pinned entries, once each, using the same filtering, ordering, metadata, and rating projection as the friends-only showcase. The API filters before pagination (`take` 1–100). Ordinary saved music is excluded. Caller-supplied user IDs have no effect; anonymous reads return 401.
+
+Clearing one flag preserves the other. Clearing both removes the item from the showcase while preserving collection membership and its rating. No additional database schema or provider calls are needed.
